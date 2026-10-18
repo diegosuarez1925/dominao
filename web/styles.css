@@ -13,3 +13,7 @@ form {
 li {
   margin: 0.5rem 0;
 }
+/* The page shows and hides sections with the hidden attribute, which display: flex would override. */
+[hidden] {
+  display: none !important;
+}

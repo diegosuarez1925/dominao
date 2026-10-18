@@ -11,6 +11,7 @@ export default {
     documents: [
       new URL("./design/types.md", import.meta.url),
       new URL("./design/compositions/Guests.md", import.meta.url),
+      new URL("./design/compositions/Tables.md", import.meta.url),
     ],
   },
   projections: [httpWire({ policy, name: "DominaoWireHttp" })],

@@ -87,3 +87,45 @@ called `Flag`.
 Future work: if a guest submits a blank name, a token is generated before the name
 is refused and stays reserved. Tokens of sessions that expire (rather than being
 ended) also stay reserved. Neither does harm, given how many codes there are.
+
+### Step 2: private tables
+
+Scope for this step: Table only handles creating a table, joining it
+by code, and getting rid of it. It knows nothing about the game, so P1's `rules`,
+the OPEN/PLAYING status, `start`, `finish`, `setRules` and `moveSeat` are left out
+for now. They will come back with the game (or move into the game concept) in a
+later step.
+
+Changes to the P1 Table design:
+
+- **Table holds its join code.** P1's reactions call `Table.open(host, rules, code)`
+  and `_getByCode(code)`, but the P1 state had no code. Table now has
+  `a unique code String`, and the code comes from CodeGenerating in a
+  `TABLE_CODES` context (6 characters).
+- **`leave` no longer deletes the table; `close` does.** P1's `leave` deleted an
+  empty table, but the P1 reactions CloseEmptyTable and FreeTableCode expect a
+  separate `Table.close` that hands back the code. I followed the reactions, so
+  "delete when empty" is now an app decision (a reaction), not hidden inside Table.
+- **A player sits at only one table at a time**, enforced with a unique index on the
+  seat's player, as P1's "player is not seated at any table" requires.
+- **New queries** for the lobby: `_get`, `_seats` and `_tableOf`.
+
+App decisions in the composition:
+
+- Every endpoint resolves the guest's token to their session first, and that session
+  is the player, so nobody can act in someone else's name.
+- An unknown join code is answered `NO_SUCH_TABLE` (HTTP 404) by the endpoint itself.
+- Only the host can close a table that still has people at it (`NOT_HOST`, 403).
+- **LeaveTableOnSessionEnd** (new): a guest who ends their session also leaves
+  their table, so empty tables still close.
+- The lobby is a former: the guest's table, its code and host, and each seat with
+  the sitter's display name, joined from GuestSessioning. The page refreshes it every
+  2 seconds (polling), which is enough for an MVP.
+
+Challenges: the HTTP layer reports refusals by category (`NOT_FOUND`, `CONFLICT`,
+`FORBIDDEN`) rather than by the concept's code, so the page translates categories
+into messages. And the "Play as guest" form stayed visible after signing in, because
+the stylesheet's `display: flex` overrode the `hidden` attribute; fixed in CSS.
+
+Future work: a join code that is generated for a guest who is already seated stays
+reserved, like the blank-name token in step 1b.

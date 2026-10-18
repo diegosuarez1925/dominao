@@ -4,6 +4,9 @@
 import type { applicationConceptSet as ApplicationConceptSet } from "../src/concepts.ts";
 
 type AtPath<T, P extends readonly string[]> = P extends readonly [infer H extends string, ...infer R extends string[]] ? H extends keyof T ? AtPath<T[H], R> : H extends `${number}` ? T extends readonly (infer Item)[] ? AtPath<Item, R> : never : never : T;
+type QueryRow<T> = T extends readonly (infer Row)[] ? Row : T;
+type AllOf<T extends readonly unknown[]> = T extends readonly [infer Head, ...infer Rest] ? Head & AllOf<Rest> : unknown;
+type OneOf<T extends readonly unknown[]> = T[number];
 type Jsonify<T> = T extends Date ? string : T extends null | boolean | number | string ? T : T extends (...args: never[]) => unknown ? never : T extends readonly (infer Item)[] ? Jsonify<Item>[] : T extends object ? { [K in keyof T]: Jsonify<T[K]> } : never;
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -18,7 +21,7 @@ export type DominaoWire = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NO_SUCH_CODE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
   };
   "/guests/me": {
     input: {
@@ -40,6 +43,67 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_NAME" | "TOKEN_IN_USE" };
   };
+  "/tables/close": {
+    input: {
+      "table": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_HOST" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+  };
+  "/tables/join": {
+    input: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_getByCode"]>[0], ["code"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "position": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>>, ["position"]>>;
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>[0], ["table"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_SEATED" | "INVALID_INPUT" | "NO_SUCH_TABLE" | "TABLE_FULL" | "UNKNOWN_SESSION" };
+  };
+  "/tables/leave": {
+    input: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+  };
+  "/tables/lobby": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": {
+        "tables": {
+          "code": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["code"]>>;
+          "host": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["host"]>>;
+          "seats": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
+            "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["position"]>>;
+          }[];
+          "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>>>, ["table"]>]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/tables/open": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["code"]>>;
+      "table": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>>, ["table"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_SEATED" | "CODE_IN_USE" | "INVALID_INPUT" | "INVALID_LENGTH" | "UNKNOWN_SESSION" };
+  };
 };
 
 export type HttpAppWideError = never;
@@ -52,7 +116,7 @@ export type DominaoWireHttp = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/guests/me": {
     input: {
@@ -73,5 +137,66 @@ export type DominaoWireHttp = {
       "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" };
+  };
+  "/tables/close": {
+    input: {
+      "table": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/tables/join": {
+    input: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_getByCode"]>[0], ["code"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "position": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>>, ["position"]>>;
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>[0], ["table"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/tables/leave": {
+    input: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
+    };
+    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/tables/lobby": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": {
+        "tables": {
+          "code": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["code"]>>;
+          "host": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["host"]>>;
+          "seats": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
+            "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["position"]>>;
+          }[];
+          "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>>>, ["table"]>]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/tables/open": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["code"]>>;
+      "table": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>>, ["table"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
 };

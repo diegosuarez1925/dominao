@@ -14,8 +14,21 @@
       <button>Play as guest</button>
     </form>
     <section id="welcome" hidden>
-      <p id="greeting"></p>
-      <button id="leave">Leave</button>
+      <p><span id="greeting"></span> <button id="leave">Leave</button></p>
+      <section id="home">
+        <button id="open">Create private table</button>
+        <form id="join">
+          <input name="code" placeholder="Join code" maxlength="6" required />
+          <button>Join table</button>
+        </form>
+      </section>
+      <section id="lobby" hidden>
+        <h2>Table <span id="code"></span></h2>
+        <p>Share this code with your friends. Seats 0 and 2 are partners, as are 1 and 3.</p>
+        <ol id="seats" start="0"></ol>
+        <button id="leaveTable">Leave table</button>
+        <button id="closeTable" hidden>Close table</button>
+      </section>
     </section>
     <p id="status"></p>
   </body>
