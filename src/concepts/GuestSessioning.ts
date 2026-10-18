@@ -1,6 +1,7 @@
-import type { Collection, Db } from "mongodb";
+import { MongoServerError, type Collection, type Db } from "mongodb";
 
 export class InvalidName extends Error {}
+export class TokenInUse extends Error {}
 export class UnknownSession extends Error {}
 
 interface Session {
@@ -24,17 +25,23 @@ export class GuestSessioningConcept {
     this.sessions = db.collection<Session>("guestSessioning.sessions");
   }
 
-  async start({ displayName }: { displayName: string }) {
+  async start({ displayName, token }: { displayName: string; token: string }) {
     const name = displayName.trim();
     if (name.length < 1 || name.length > 20) {
       throw new InvalidName("A display name must be 1 to 20 characters long.");
     }
     await this.#ensureIndex();
+    // The token's secrecy is the caller's job; this concept only keeps it unique.
     const session = crypto.randomUUID();
-    // Two UUIDs give 244 random bits, far too many to guess.
-    const token = (crypto.randomUUID() + crypto.randomUUID()).replaceAll("-", "");
-    await this.sessions.insertOne({ _id: session, token, displayName: name, lastSeen: this.clock() });
-    return { session, token };
+    try {
+      await this.sessions.insertOne({ _id: session, token, displayName: name, lastSeen: this.clock() });
+    } catch (error) {
+      if (error instanceof MongoServerError && error.code === 11000) {
+        throw new TokenInUse("That token already belongs to another session.");
+      }
+      throw error;
+    }
+    return { session };
   }
 
   async resume({ token }: { token: string }) {

@@ -59,3 +59,31 @@ tab, so one person can test a four-player table with four tabs.
 
 The page in `web/` is a throwaway plain-TypeScript page for trying sessions; the Vue
 frontend replaces it in step 4.
+
+### Step 1b: tokens come from CodeGenerating
+
+I had first let GuestSessioning make its own tokens. Reviewing it, I went back to
+the P1 design: CodeGenerating is a general concept for unique codes within a
+context, and the same concept will make table join codes in step 2. So:
+
+- **CodeGenerating** is implemented from the P1 spec. Codes are unique per context
+  (enforced by a unique MongoDB index, with a retry if two requests draw the same
+  code). They use `crypto.getRandomValues`, the same secure source as
+  `crypto.randomUUID`, over 32 easy-to-read symbols with no I, O, 0 or 1.
+- **GuestSessioning.start now takes the token** instead of making one, and only keeps
+  it unique.
+- **`/guests/start` chains the two P1 reactions**: generate a 32-character code in
+  the `SESSION_TOKENS` context, then start the session with it as the token. That is
+  160 random bits, far too many to guess.
+- **FreeTokenOnSessionEnd** (from P1) returns the token to CodeGenerating when a
+  session ends.
+
+Challenge: the endpoint hung until it timed out. The cause was in sync-engine 1.1.0
+itself: when it records an action it drops any input field named `length`, so the
+rule waiting for `generate(length: 32)` never matched. I renamed the input to
+`size`. P1's `_isAvailable` returns a Boolean; in the spec format that type is
+called `Flag`.
+
+Future work: if a guest submits a blank name, a token is generated before the name
+is refused and stays reserved. Tokens of sessions that expire (rather than being
+ended) also stay reserved. Neither does harm, given how many codes there are.

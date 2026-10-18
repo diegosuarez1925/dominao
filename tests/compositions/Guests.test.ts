@@ -34,6 +34,9 @@ test("a guest starts a session, is recognized by token, and leaves", async () =>
   const started = await call("/guests/start", { displayName: "Abuelo" });
   expect(started.status).toBe(200);
   const { session, token } = started.body;
+  expect(token).toMatch(/^[A-HJ-NP-Z2-9]{32}$/);
+  const tokenCodes = testDb.db.collection("codeGenerating.codes");
+  expect(await tokenCodes.countDocuments({ context: "SESSION_TOKENS", code: token })).toBe(1);
 
   expect(await call("/guests/me", { token })).toEqual({
     status: 200,
@@ -42,6 +45,8 @@ test("a guest starts a session, is recognized by token, and leaves", async () =>
 
   expect((await call("/guests/leave", { token })).body).toEqual({ session });
   expect((await call("/guests/me", { token })).status).toBe(401);
+  // FreeTokenOnSessionEnd gave the token back to CodeGenerating.
+  expect(await tokenCodes.countDocuments({ context: "SESSION_TOKENS", code: token })).toBe(0);
 });
 
 test("an empty name is a bad request, and a missing name is invalid input", async () => {

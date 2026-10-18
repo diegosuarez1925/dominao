@@ -8,14 +8,35 @@ _specifications and composition source, then regenerate this file._
 
 ## Concepts
 
+### CodeGenerating
+
+Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
+
+#### Actions
+
+- `generate(context: Context, size?: Number) : returns (code: String)`
+  - Refuses `INVALID_LENGTH`: A code must be a whole number of characters greater than 5.
+- `remove(context: Context, code: String) : returns (code: String)`
+  - Refuses `NO_SUCH_CODE`: That code is not in use in this context.
+
+#### Queries
+
+- `_isAvailable(context: Context, code: String) : one (available: Flag)`
+
+#### Instances
+
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 15.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 16.
+
 ### GuestSessioning
 
 Defined in [GuestSessioning](../design/concepts/GuestSessioning.md), line 1.
 
 #### Actions
 
-- `start(displayName: String) : returns (session: Session, token: String)`
+- `start(displayName: String, token: String) : returns (session: Session)`
   - Refuses `INVALID_NAME`: A display name must be 1 to 20 characters long.
+  - Refuses `TOKEN_IN_USE`: That token already belongs to another session.
 - `resume(token: String) : returns (session: Session, displayName: String)`
   - Refuses `UNKNOWN_SESSION`: This guest session is not active.
 - `end(token: String) : returns (session: Session)`
@@ -27,7 +48,13 @@ Defined in [GuestSessioning](../design/concepts/GuestSessioning.md), line 1.
 
 #### Instances
 
-- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 10.
+- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 18.
+
+## Application types
+
+Concrete types:
+
+- `CodeContext` — [Application types](../design/types.md), line 10.
 
 ## Reactions
 
@@ -51,11 +78,22 @@ then
   RequestBoundary.respond (error: message, requestId)
 ```
 
+### Guests.FreeTokenOnSessionEnd
+
+Authored path: `Guests.FreeTokenOnSessionEnd`.
+- Covered by [Guests](../design/compositions/Guests.md), line 23.
+
+```reaction
+when GuestSessioning.end (token, session)
+then
+  CodeGenerating.remove (code: token, context: "SESSION_TOKENS")
+```
+
 ### Guests.Leave
 
 Authored path: `Guests.Leave`.
-- Covered by [Guests](../design/compositions/Guests.md), line 13.
-- Covered by [Guests](../design/compositions/Guests.md), line 18.
+- Covered by [Guests](../design/compositions/Guests.md), line 15.
+- Covered by [Guests](../design/compositions/Guests.md), line 20.
 
 ```reaction
 when RequestBoundary.request (path: "/guests/leave", requestId, token)
@@ -66,8 +104,8 @@ then
 ### Guests.Leave#2
 
 Authored path: `Guests.Leave`.
-- Covered by [Guests](../design/compositions/Guests.md), line 13.
-- Covered by [Guests](../design/compositions/Guests.md), line 18.
+- Covered by [Guests](../design/compositions/Guests.md), line 15.
+- Covered by [Guests](../design/compositions/Guests.md), line 20.
 
 ```reaction
 when GuestSessioning.end (token, session), asked by Guests.Leave
@@ -80,8 +118,8 @@ then
 ### Guests.Me
 
 Authored path: `Guests.Me`.
-- Covered by [Guests](../design/compositions/Guests.md), line 12.
-- Covered by [Guests](../design/compositions/Guests.md), line 17.
+- Covered by [Guests](../design/compositions/Guests.md), line 14.
+- Covered by [Guests](../design/compositions/Guests.md), line 19.
 
 ```reaction
 when RequestBoundary.request (path: "/guests/me", requestId, token)
@@ -92,8 +130,8 @@ then
 ### Guests.Me#2
 
 Authored path: `Guests.Me`.
-- Covered by [Guests](../design/compositions/Guests.md), line 12.
-- Covered by [Guests](../design/compositions/Guests.md), line 17.
+- Covered by [Guests](../design/compositions/Guests.md), line 14.
+- Covered by [Guests](../design/compositions/Guests.md), line 19.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Guests.Me
@@ -107,26 +145,40 @@ then
 
 Authored path: `Guests.Start`.
 - Covered by [Guests](../design/compositions/Guests.md), line 3.
-- Covered by [Guests](../design/compositions/Guests.md), line 8.
+- Covered by [Guests](../design/compositions/Guests.md), line 10.
 
 ```reaction
 when RequestBoundary.request (displayName, path: "/guests/start", requestId)
 then
-  GuestSessioning.start (displayName)
+  CodeGenerating.generate (context: "SESSION_TOKENS", size: 32)
 ```
 
 ### Guests.Start#2
 
 Authored path: `Guests.Start`.
 - Covered by [Guests](../design/compositions/Guests.md), line 3.
-- Covered by [Guests](../design/compositions/Guests.md), line 8.
+- Covered by [Guests](../design/compositions/Guests.md), line 10.
 
 ```reaction
-when GuestSessioning.start (displayName, session, token), asked by Guests.Start
+when CodeGenerating.generate (context: "SESSION_TOKENS", size: 32, code), asked by Guests.Start
 where
   earlier, RequestBoundary.request (displayName, path: "/guests/start", requestId)
 then
-  RequestBoundary.respond (requestId, session, token)
+  GuestSessioning.start (displayName, token: code)
+```
+
+### Guests.Start#3
+
+Authored path: `Guests.Start`.
+- Covered by [Guests](../design/compositions/Guests.md), line 3.
+- Covered by [Guests](../design/compositions/Guests.md), line 10.
+
+```reaction
+when GuestSessioning.start (displayName, token: code, session), asked by Guests.Start#2
+where
+  earlier, RequestBoundary.request (displayName, path: "/guests/start", requestId)
+then
+  RequestBoundary.respond (requestId, session, token: code)
 ```
 
 ## Endpoint input contracts

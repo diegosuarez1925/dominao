@@ -18,7 +18,7 @@ export type DominaoWire = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "NO_SUCH_CODE" | "UNKNOWN_SESSION" };
   };
   "/guests/me": {
     input: {
@@ -36,9 +36,9 @@ export type DominaoWire = {
     };
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["session"]>>;
-      "token": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_NAME" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_NAME" | "TOKEN_IN_USE" };
   };
 };
 
@@ -52,7 +52,7 @@ export type DominaoWireHttp = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/guests/me": {
     input: {
@@ -70,8 +70,8 @@ export type DominaoWireHttp = {
     };
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["session"]>>;
-      "token": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" };
   };
 };

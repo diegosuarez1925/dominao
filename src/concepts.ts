@@ -1,12 +1,28 @@
 import { conceptSet, registerConcept } from "@mit-sdg/sync-engine/assembly";
+import codeGeneratingSpec from "@design/concepts/CodeGenerating.md" with { type: "text" };
 import guestSessioningSpec from "@design/concepts/GuestSessioning.md" with { type: "text" };
-import { GuestSessioningConcept, InvalidName, UnknownSession } from "./concepts/GuestSessioning.ts";
+import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
+import {
+  GuestSessioningConcept,
+  InvalidName,
+  TokenInUse,
+  UnknownSession,
+} from "./concepts/GuestSessioning.ts";
+
+const codeGenerating = registerConcept({
+  class: CodeGeneratingConcept,
+  spec: codeGeneratingSpec,
+  refusals: { INVALID_LENGTH: InvalidLength, NO_SUCH_CODE: NoSuchCode },
+});
 
 const guestSessioning = registerConcept({
   class: GuestSessioningConcept,
   spec: guestSessioningSpec,
-  refusals: { INVALID_NAME: InvalidName, UNKNOWN_SESSION: UnknownSession },
+  refusals: { INVALID_NAME: InvalidName, TOKEN_IN_USE: TokenInUse, UNKNOWN_SESSION: UnknownSession },
 });
 
-export const applicationConceptSet = conceptSet({ GuestSessioning: guestSessioning });
+export const applicationConceptSet = conceptSet({
+  CodeGenerating: codeGenerating,
+  GuestSessioning: guestSessioning,
+});
 export const { concepts } = applicationConceptSet;

@@ -1,8 +1,10 @@
 # Guests
 
 Nobody signs up for DOMINAO. A visitor [starts a guest session](reaction:Guests.Start)
-by typing a display name, and gets back the session (which other players will see
-as their identity at a table) and a secret token that their browser keeps.
+by typing a display name. The app asks CodeGenerating for a 32-character code in the
+session-token context and starts the session with that code as its secret token.
+The visitor gets back the session (which other players will see as their identity
+at a table) and the token, which their browser keeps.
 
 ```endpoints
 Guests.Start at /guests/start
@@ -17,3 +19,6 @@ which ends the session at once.
 Guests.Me at /guests/me
 Guests.Leave at /guests/leave
 ```
+
+However a session ends, [its token is freed](reaction:Guests.FreeTokenOnSessionEnd)
+in the session-token context, so CodeGenerating only holds tokens that are in use.
