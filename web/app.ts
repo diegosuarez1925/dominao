@@ -1,42 +1,54 @@
+// A temporary page for trying guest sessions. The Vue frontend replaces it later.
 import { createHttpClient } from "@mit-sdg/sync-engine-http/client";
-import type { ReservationsWireHttp } from "../generated/wire.ts";
+import type { DominaoWireHttp } from "../generated/wire.ts";
 
-const client = createHttpClient<ReservationsWireHttp>({ baseUrl: "/api" });
+const client = createHttpClient<DominaoWireHttp>({ baseUrl: "/api" });
 
-const form = document.querySelector<HTMLFormElement>("#reserve")!;
+// sessionStorage is per tab, so four tabs can be four different players.
+const TOKEN_KEY = "dominao.token";
+
+const startForm = document.querySelector<HTMLFormElement>("#start")!;
+const welcome = document.querySelector<HTMLElement>("#welcome")!;
+const greeting = document.querySelector<HTMLElement>("#greeting")!;
+const leaveButton = document.querySelector<HTMLButtonElement>("#leave")!;
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
-const list = document.querySelector<HTMLUListElement>("#reservations")!;
 
-async function showReservations() {
-  const result = await client.reservations.list({});
-  if ("error" in result) {
-    status.textContent = `Could not load reservations: ${result.error}`;
-    return;
-  }
-  list.replaceChildren(
-    ...result.book.reservations.map(({ reservation, user, resource }) => {
-      const cancel = document.createElement("button");
-      cancel.textContent = "Cancel";
-      cancel.addEventListener("click", async () => {
-        await client.reservations.cancel({ reservation });
-        await showReservations();
-      });
-      const item = document.createElement("li");
-      item.append(`${resource}, reserved by ${user} `, cancel);
-      return item;
-    }),
-  );
+function show(displayName: string | null) {
+  startForm.hidden = displayName !== null;
+  welcome.hidden = displayName === null;
+  greeting.textContent = displayName === null ? "" : `¡Hola, ${displayName}!`;
 }
 
-form.addEventListener("submit", async (event) => {
+async function resume() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if (token === null) return show(null);
+  const result = await client.guests.me({ token });
+  if ("error" in result) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    status.textContent = "Your guest session expired. Pick a name to play again.";
+    return show(null);
+  }
+  show(result.displayName);
+}
+
+startForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = new FormData(form);
-  const result = await client.reservations.reserve({
-    user: String(data.get("user")),
-    resource: String(data.get("resource")),
-  });
-  status.textContent = "error" in result ? `Could not reserve: ${result.error}` : "Reserved!";
-  await showReservations();
+  const displayName = String(new FormData(startForm).get("displayName"));
+  const result = await client.guests.start({ displayName });
+  if ("error" in result) {
+    status.textContent = "A name must be 1 to 20 characters long.";
+    return;
+  }
+  sessionStorage.setItem(TOKEN_KEY, result.token);
+  status.textContent = "";
+  await resume();
 });
 
-showReservations();
+leaveButton.addEventListener("click", async () => {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if (token !== null) await client.guests.leave({ token });
+  sessionStorage.removeItem(TOKEN_KEY);
+  show(null);
+});
+
+resume();

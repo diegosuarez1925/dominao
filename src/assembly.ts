@@ -1,14 +1,16 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
-import { composition } from "./compositions/Reservations.ts";
-import { ReservingConcept } from "./concepts/Reserving.ts";
+import type { Db } from "mongodb";
+import { composition as guests } from "./compositions/Guests.ts";
+import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { db } from "./db.ts";
 
-export function assembleApplication() {
+// Tests pass their own database; the app uses the one in .env.
+export function assembleApplication(database: Db = db) {
   return assemble({
     conceptSet: applicationConceptSet,
-    instances: { Reserving: new ReservingConcept(db) },
-    composition: { Reservations: composition },
+    instances: { GuestSessioning: new GuestSessioningConcept(database) },
+    composition: { Guests: guests },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.
     rawFaultReporter: ({ error }) => console.error(error),
   });
