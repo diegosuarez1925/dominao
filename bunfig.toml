@@ -1,0 +1,4 @@
+# Bun's bundler builds the page when web/server.ts serves index.html; this plugin
+# lets it compile Vue single-file components.
+[serve.static]
+plugins = ["./web/vue-plugin.ts"]

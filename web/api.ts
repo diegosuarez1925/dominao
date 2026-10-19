@@ -1,0 +1,15 @@
+// The typed client for the backend's endpoints, and the shapes of what they answer.
+import { createHttpClient } from "@mit-sdg/sync-engine-http/client";
+import type { DominaoWireHttp } from "../generated/wire.ts";
+
+export const client = createHttpClient<DominaoWireHttp>({ baseUrl: "/api" });
+
+type Client = typeof client;
+type Answer<T> = Exclude<Awaited<T>, { error: unknown }>;
+
+/** The guest's table as the lobby shows it: code, host and who sits where. */
+export type Table = Answer<ReturnType<Client["tables"]["lobby"]>>["lobby"]["tables"][number];
+/** The game as this guest sees it: scores, board, their own hand, the log, and so on. */
+export type Game = Answer<ReturnType<Client["games"]["view"]>>["view"]["games"][number];
+export type BoardTile = Game["board"][number];
+export type Side = "LEFT" | "RIGHT";

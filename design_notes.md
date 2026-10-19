@@ -203,3 +203,25 @@ line once it gets long.
 - The log is shown under the hand, grouped by match, newest last, with skips greyed.
 
 Future work: doubles drawn crosswise, as on a real table.
+
+### Step 4: the Vue frontend
+
+Asked for: replace the temporary page with Vue, keeping everything it did.
+
+- **How Vue is built.** The starter serves the page with `bun web/server.ts`, whose
+  bundler builds `index.html` on the fly. Rather than bring in a second build tool
+  (Vite), a small Bun plugin (`web/vue-plugin.ts`, registered in `bunfig.toml`) compiles
+  single-file components with Vue's own `compiler-sfc`. `bun run dev`, `bun run start`
+  and the container all work as before.
+- **Components** use the Composition API with `<script setup>`, as in the Vue prep:
+  `App` picks the screen; `NameForm`, `HomeScreen` and `TableLobby` cover joining;
+  `GameScreen` holds the scores, players, `GameBoard`, `PlayerHand` and `MoveLog`;
+  `DominoTile` draws one domino. Each keeps its own scoped styles.
+- **One place talks to the backend.** `web/session.ts` holds the tab's state (guest,
+  table, game, message) and every action; `web/api.ts` has the typed client and the
+  response types taken from the generated wire, so a backend change that breaks the
+  page shows up in `bun run check`. The snake layout moved to `web/board.ts`.
+- **Polling stays** at every 2 seconds. The game is only replaced when it changed, and
+  Vue's keyed lists keep hand buttons in place, so clicks are not lost to a redraw.
+- `.vue` files are not type-checked by `tsc` (that would need `vue-tsc`); the logic
+  they use lives in the typed `.ts` files for that reason.
