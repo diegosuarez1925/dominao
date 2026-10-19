@@ -129,3 +129,51 @@ the stylesheet's `display: flex` overrode the `hidden` attribute; fixed in CSS.
 
 Future work: a join code that is generated for a guest who is already seated stays
 reserved, like the blank-name token in step 1b.
+
+### Step 3: the domino game
+
+P1 had no concept for the game itself, so this step adds **DominoPlaying**, written
+from the rules as I play them:
+
+- Games are to 200 points, in two teams of partners sitting across from each other.
+- Each match deals 7 random tiles of the double-six set to each player. In the first
+  match, whoever holds the double six plays it at once; later matches are opened, with
+  any tile, by the previous match's winner.
+- On their turn a player must play a tile matching one end of the line; its other
+  number becomes the new end. A player with no such tile is skipped automatically,
+  and nobody can pass by choice (there is no pass action at all).
+- A **domino** (a player runs out of tiles) scores the pips in the other three hands
+  for that player's team.
+- A **tranque** (nobody can play) scores all the pips in the four hands for the team
+  whose two hands hold fewer pips; the next match is started by that team's player
+  who comes first in the match's turn order.
+
+Decisions I had to make where the rules were silent:
+
+- **Turn order is seat order** (seat 0, 1, 2, 3, then 0 again), and counterclockwise
+  is simply the direction the seats are numbered. Seats 0 and 2 are partners.
+- **"Earliest in turn order" in a tranque** is counted from the player who started
+  that match.
+- **A tied tranque** scores nothing, and the same player starts the next match.
+- **The player picks the end.** `play` takes `side` (LEFT or RIGHT); the page only
+  asks when a tile fits two different ends.
+
+Design:
+
+- DominoPlaying is independent of tables: a game is played at a `Place` by four
+  `Player`s given in turn order. The app binds Place to Table and Player to a guest
+  session, and the start endpoint passes the table's seats 0 to 3 in order.
+- Table stays game-free. It only gained a generic `_isFull` query, so the start
+  endpoint can say "the table is not full" instead of timing out.
+- Starting needs the host of a full table. Anyone getting up from the table (or the
+  host closing it) **abandons** the game, since it cannot go on with three players.
+- Each player's view of the game (a former) includes only their own hand.
+- The concept takes a shuffle function, so tests can deal known hands; tests also
+  set up exact positions to check domino, tranque, tie and game-over scoring, and
+  play 15 random games to the end checking that no tile is ever lost.
+
+Challenge: the page redraws every 2 seconds, and a redraw could remove a tile button
+just as it was being clicked. It now redraws only when the game actually changed.
+
+Future work: Matchmaking (public games), the real Vue frontend, showing the board as
+a proper line of dominoes, and letting the host change the target score.

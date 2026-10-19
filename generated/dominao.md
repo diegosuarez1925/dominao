@@ -25,8 +25,43 @@ Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
 
 #### Instances
 
-- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 16.
-  - `Context` is `CodeContext` — [Application types](../design/types.md), line 17.
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 19.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 20.
+
+### DominoPlaying
+
+Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
+
+#### Actions
+
+- `start(place: Place, first: Player, second: Player, third: Player, fourth: Player) : returns (game: Game)`
+  - Refuses `DUPLICATE_PLAYER`: A game needs four different players.
+  - Refuses `GAME_IN_PROGRESS`: A game is already being played there.
+- `play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)`
+  - Refuses `NO_SUCH_GAME`: There is no such game.
+  - Refuses `GAME_NOT_ACTIVE`: That game is over.
+  - Refuses `NOT_YOUR_TURN`: It is not your turn.
+  - Refuses `NOT_IN_HAND`: That tile is not in your hand.
+  - Refuses `ILLEGAL_PLAY`: That tile does not match that end of the board.
+- `abandon(game: Game) : returns (game: Game)`
+  - Refuses `NO_SUCH_GAME`: There is no such game.
+  - Refuses `GAME_NOT_ACTIVE`: That game is over.
+
+#### Queries
+
+- `_activeAt(place: Place) : optional (game: Game)`
+- `_latestAt(place: Place) : optional (game: Game)`
+- `_summary(game: Game) : optional (status: Status, target: Number, matchNumber: Number, scoreA: Number, scoreB: Number, turnPlayer: Player)`
+- `_players(game: Game) : many (position: Number, player: Player, tileCount: Number)`
+- `_hand(game: Game, player: Player) : many (tile: Tile)`
+- `_board(game: Game) : many (tile: Tile, left: Number, right: Number)`
+- `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, ending: Ending)`
+
+#### Instances
+
+- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 22.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 24.
+  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 23.
 
 ### GuestSessioning
 
@@ -48,7 +83,7 @@ Defined in [GuestSessioning](../design/concepts/GuestSessioning.md), line 1.
 
 #### Instances
 
-- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 19.
+- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 26.
 
 ### Table
 
@@ -73,23 +108,67 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 - `_getByCode(code: String) : optional (table: Table)`
 - `_get(table: Table) : optional (host: Player, code: String)`
 - `_seats(table: Table) : many (position: Number, player: Player)`
+- `_isFull(table: Table) : one (full: Flag)`
 - `_tableOf(player: Player) : optional (table: Table)`
 
 #### Instances
 
-- `Table` — instance of `Table` — [Application types](../design/types.md), line 21.
-  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 22.
+- `Table` — instance of `Table` — [Application types](../design/types.md), line 28.
+  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 29.
 
 ## Application types
 
 Concrete types:
 
-- `CodeContext` — [Application types](../design/types.md), line 10.
+- `CodeContext` — [Application types](../design/types.md), line 13.
 
 ## Formers
 
 _Formers name result shapes evaluated when asked. The source former owns_
 _the authored explanation; this section records the generated shape._
+
+### the game seen by (session)
+
+Authored path: `Games.GameView`.
+- Covered by [Games](../design/compositions/Games.md), line 26.
+
+```former
+Former "the game seen by (session)" — inputs (session); bindings (table, game, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, position, player, tileCount, displayName, resultMatch, winner, team, points, ending); promises exactly one record — forms:
+  a record of
+    games: each Table._tableOf (player: session) has (table)
+      where DominoPlaying._latestAt (place: table) has (game)
+      where DominoPlaying._summary (game) has (matchNumber, scoreA, scoreB, status, target, turnPlayer)
+      form a record of
+        board: each DominoPlaying._board (game) has (left, right, tile: boardTile)
+          form a record of
+            left
+            right
+            tile: boardTile
+        game
+        hand: each DominoPlaying._hand (game, player: session) has (tile)
+          form a record of
+            tile
+        lastResult: each DominoPlaying._lastResult (game) has (ending, matchNumber: resultMatch, points, team, winner)
+          form a record of
+            ending
+            matchNumber: resultMatch
+            points
+            team
+            winner
+        matchNumber
+        players: each DominoPlaying._players (game) has (player, position, tileCount)
+          where GuestSessioning._getName (session: player) has (displayName)
+          form a record of
+            displayName
+            player
+            position
+            tileCount
+        scoreA
+        scoreB
+        status
+        target
+        turnPlayer
+```
 
 ### the lobby of (session)
 
@@ -133,6 +212,192 @@ where
   earlier, RequestBoundary.request (requestId)
 then
   RequestBoundary.respond (error: message, requestId)
+```
+
+### Games.AbandonGameWhenPlayerLeaves
+
+Authored path: `Games.AbandonGameWhenPlayerLeaves`.
+- Covered by [Games](../design/compositions/Games.md), line 35.
+
+```reaction
+when Table.leave (table)
+where
+  DominoPlaying._activeAt (place: table) has (game)
+then
+  DominoPlaying.abandon (game)
+```
+
+### Games.AbandonGameWhenTableCloses
+
+Authored path: `Games.AbandonGameWhenTableCloses`.
+- Covered by [Games](../design/compositions/Games.md), line 36.
+
+```reaction
+when Table.close (table, code)
+where
+  DominoPlaying._activeAt (place: table) has (game)
+then
+  DominoPlaying.abandon (game)
+```
+
+### Games.Play
+
+Authored path: `Games.Play`.
+- Covered by [Games](../design/compositions/Games.md), line 16.
+- Covered by [Games](../design/compositions/Games.md), line 22.
+
+```reaction
+when RequestBoundary.request (game, path: "/games/play", requestId, side, tile, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Games.Play#2
+
+Authored path: `Games.Play`.
+- Covered by [Games](../design/compositions/Games.md), line 16.
+- Covered by [Games](../design/compositions/Games.md), line 22.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.Play
+where
+  earlier, RequestBoundary.request (game, path: "/games/play", requestId, side, tile, token)
+then
+  DominoPlaying.play (game, player: session, side, tile)
+```
+
+### Games.Play#3
+
+Authored path: `Games.Play`.
+- Covered by [Games](../design/compositions/Games.md), line 16.
+- Covered by [Games](../design/compositions/Games.md), line 22.
+
+```reaction
+when DominoPlaying.play (game, player: session, side, tile), asked by Games.Play#2
+where
+  earlier, RequestBoundary.request (game, path: "/games/play", requestId, side, tile, token)
+then
+  RequestBoundary.respond (game, requestId)
+```
+
+### Games.StartGame
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when RequestBoundary.request (path: "/games/start", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Games.StartGame:host-of-full-table#2
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
+where
+  Table._tableOf (player: session) has (table)
+  Table._get (table) has (host: session)
+  Table._isFull (table) has (full: true)
+  Table._seats (table) has (player: first, position: 0)
+  Table._seats (table) has (player: second, position: 1)
+  Table._seats (table) has (player: third, position: 2)
+  Table._seats (table) has (player: fourth, position: 3)
+then
+  DominoPlaying.start (first, fourth, place: table, second, third)
+```
+
+### Games.StartGame:host-of-full-table#3
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when DominoPlaying.start (first, fourth, place: table, second, third, game), asked by Games.StartGame:host-of-full-table#2
+where
+  earlier, RequestBoundary.request (path: "/games/start", requestId, token)
+then
+  RequestBoundary.respond (game, requestId)
+```
+
+### Games.StartGame:not-host#2
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
+where
+  Table._tableOf (player: session) has (table)
+  no Table._get (table) has (host: session)
+  earlier, RequestBoundary.request (path: "/games/start", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_HOST", requestId)
+```
+
+### Games.StartGame:not-seated#2
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
+where
+  no Table._tableOf (player: session)
+  earlier, RequestBoundary.request (path: "/games/start", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_SEATED", requestId)
+```
+
+### Games.StartGame:table-not-full#2
+
+Authored path: `Games.StartGame`.
+- Covered by [Games](../design/compositions/Games.md), line 8.
+- Covered by [Games](../design/compositions/Games.md), line 13.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
+where
+  Table._tableOf (player: session) has (table)
+  Table._get (table) has (host: session)
+  Table._isFull (table) has (full: false)
+  earlier, RequestBoundary.request (path: "/games/start", requestId, token)
+then
+  RequestBoundary.respond (error: "TABLE_NOT_FULL", requestId)
+```
+
+### Games.ViewGame
+
+Authored path: `Games.ViewGame`.
+- Covered by [Games](../design/compositions/Games.md), line 25.
+- Covered by [Games](../design/compositions/Games.md), line 31.
+
+```reaction
+when RequestBoundary.request (path: "/games/view", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Games.ViewGame#2
+
+Authored path: `Games.ViewGame`.
+- Covered by [Games](../design/compositions/Games.md), line 25.
+- Covered by [Games](../design/compositions/Games.md), line 31.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Games.ViewGame
+where
+  earlier, RequestBoundary.request (path: "/games/view", requestId, token)
+then
+  RequestBoundary.respond (requestId, view: former "the game seen by (session)" with (session))
 ```
 
 ### Guests.FreeTokenOnSessionEnd
@@ -512,6 +777,9 @@ object or lacks a required key. The response uses `INVALID_INPUT` and names
 the path or missing key. A declared default fills an absent key. Endpoints
 not listed here have no explicit input contract.
 
+- `/games/play` — requires `token`, `game`, `tile`, `side`
+- `/games/start` — requires `token`
+- `/games/view` — requires `token`
 - `/guests/leave` — requires `token`
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`

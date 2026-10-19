@@ -17,3 +17,36 @@ li {
 [hidden] {
   display: none !important;
 }
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-height: 2.5rem;
+}
+
+/* A domino: two numbers side by side, split by a line. */
+.tile {
+  display: inline-flex;
+  border: 2px solid #222;
+  border-radius: 0.4rem;
+  background: #fffdf5;
+  font: bold 1.1rem ui-monospace, monospace;
+  padding: 0;
+}
+
+.tile span {
+  padding: 0.3rem 0.5rem;
+}
+
+.tile span + span {
+  border-left: 2px solid #222;
+}
+
+button.tile:disabled {
+  opacity: 0.4;
+}
+
+.current {
+  font-weight: bold;
+}

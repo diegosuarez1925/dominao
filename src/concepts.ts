@@ -1,8 +1,19 @@
 import { conceptSet, registerConcept } from "@mit-sdg/sync-engine/assembly";
 import codeGeneratingSpec from "@design/concepts/CodeGenerating.md" with { type: "text" };
+import dominoPlayingSpec from "@design/concepts/DominoPlaying.md" with { type: "text" };
 import guestSessioningSpec from "@design/concepts/GuestSessioning.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
+import {
+  DominoPlayingConcept,
+  DuplicatePlayer,
+  GameInProgress,
+  GameNotActive,
+  IllegalPlay,
+  NoSuchGame,
+  NotInHand,
+  NotYourTurn,
+} from "./concepts/DominoPlaying.ts";
 import {
   GuestSessioningConcept,
   InvalidName,
@@ -22,6 +33,20 @@ const codeGenerating = registerConcept({
   class: CodeGeneratingConcept,
   spec: codeGeneratingSpec,
   refusals: { INVALID_LENGTH: InvalidLength, NO_SUCH_CODE: NoSuchCode },
+});
+
+const dominoPlaying = registerConcept({
+  class: DominoPlayingConcept,
+  spec: dominoPlayingSpec,
+  refusals: {
+    DUPLICATE_PLAYER: DuplicatePlayer,
+    GAME_IN_PROGRESS: GameInProgress,
+    NO_SUCH_GAME: NoSuchGame,
+    GAME_NOT_ACTIVE: GameNotActive,
+    NOT_YOUR_TURN: NotYourTurn,
+    NOT_IN_HAND: NotInHand,
+    ILLEGAL_PLAY: IllegalPlay,
+  },
 });
 
 const guestSessioning = registerConcept({
@@ -44,6 +69,7 @@ const table = registerConcept({
 
 export const applicationConceptSet = conceptSet({
   CodeGenerating: codeGenerating,
+  DominoPlaying: dominoPlaying,
   GuestSessioning: guestSessioning,
   Table: table,
 });

@@ -17,3 +17,11 @@ export function strings(...fields: string[]): EndpointValidator {
       ? { ok: true }
       : { ok: false, detail: `${fields.join(", ")} must be strings` };
 }
+
+/** Like another validator, but also requires the field to be LEFT or RIGHT. */
+export function sides(field: string, rest: EndpointValidator): EndpointValidator {
+  return (value) =>
+    record(value) && (value[field] === "LEFT" || value[field] === "RIGHT")
+      ? rest(value)
+      : { ok: false, detail: `${field} must be LEFT or RIGHT` };
+}

@@ -101,6 +101,10 @@ _seats(table: Table) : many (position: Number, player: Player)
   Answers every seat at the table in order of position, and no rows when nobody sits
   there or the table does not exist.
 
+_isFull(table: Table) : one (full: Flag)
+  Answers true when all four positions at the table are taken, and false otherwise,
+  including when the table does not exist.
+
 _tableOf(player: Player) : optional (table: Table)
   Answers the table where the player sits, and no row when they sit nowhere.
 ```

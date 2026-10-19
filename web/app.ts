@@ -1,4 +1,4 @@
-// A temporary page for trying guest sessions and tables. The Vue frontend replaces it later.
+// A temporary page for trying guest sessions, tables and games. The Vue frontend replaces it later.
 import { createHttpClient } from "@mit-sdg/sync-engine-http/client";
 import type { DominaoWireHttp } from "../generated/wire.ts";
 
@@ -6,7 +6,7 @@ const client = createHttpClient<DominaoWireHttp>({ baseUrl: "/api" });
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
-const LOBBY_REFRESH_MS = 2000;
+const REFRESH_MS = 2000;
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const startForm = $<HTMLFormElement>("#start");
@@ -18,10 +18,18 @@ const joinForm = $<HTMLFormElement>("#join");
 const codeLabel = $("#code");
 const seatList = $<HTMLOListElement>("#seats");
 const closeButton = $<HTMLButtonElement>("#closeTable");
+const startButton = $<HTMLButtonElement>("#startGame");
+const gameSection = $("#game");
+const chooseSide = $("#chooseSide");
 const status = $<HTMLParagraphElement>("#status");
 
 let me: { session: string; token: string } | null = null;
 let currentTable: string | null = null;
+let currentGame: string | null = null;
+/** A tile that fits both ends, waiting for the player to pick a side. */
+let pendingTile: string | null = null;
+/** The game as last drawn; redrawing only on change keeps buttons from vanishing under a click. */
+let drawnGame = "";
 
 function say(message: string) {
   status.textContent = message;
@@ -42,7 +50,12 @@ async function resume() {
   }
   startForm.hidden = me !== null;
   welcome.hidden = me === null;
-  if (me !== null) await refreshLobby();
+  if (me !== null) await refreshAll();
+}
+
+async function refreshAll() {
+  await refreshLobby();
+  await refreshGame();
 }
 
 async function refreshLobby() {
@@ -56,6 +69,7 @@ async function refreshLobby() {
   if (table === undefined) return;
   codeLabel.textContent = table.code;
   closeButton.hidden = table.host !== me.session;
+  startButton.hidden = table.host !== me.session || table.seats.length < 4;
   seatList.replaceChildren(
     ...[0, 1, 2, 3].map((position) => {
       const seat = table.seats.find((s) => s.position === position);
@@ -67,6 +81,108 @@ async function refreshLobby() {
     }),
   );
 }
+
+/** Draws a domino with its left and right numbers. */
+function domino<T extends HTMLElement>(left: number, right: number, element: T): T {
+  element.className = "tile";
+  const a = document.createElement("span");
+  const b = document.createElement("span");
+  a.textContent = String(left);
+  b.textContent = String(right);
+  element.replaceChildren(a, b);
+  return element;
+}
+
+async function refreshGame() {
+  if (me === null) return;
+  const result = await client.games.view({ token: me.token });
+  if ("error" in result) return;
+  const game = result.view.games[0];
+  // A game is shown while it is being played, or after it ends until a new one starts.
+  gameSection.hidden = game === undefined;
+  currentGame = game?.status === "ACTIVE" ? game.game : null;
+  if (currentGame !== null) startButton.hidden = true;
+  if (game === undefined || JSON.stringify(game) === drawnGame) return;
+  drawnGame = JSON.stringify(game);
+
+  const name = (session: string) => game.players.find((p) => p.player === session)?.displayName ?? "?";
+  const team = (seat: number) =>
+    game.players.filter((p) => p.position % 2 === seat % 2).map((p) => p.displayName).join(" & ");
+  $("#scores").textContent =
+    `${team(0)}: ${game.scoreA} · ${team(1)}: ${game.scoreB} · first to ${game.target} · match ${game.matchNumber}`;
+
+  const last = game.lastResult[0];
+  let message = "";
+  if (last !== undefined) {
+    const how = last.ending === "DOMINO" ? `${name(last.winner)} played their last tile` : "Tranque! Nobody could play";
+    message =
+      last.team === -1
+        ? `Match ${last.matchNumber}: ${how}, and it was a tie, so nobody scores.`
+        : `Match ${last.matchNumber}: ${how}. ${team(last.team)} score ${last.points}.`;
+  }
+  if (game.status === "FINISHED") message += ` ${team(game.scoreA >= game.target ? 0 : 1)} win the game!`;
+  if (game.status === "ABANDONED") message = "This game was stopped because a player left the table.";
+  $("#result").textContent = message;
+
+  $("#players").replaceChildren(
+    ...game.players.map((p) => {
+      const item = document.createElement("li");
+      item.textContent = `${p.displayName}${p.player === me!.session ? " (you)" : ""}: ${p.tileCount} tiles`;
+      if (game.status === "ACTIVE" && p.player === game.turnPlayer) {
+        item.textContent += " ← playing";
+        item.className = "current";
+      }
+      return item;
+    }),
+  );
+
+  $("#board").replaceChildren(...game.board.map((t) => domino(t.left, t.right, document.createElement("span"))));
+
+  const myTurn = game.status === "ACTIVE" && game.turnPlayer === me.session;
+  $("#turn").textContent = myTurn ? "Your turn: pick a tile that matches an end." : "";
+  const left = game.board[0]?.left;
+  const right = game.board.at(-1)?.right;
+  $("#hand").replaceChildren(
+    ...game.hand.map(({ tile }) => {
+      const [a, b] = tile.split("-").map(Number);
+      const fitsLeft = left === undefined || a === left || b === left;
+      const fitsRight = right !== undefined && (a === right || b === right);
+      const button = domino(a, b, document.createElement("button"));
+      button.disabled = !myTurn || !(fitsLeft || fitsRight);
+      button.addEventListener("click", () => {
+        // Ask for a side only when the tile fits two different ends.
+        if (fitsLeft && fitsRight && left !== right) {
+          pendingTile = tile;
+          $("#chosenTile").textContent = tile.replace("-", "|");
+          chooseSide.hidden = false;
+        } else {
+          play(tile, fitsLeft ? "LEFT" : "RIGHT");
+        }
+      });
+      return button;
+    }),
+  );
+  if (!myTurn) chooseSide.hidden = true;
+}
+
+async function play(tile: string, side: "LEFT" | "RIGHT") {
+  if (me === null || currentGame === null) return;
+  chooseSide.hidden = true;
+  pendingTile = null;
+  const result = await client.games.play({ token: me.token, game: currentGame, tile, side });
+  say("error" in result ? `That move was not allowed (${result.error}).` : "");
+  await refreshGame();
+}
+
+$("#playLeft").addEventListener("click", () => pendingTile && play(pendingTile, "LEFT"));
+$("#playRight").addEventListener("click", () => pendingTile && play(pendingTile, "RIGHT"));
+
+startButton.addEventListener("click", async () => {
+  if (me === null) return;
+  const result = await client.games.start({ token: me.token });
+  say("error" in result ? `Could not start the game (${result.error}).` : "");
+  await refreshGame();
+});
 
 startForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -89,7 +205,7 @@ $("#open").addEventListener("click", async () => {
   if (me === null) return;
   const result = await client.tables.open({ token: me.token });
   say("error" in result ? `Could not open a table: ${result.error}` : "");
-  await refreshLobby();
+  await refreshAll();
 });
 
 joinForm.addEventListener("submit", async (event) => {
@@ -99,21 +215,21 @@ joinForm.addEventListener("submit", async (event) => {
   const result = await client.tables.join({ token: me.token, code });
   const reasons: Record<string, string> = { NOT_FOUND: "No table has that code.", CONFLICT: "That table is full." };
   say("error" in result ? (reasons[result.error] ?? `Could not join: ${result.error}`) : "");
-  await refreshLobby();
+  await refreshAll();
 });
 
 $("#leaveTable").addEventListener("click", async () => {
   if (me === null || currentTable === null) return;
   await client.tables.leave({ token: me.token, table: currentTable });
-  await refreshLobby();
+  await refreshAll();
 });
 
 closeButton.addEventListener("click", async () => {
   if (me === null || currentTable === null) return;
   await client.tables.close({ token: me.token, table: currentTable });
-  await refreshLobby();
+  await refreshAll();
 });
 
-// Other players join and leave in their own tabs, so keep checking the lobby.
-setInterval(refreshLobby, LOBBY_REFRESH_MS);
+// Other players join, leave and play in their own tabs, so keep checking.
+setInterval(refreshAll, REFRESH_MS);
 resume();

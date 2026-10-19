@@ -113,6 +113,10 @@ export class TableConcept {
     return rows.map(({ position, player }) => ({ position, player }));
   }
 
+  async _isFull({ table }: { table: string }) {
+    return { full: (await this.seats.countDocuments({ table })) === SEATS_PER_TABLE };
+  }
+
   async _tableOf({ player }: { player: string }) {
     const seat = await this.seats.findOne({ player });
     return seat === null ? [] : [{ table: seat.table }];

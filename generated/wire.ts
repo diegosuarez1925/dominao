@@ -14,6 +14,67 @@ export type Json = null | boolean | number | string | Json[] | { [key: string]: 
 export type AppWideError = never;
 
 export type DominaoWire = {
+  "/games/play": {
+    input: {
+      "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>>;
+      "side": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["side"]>>;
+      "tile": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["tile"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>>, ["game"]>]>>;
+    };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "ILLEGAL_PLAY" | "INVALID_INPUT" | "NOT_IN_HAND" | "NOT_YOUR_TURN" | "NO_SUCH_GAME" | "UNKNOWN_SESSION" };
+  };
+  "/games/start": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "game": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["start"]>>, ["game"]>>;
+    };
+    error: { error: AppWideError | "DUPLICATE_PLAYER" | "GAME_IN_PROGRESS" | "INVALID_INPUT" | "NOT_HOST" | "NOT_SEATED" | "TABLE_NOT_FULL" | "UNKNOWN_SESSION" };
+  };
+  "/games/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "view": {
+        "games": {
+          "board": {
+            "left": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["left"]>>;
+            "right": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["right"]>>;
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["tile"]>>;
+          }[];
+          "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>[0], ["game"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_latestAt"]>>>, ["game"]>]>>;
+          "hand": {
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_hand"]>>>, ["tile"]>>;
+          }[];
+          "lastResult": {
+            "ending": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["ending"]>>;
+            "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["matchNumber"]>>;
+            "points": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["points"]>>;
+            "team": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["team"]>>;
+            "winner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["winner"]>>;
+          }[];
+          "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
+          "players": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
+            "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["position"]>>;
+            "tileCount": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["tileCount"]>>;
+          }[];
+          "scoreA": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["scoreA"]>>;
+          "scoreB": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["scoreB"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["status"]>>;
+          "target": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["target"]>>;
+          "turnPlayer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["turnPlayer"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/guests/leave": {
     input: {
       "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>[0], ["token"]>>;
@@ -21,7 +82,7 @@ export type DominaoWire = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
   };
   "/guests/me": {
     input: {
@@ -51,7 +112,7 @@ export type DominaoWire = {
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_HOST" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_HOST" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
   };
   "/tables/join": {
     input: {
@@ -72,7 +133,7 @@ export type DominaoWire = {
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
   };
   "/tables/lobby": {
     input: {
@@ -109,6 +170,67 @@ export type DominaoWire = {
 export type HttpAppWideError = never;
 
 export type DominaoWireHttp = {
+  "/games/play": {
+    input: {
+      "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>>;
+      "side": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["side"]>>;
+      "tile": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["tile"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>>, ["game"]>]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/games/start": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "game": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["start"]>>, ["game"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/games/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "view": {
+        "games": {
+          "board": {
+            "left": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["left"]>>;
+            "right": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["right"]>>;
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["tile"]>>;
+          }[];
+          "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>[0], ["game"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_latestAt"]>>>, ["game"]>]>>;
+          "hand": {
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_hand"]>>>, ["tile"]>>;
+          }[];
+          "lastResult": {
+            "ending": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["ending"]>>;
+            "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["matchNumber"]>>;
+            "points": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["points"]>>;
+            "team": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["team"]>>;
+            "winner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["winner"]>>;
+          }[];
+          "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
+          "players": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
+            "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["position"]>>;
+            "tileCount": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["tileCount"]>>;
+          }[];
+          "scoreA": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["scoreA"]>>;
+          "scoreB": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["scoreB"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["status"]>>;
+          "target": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["target"]>>;
+          "turnPlayer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["turnPlayer"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/guests/leave": {
     input: {
       "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>[0], ["token"]>>;
@@ -116,7 +238,7 @@ export type DominaoWireHttp = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/guests/me": {
     input: {
@@ -146,7 +268,7 @@ export type DominaoWireHttp = {
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
     };
-    error: { error: HttpAppWideError | "FORBIDDEN" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/tables/join": {
     input: {
@@ -167,7 +289,7 @@ export type DominaoWireHttp = {
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
     };
-    error: { error: HttpAppWideError | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/tables/lobby": {
     input: {

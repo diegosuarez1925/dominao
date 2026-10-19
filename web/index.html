@@ -26,8 +26,23 @@
         <h2>Table <span id="code"></span></h2>
         <p>Share this code with your friends. Seats 0 and 2 are partners, as are 1 and 3.</p>
         <ol id="seats" start="0"></ol>
+        <button id="startGame" hidden>Start game</button>
         <button id="leaveTable">Leave table</button>
         <button id="closeTable" hidden>Close table</button>
+      </section>
+      <section id="game" hidden>
+        <p id="scores"></p>
+        <p id="result"></p>
+        <ol id="players" start="0"></ol>
+        <h3>Board</h3>
+        <div id="board" class="tiles"></div>
+        <h3>Your hand</h3>
+        <p id="turn"></p>
+        <div id="hand" class="tiles"></div>
+        <p id="chooseSide" hidden>
+          Play <span id="chosenTile"></span> on
+          <button id="playLeft">the left</button> or <button id="playRight">the right</button>?
+        </p>
       </section>
     </section>
     <p id="status"></p>

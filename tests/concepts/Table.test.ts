@@ -31,7 +31,9 @@ test("principle: four sit by code, a fifth is refused, the host passes on, and t
 
   expect(await tables.join({ table, player: "papo" })).toEqual({ position: 1 });
   expect(await tables.join({ table, player: "nando" })).toEqual({ position: 2 });
+  expect(await tables._isFull({ table })).toEqual({ full: false });
   expect(await tables.join({ table, player: "cheo" })).toEqual({ position: 3 });
+  expect(await tables._isFull({ table })).toEqual({ full: true });
   await expect(tables.join({ table, player: "stranger" })).rejects.toThrow(TableFull);
 
   await tables.leave({ table, player: "abuelo" });
