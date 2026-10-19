@@ -24,8 +24,8 @@ Games.Play at /games/play
 
 Each player [looks at the game](reaction:Games.ViewGame) at their table through
 [their own view](former:Games.GameView): the scores, the line of tiles, whose turn
-it is, how many tiles everyone holds, how the last match ended, and their own hand,
-but never anyone else's. The page asks for it every couple of seconds.
+it is, how many tiles everyone holds, a log of every play and skip by name, how the
+last match ended, and their own hand, but never anyone else's. The page asks for it every couple of seconds.
 
 ```endpoints
 Games.ViewGame at /games/view

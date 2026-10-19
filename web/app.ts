@@ -93,6 +93,95 @@ function domino<T extends HTMLElement>(left: number, right: number, element: T):
   return element;
 }
 
+/** How many grid units wide the board is; a domino lying flat takes two units by one. */
+const BOARD_UNITS = 16;
+
+type Placed = { x: number; y: number; vertical: boolean; first: number; second: number };
+
+/**
+ * Lays the board out as one continuous snake. The first tile sits in the middle; the right
+ * arm grows rightward and, at the edge, turns down and comes back the other way, while the
+ * left arm grows leftward and turns up. Each tile shows its numbers in the order they are
+ * reached along the snake, so touching halves always match.
+ */
+function layOut(board: { left: number; right: number; fromFirst: number }[]): Placed[] {
+  const placed: Placed[] = [];
+  const center = board.find((t) => t.fromFirst === 0);
+  if (center === undefined) return placed;
+  const start = BOARD_UNITS / 2 - 1;
+  placed.push({ x: start, y: 0, vertical: false, first: center.left, second: center.right });
+  // The right arm goes away from the first tile in board order, the left arm against it.
+  const arms = [
+    { tiles: board.filter((t) => t.fromFirst > 0).sort((a, b) => a.fromFirst - b.fromFirst), x: start + 2, along: 1, turn: 1 },
+    { tiles: board.filter((t) => t.fromFirst < 0).sort((a, b) => b.fromFirst - a.fromFirst), x: start, along: -1, turn: -1 },
+  ];
+  for (const arm of arms) {
+    let { x, along } = arm;
+    let row = 0;
+    for (const t of arm.tiles) {
+      // The near number touches the tile before; on the left arm that is the tile's right.
+      const [near, far] = arm.turn === 1 ? [t.left, t.right] : [t.right, t.left];
+      // Keep one column free at each edge so there is always room to turn.
+      const fits = along === 1 ? x + 2 <= BOARD_UNITS - 1 : x - 2 >= 1;
+      if (fits) {
+        const left = along === 1 ? x : x - 2;
+        placed.push({ x: left, y: row, vertical: false, ...(along === 1 ? { first: near, second: far } : { first: far, second: near }) });
+        x += 2 * along;
+      } else {
+        // Stand the tile up beside the row's last tile, reaching into the next row.
+        const left = along === 1 ? x : x - 1;
+        const top = arm.turn === 1 ? row : row - 1;
+        placed.push({ x: left, y: top, vertical: true, ...(arm.turn === 1 ? { first: near, second: far } : { first: far, second: near }) });
+        row += arm.turn;
+        along = -along;
+      }
+    }
+  }
+  return placed;
+}
+
+function drawBoard(board: { left: number; right: number; fromFirst: number }[]) {
+  const element = $("#board");
+  const placed = layOut(board);
+  const unit = Math.floor((element.clientWidth || 576) / BOARD_UNITS);
+  const top = Math.min(0, ...placed.map((p) => p.y));
+  const bottom = Math.max(1, ...placed.map((p) => p.y + (p.vertical ? 2 : 1)));
+  element.style.height = `${(bottom - top) * unit}px`;
+  element.style.setProperty("--unit", `${unit}px`);
+  element.replaceChildren(
+    ...placed.map((p) => {
+      const tile = domino(p.first, p.second, document.createElement("span"));
+      if (p.vertical) tile.classList.add("vertical");
+      tile.style.left = `${p.x * unit}px`;
+      tile.style.top = `${(p.y - top) * unit}px`;
+      return tile;
+    }),
+  );
+}
+
+/** Lists every turn so far, newest last, with a heading where each match begins. */
+function drawLog(log: { turn: number; matchNumber: number; displayName: string; move: string; tile: string }[]) {
+  const element = $("#log");
+  const lines: HTMLElement[] = [];
+  let match = 0;
+  for (const turn of [...log].sort((a, b) => a.turn - b.turn)) {
+    if (turn.matchNumber !== match) {
+      match = turn.matchNumber;
+      const heading = document.createElement("li");
+      heading.className = "match";
+      heading.textContent = `Match ${match}`;
+      lines.push(heading);
+    }
+    const line = document.createElement("li");
+    line.textContent =
+      turn.move === "PLAYED" ? `${turn.displayName} played ${turn.tile.replace("-", "|")}` : `${turn.displayName} was skipped`;
+    if (turn.move === "SKIPPED") line.className = "skipped";
+    lines.push(line);
+  }
+  element.replaceChildren(...lines);
+  element.scrollTop = element.scrollHeight;
+}
+
 async function refreshGame() {
   if (me === null) return;
   const result = await client.games.view({ token: me.token });
@@ -136,7 +225,8 @@ async function refreshGame() {
     }),
   );
 
-  $("#board").replaceChildren(...game.board.map((t) => domino(t.left, t.right, document.createElement("span"))));
+  drawBoard(game.board);
+  drawLog(game.log);
 
   const myTurn = game.status === "ACTIVE" && game.turnPlayer === me.session;
   $("#turn").textContent = myTurn ? "Your turn: pick a tile that matches an end." : "";

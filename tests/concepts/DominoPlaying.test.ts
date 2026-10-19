@@ -48,6 +48,8 @@ async function rig(state: { hands: string[][]; board: string[]; turn: number; st
         turn: state.turn,
         starter: state.starter ?? 0,
         teamScores: state.teamScores ?? [0, 0],
+        leftCount: 0,
+        log: [],
       },
     },
   );
@@ -61,7 +63,8 @@ async function summary(game: string) {
 test("the first match opens with the double six, and the turn passes on", async () => {
   const { game } = await dominoes.start({ place: "table", ...players });
   // Cheo (fourth) holds the double six with the unshuffled deal and plays it at once.
-  expect(await dominoes._board({ game })).toEqual([{ tile: "6-6", left: 6, right: 6 }]);
+  expect(await dominoes._board({ game })).toEqual([{ tile: "6-6", left: 6, right: 6, fromFirst: 0 }]);
+  expect(await dominoes._log({ game })).toEqual([{ turn: 1, matchNumber: 1, player: "cheo", move: "PLAYED", tile: "6-6" }]);
   const counts = (await dominoes._players({ game })).map((row) => row.tileCount);
   expect(counts).toEqual([7, 7, 7, 6]);
   // Abuelo (next after Cheo) holds 0-6, so it is his turn.
@@ -80,6 +83,20 @@ test("a tile goes on the end it matches, and its other number becomes the new en
   await dominoes.play({ game, player: "abuelo", tile: "3-2", side: "RIGHT" });
   const board = await dominoes._board({ game });
   expect(board.map(({ left, right }) => [left, right])).toEqual([[5, 1], [1, 2], [2, 3]]);
+});
+
+test("each board tile knows how far it lies from the match's first tile", async () => {
+  const game = await rig({ hands: [["1-6", "0-0"], ["6-2", "3-3"], ["1-1", "4-4"], ["2-2", "5-5"]], board: ["6-6"], turn: 0 });
+  await dominoes.play({ game, player: "abuelo", tile: "1-6", side: "LEFT" });
+  await dominoes.play({ game, player: "papo", tile: "6-2", side: "RIGHT" });
+  await dominoes.play({ game, player: "nando", tile: "1-1", side: "LEFT" });
+  const board = await dominoes._board({ game });
+  expect(board.map(({ tile, fromFirst }) => [tile, fromFirst])).toEqual([
+    ["1-1", -2],
+    ["1-6", -1],
+    ["6-6", 0],
+    ["2-6", 1],
+  ]);
 });
 
 test("illegal moves are refused", async () => {
@@ -101,6 +118,12 @@ test("players who cannot play are skipped automatically", async () => {
   await dominoes.play({ game, player: "abuelo", tile: "3-6", side: "RIGHT" });
   // Ends are now 5 and 6. Papo (1-1, 2-2) and Nando (1-2, 4-4) cannot play; Cheo can.
   expect((await summary(game)).turnPlayer).toBe("cheo");
+  // The log shows Abuelo's play and the two skips.
+  expect(await dominoes._log({ game })).toEqual([
+    { turn: 1, matchNumber: 1, player: "abuelo", move: "PLAYED", tile: "3-6" },
+    { turn: 2, matchNumber: 1, player: "papo", move: "SKIPPED", tile: "" },
+    { turn: 3, matchNumber: 1, player: "nando", move: "SKIPPED", tile: "" },
+  ]);
 });
 
 test("a domino: the player's team scores the pips left in the other three hands, and the winner starts next", async () => {

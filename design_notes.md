@@ -177,3 +177,29 @@ just as it was being clicked. It now redraws only when the game actually changed
 
 Future work: Matchmaking (public games), the real Vue frontend, showing the board as
 a proper line of dominoes, and letting the host change the target score.
+
+### Step 3b: the move log and a continuous board
+
+Asked for: a log of what each player played on each turn, and whether they were
+skipped; and a board that keeps snaking continuously instead of wrapping onto a new
+line once it gets long.
+
+- **The log lives in DominoPlaying.** The concept already decides when a player is
+  skipped (inside `play`), so it records each turn as PLAYED with the tile, or
+  SKIPPED. The opening double six counts as the holder's play. A tranque adds no
+  skip rows, since the match simply ends. A new `_log` query answers the turns,
+  numbered 1, 2, 3, … across the game.
+- **Why the turn number:** the view's `each(...)` treats rows as a set, so two skips
+  by the same player in the same match were identical rows and the second one
+  vanished. The number keeps every row distinct; a test plays a whole game through
+  the API and checks there are no gaps.
+- **The board needed one more fact:** `_board` now says how far each tile is from the
+  first tile played (`fromFirst`: negative on the left, positive on the right). The
+  concept counts tiles added on the left to work this out.
+- **Snake layout (page only):** the board is a 16-unit-wide grid. The first tile sits
+  in the middle; the right arm runs right and, at the edge, stands a tile up and
+  comes back along the row below; the left arm does the same upward. Each tile shows
+  its numbers in the order they are reached, so touching halves always match.
+- The log is shown under the hand, grouped by match, newest last, with skips greyed.
+
+Future work: doubles drawn crosswise, as on a real table.

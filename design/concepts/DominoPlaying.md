@@ -38,6 +38,9 @@ Status is ACTIVE or FINISHED or ABANDONED
 
 Ending is DOMINO or TRANQUE
   How a match ended: a player ran out of tiles, or nobody could play.
+
+Move is PLAYED or SKIPPED
+  What happened on a player's turn: they played a tile, or they could not play.
 ```
 
 ## State
@@ -53,13 +56,22 @@ a set of Games with
   a starter Number
   a turn Number
   a board seq of Tile
+  a leftCount Number
 Rule: players are in turn order, and players 0 and 2 form team 0 while players 1 and 3 form team 1
 Rule: the board lists the played tiles from its left end to its right end, each turned so touching numbers match
+Rule: leftCount is how many tiles of the match were played to the left of its first tile
 
 a set of Hands with
   a game Game
   a position Number
   a tiles seq of Tile
+
+a seq of Turns with
+  a game Game
+  a matchNumber Number
+  a player Player
+  a move Move
+  an optional tile Tile
 
 a set of Results with
   a game Game
@@ -84,7 +96,7 @@ start(place: Place, first: Player, second: Player, third: Player, fourth: Player
   then
     add a new ACTIVE game at place with the players in that order, a target of 200, and both team scores at 0
     deal match 1: shuffle the 28 tiles and give each player 7
-    the player holding the double six plays it as the first tile on the board
+    the player holding the double six plays it as the first tile on the board, recorded as PLAYED
     pass the turn to the next player who can play, skipping those who cannot
     returns game
 
@@ -107,6 +119,7 @@ play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)
   where it is player's turn, tile is in their hand, and it fits the end on side or the board is empty
   then
     move tile from player's hand to that end of the board; its other number becomes the new end
+    record that player PLAYED tile, and record SKIPPED for each player passed over below
     if player's hand is now empty, the match ends in a DOMINO: player's team scores the pips in the other three hands, and player starts the next match
     otherwise, if no player can play, the match ends in a TRANQUE: the team whose two hands hold fewer pips scores the pips in all four hands, and its player earliest in the match's turn order starts the next match; on a tie nobody scores and the same player starts again
     otherwise, pass the turn to the next player who can play, skipping those who cannot
@@ -148,9 +161,17 @@ _hand(game: Game, player: Player) : many (tile: Tile)
   Answers the tiles in the player's hand, ordered by their numbers, and no rows when
   the player is not in the game.
 
-_board(game: Game) : many (tile: Tile, left: Number, right: Number)
+_board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: Number)
   Answers the board's tiles from its left end to its right end, each with the number
-  facing left and the number facing right; no rows when the board is empty.
+  facing left, the number facing right, and its place counted from the match's first
+  tile (0), negative to the left and positive to the right; no rows when the board is
+  empty.
+
+_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)
+  Answers every turn of the game in the order they happened, numbered from 1 across
+  the whole game: who played which tile, or who was skipped (with an empty tile); no
+  rows when the game does not exist. The number keeps two skips by the same player in
+  the same match apart.
 
 _lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, ending: Ending)
   Answers how the most recent finished match ended, and no row before any match has

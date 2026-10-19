@@ -43,6 +43,7 @@ export type DominaoWire = {
       "view": {
         "games": {
           "board": {
+            "fromFirst": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["fromFirst"]>>;
             "left": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["left"]>>;
             "right": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["right"]>>;
             "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["tile"]>>;
@@ -57,6 +58,14 @@ export type DominaoWire = {
             "points": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["points"]>>;
             "team": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["team"]>>;
             "winner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["winner"]>>;
+          }[];
+          "log": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["matchNumber"]>>;
+            "move": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["move"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["tile"]>>;
+            "turn": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["turn"]>>;
           }[];
           "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
           "players": {
@@ -199,6 +208,7 @@ export type DominaoWireHttp = {
       "view": {
         "games": {
           "board": {
+            "fromFirst": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["fromFirst"]>>;
             "left": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["left"]>>;
             "right": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["right"]>>;
             "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_board"]>>>, ["tile"]>>;
@@ -213,6 +223,14 @@ export type DominaoWireHttp = {
             "points": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["points"]>>;
             "team": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["team"]>>;
             "winner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_lastResult"]>>>, ["winner"]>>;
+          }[];
+          "log": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["matchNumber"]>>;
+            "move": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["move"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
+            "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["tile"]>>;
+            "turn": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["turn"]>>;
           }[];
           "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
           "players": {

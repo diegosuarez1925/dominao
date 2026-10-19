@@ -14,8 +14,8 @@ const { DominoPlaying, GuestSessioning, Table } = concepts;
 
 /**
  * The game at the guest's table as that guest sees it: the scores, the board, whose
- * turn it is, everyone's tile count, their own hand (and nobody else's), and how the
- * last match ended.
+ * turn it is, everyone's tile count, their own hand (and nobody else's), every turn
+ * so far, and how the last match ended.
  */
 const GameView = former(
   "the game seen by (session)",
@@ -34,6 +34,7 @@ const GameView = former(
       boardTile,
       left,
       right,
+      fromFirst,
       position,
       player,
       tileCount,
@@ -43,6 +44,12 @@ const GameView = former(
       team,
       points,
       ending,
+      turnNumber,
+      turnMatch,
+      mover,
+      move,
+      movedTile,
+      moverName,
     },
   ) =>
     form({
@@ -59,15 +66,19 @@ const GameView = former(
           scoreA,
           scoreB,
           turnPlayer,
-          board: each(DominoPlaying._board({ game }).is({ tile: boardTile, left, right })).form({
+          board: each(DominoPlaying._board({ game }).is({ tile: boardTile, left, right, fromFirst })).form({
             tile: boardTile,
             left,
             right,
+            fromFirst,
           }),
           hand: each(DominoPlaying._hand({ game, player: session }).is({ tile })).form({ tile }),
           players: each(DominoPlaying._players({ game }).is({ position, player, tileCount }))
             .where(GuestSessioning._getName({ session: player }).is({ displayName }))
             .form({ position, player, displayName, tileCount }),
+          log: each(DominoPlaying._log({ game }).is({ turn: turnNumber, matchNumber: turnMatch, player: mover, move, tile: movedTile }))
+            .where(GuestSessioning._getName({ session: mover }).is({ displayName: moverName }))
+            .form({ turn: turnNumber, matchNumber: turnMatch, player: mover, displayName: moverName, move, tile: movedTile }),
           lastResult: each(
             DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, ending }),
           ).form({ matchNumber: resultMatch, winner, team, points, ending }),

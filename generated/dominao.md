@@ -54,7 +54,8 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 - `_summary(game: Game) : optional (status: Status, target: Number, matchNumber: Number, scoreA: Number, scoreB: Number, turnPlayer: Player)`
 - `_players(game: Game) : many (position: Number, player: Player, tileCount: Number)`
 - `_hand(game: Game, player: Player) : many (tile: Tile)`
-- `_board(game: Game) : many (tile: Tile, left: Number, right: Number)`
+- `_board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: Number)`
+- `_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)`
 - `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, ending: Ending)`
 
 #### Instances
@@ -133,14 +134,15 @@ Authored path: `Games.GameView`.
 - Covered by [Games](../design/compositions/Games.md), line 26.
 
 ```former
-Former "the game seen by (session)" — inputs (session); bindings (table, game, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, position, player, tileCount, displayName, resultMatch, winner, team, points, ending); promises exactly one record — forms:
+Former "the game seen by (session)" — inputs (session); bindings (table, game, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, resultMatch, winner, team, points, ending, turnNumber, turnMatch, mover, move, movedTile, moverName); promises exactly one record — forms:
   a record of
     games: each Table._tableOf (player: session) has (table)
       where DominoPlaying._latestAt (place: table) has (game)
       where DominoPlaying._summary (game) has (matchNumber, scoreA, scoreB, status, target, turnPlayer)
       form a record of
-        board: each DominoPlaying._board (game) has (left, right, tile: boardTile)
+        board: each DominoPlaying._board (game) has (fromFirst, left, right, tile: boardTile)
           form a record of
+            fromFirst
             left
             right
             tile: boardTile
@@ -155,6 +157,15 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
             points
             team
             winner
+        log: each DominoPlaying._log (game) has (matchNumber: turnMatch, move, player: mover, tile: movedTile, turn: turnNumber)
+          where GuestSessioning._getName (session: mover) has (displayName: moverName)
+          form a record of
+            displayName: moverName
+            matchNumber: turnMatch
+            move
+            player: mover
+            tile: movedTile
+            turn: turnNumber
         matchNumber
         players: each DominoPlaying._players (game) has (player, position, tileCount)
           where GuestSessioning._getName (session: player) has (displayName)

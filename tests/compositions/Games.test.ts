@@ -62,7 +62,7 @@ test("each player sees the same game but only their own hand", async () => {
   expect((await call("/games/start", { token: guests[0].token })).status).toBe(409);
 
   const views = await Promise.all(guests.map((guest) => view(guest.token)));
-  expect(views[0].board).toEqual([{ tile: "6-6", left: 6, right: 6 }]);
+  expect(views[0].board).toEqual([{ tile: "6-6", left: 6, right: 6, fromFirst: 0 }]);
   expect(views[0].players.map((p: { displayName: string }) => p.displayName)).toEqual(["Abuelo", "Papo", "Nando", "Cheo"]);
   const hands = views.map((v) => v.hand.map((row: { tile: string }) => row.tile));
   // 27 tiles left after the double six, all different, none seen twice.
@@ -75,6 +75,7 @@ test("four guests play a whole game to 200 through the API", async () => {
   await call("/games/start", { token: guests[0].token });
   const bySession = new Map(guests.map((guest) => [guest.session, guest.token]));
 
+  let plays = 0;
   for (let moves = 0; moves < 3000; moves++) {
     const state = await view(guests[0].token);
     if (state.status === "FINISHED") break;
@@ -92,11 +93,18 @@ test("four guests play a whole game to 200 through the API", async () => {
       .find(Boolean);
     const played = await call("/games/play", { token, game: mine.game, ...move });
     expect(played.status).toBe(200);
+    plays++;
   }
   const final = await view(guests[2].token);
   expect(final.status).toBe("FINISHED");
   expect(Math.max(final.scoreA, final.scoreB)).toBeGreaterThanOrEqual(200);
   expect(final.lastResult).toHaveLength(1);
+  // Every turn is in the log, even repeated skips: one row per play (plus the opening
+  // double six, which plays itself), numbered 1, 2, 3, … with no gaps.
+  const turns = final.log.map((row: { turn: number }) => row.turn).sort((a: number, b: number) => a - b);
+  expect(turns).toEqual(turns.map((_: number, index: number) => index + 1));
+  expect(final.log.filter((row: { move: string }) => row.move === "PLAYED")).toHaveLength(plays + 1);
+  expect(final.log.some((row: { move: string }) => row.move === "SKIPPED")).toBe(true);
 }, 60_000);
 
 test("playing out of turn is refused", async () => {

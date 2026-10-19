@@ -11,6 +11,7 @@ export class IllegalPlay extends Error {}
 type Status = "ACTIVE" | "FINISHED" | "ABANDONED";
 type Side = "LEFT" | "RIGHT";
 type Ending = "DOMINO" | "TRANQUE";
+type Move = "PLAYED" | "SKIPPED";
 
 /** A tile as its two numbers, smaller first. */
 type Pips = [number, number];
@@ -21,6 +22,14 @@ interface Result {
   team: number;
   points: number;
   ending: Ending;
+}
+
+interface Turn {
+  matchNumber: number;
+  seat: number;
+  move: Move;
+  /** The tile played, or "" when the player was skipped. */
+  tile: string;
 }
 
 interface Game {
@@ -36,6 +45,10 @@ interface Game {
   turn: number;
   /** Played tiles from left to right, each turned so touching numbers match: [left, right]. */
   board: Pips[];
+  /** How many tiles of this match went to the left of its first tile. */
+  leftCount: number;
+  /** Every turn of the game, oldest first. */
+  log: Turn[];
   /** Each seat's hand, by seat position. */
   hands: Pips[][];
   results: Result[];
@@ -140,6 +153,8 @@ export class DominoPlayingConcept {
       starter: 0,
       turn: 0,
       board: [],
+      leftCount: 0,
+      log: [],
       hands: [],
       results: [],
       startedAt: new Date(),
@@ -163,7 +178,14 @@ export class DominoPlayingConcept {
     const board = placed(found.board, pipsOfTile, side === "LEFT" ? "LEFT" : "RIGHT");
     if (board === undefined) throw new IllegalPlay("That tile does not match that end of the board.");
 
-    const updated: Game = { ...found, board, hands: found.hands.map((h) => [...h]) };
+    const toLeft = side === "LEFT" && found.board.length > 0;
+    const updated: Game = {
+      ...found,
+      board,
+      leftCount: (found.leftCount ?? 0) + (toLeft ? 1 : 0),
+      hands: found.hands.map((h) => [...h]),
+      log: [...(found.log ?? []), { matchNumber: found.matchNumber, seat, move: "PLAYED", tile: tileName(pipsOfTile) }],
+    };
     updated.hands[seat].splice(index, 1);
     this.#afterPlay(updated, seat);
 
@@ -232,7 +254,25 @@ export class DominoPlayingConcept {
   async _board({ game }: { game: string }) {
     const found = await this.games.findOne({ _id: game });
     if (found === null) return [];
-    return found.board.map(([left, right]) => ({ tile: tileName([left, right]), left, right }));
+    const first = found.leftCount ?? 0;
+    return found.board.map(([left, right], index) => ({
+      tile: tileName([left, right]),
+      left,
+      right,
+      fromFirst: index - first,
+    }));
+  }
+
+  async _log({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    if (found === null) return [];
+    return (found.log ?? []).map(({ matchNumber, seat, move, tile }, index) => ({
+      turn: index + 1,
+      matchNumber,
+      player: found.players[seat],
+      move,
+      tile,
+    }));
   }
 
   async _lastResult({ game }: { game: string }) {
@@ -247,6 +287,7 @@ export class DominoPlayingConcept {
     game.matchNumber += 1;
     game.hands = [...Array(SEATS).keys()].map((seat) => tiles.slice(seat * HAND_SIZE, (seat + 1) * HAND_SIZE));
     game.board = [];
+    game.leftCount = 0;
     if (starter !== undefined) {
       game.starter = starter;
       game.turn = starter;
@@ -256,6 +297,7 @@ export class DominoPlayingConcept {
     game.starter = holder;
     game.hands[holder] = game.hands[holder].filter(([a, b]) => !(a === 6 && b === 6));
     game.board = [[6, 6]];
+    game.log.push({ matchNumber: game.matchNumber, seat: holder, move: "PLAYED", tile: "6-6" });
     this.#afterPlay(game, holder);
   }
 
@@ -265,11 +307,16 @@ export class DominoPlayingConcept {
       const points = pips(game.hands.filter((_, other) => other !== seat).flat());
       return this.#endMatch(game, seat, teamOf(seat), points, "DOMINO");
     }
+    const skipped: number[] = [];
     for (let candidate = next(seat), step = 0; step < SEATS; candidate = next(candidate), step++) {
       if (canPlay(game.hands[candidate], game.board)) {
+        for (const passed of skipped) {
+          game.log.push({ matchNumber: game.matchNumber, seat: passed, move: "SKIPPED", tile: "" });
+        }
         game.turn = candidate;
         return;
       }
+      skipped.push(candidate);
     }
     // Nobody can play: a tranque.
     const teamPips = [0, 1].map((team) => pips(game.hands.filter((_, s) => teamOf(s) === team).flat()));
