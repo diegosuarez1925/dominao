@@ -152,3 +152,15 @@ help me out a lot for this part, here are the notes he wrote on everything that 
   Vue's keyed lists keep hand buttons in place, so clicks are not lost to a redraw.
 - `.vue` files are not type-checked by `tsc` (that would need `vue-tsc`); the logic
   they use lives in the typed `.ts` files for that reason.
+
+
+## P3 TO-DO list
+
+So, for P3, I need to get the following things done:
+- Implement customizable rules for games (how tranques are handles, score goals, etc.)
+- Implement random matchmaking (public tables)
+- Implement actual sessioning with accounts, authentication, and all of that
+- Completely revamp the frontend so that it looks good
+- Clean up a lot of the code
+
+Among many other things
