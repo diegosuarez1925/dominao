@@ -6,3 +6,7 @@ node_modules/
 .DS_Store
 
 !.env.example
+
+# Demo videos go on YouTube; the class platform rejects commits over 50 MB.
+*.mov
+*.mp4

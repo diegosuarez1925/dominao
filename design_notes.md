@@ -164,3 +164,17 @@ So, for P3, I need to get the following things done:
 - Clean up a lot of the code
 
 Among many other things
+
+## P3 progress log
+
+### Deployment
+
+- The class platform runs one process (the `start` script) on port 3000, but the app
+  had two: the backend, and `web/server.ts` serving the page on 8080. The backend now
+  serves the Vue page at `/` as well, so `bun run start` is the whole app. The page is
+  still bundled by Bun with the Vue plugin, once at startup in production.
+- `packageManager` now names Bun 1.4, since the lockfile is written by Bun 1.4 and the
+  platform installs with the version named there.
+- The demo video is out of git (and `.mov`/`.mp4` are ignored): the platform rejects
+  commits over 50 MB, and the recording belongs on YouTube anyway.
+- `bun run preview` runs the app exactly as the platform does, for checking before a deploy.
