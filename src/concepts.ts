@@ -1,6 +1,7 @@
 import { conceptSet, registerConcept } from "@mit-sdg/sync-engine/assembly";
 import codeGeneratingSpec from "@design/concepts/CodeGenerating.md" with { type: "text" };
 import dominoPlayingSpec from "@design/concepts/DominoPlaying.md" with { type: "text" };
+import matchmakingSpec from "@design/concepts/Matchmaking.md" with { type: "text" };
 import guestSessioningSpec from "@design/concepts/GuestSessioning.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
@@ -20,6 +21,14 @@ import {
   TokenInUse,
   UnknownSession,
 } from "./concepts/GuestSessioning.ts";
+import {
+  AlreadyQueued,
+  CountdownRunning,
+  LobbyNotFull,
+  MatchmakingConcept,
+  NoSuchLobby,
+  NotQueued,
+} from "./concepts/Matchmaking.ts";
 import {
   AlreadySeated,
   CodeInUse,
@@ -55,6 +64,18 @@ const guestSessioning = registerConcept({
   refusals: { INVALID_NAME: InvalidName, TOKEN_IN_USE: TokenInUse, UNKNOWN_SESSION: UnknownSession },
 });
 
+const matchmaking = registerConcept({
+  class: MatchmakingConcept,
+  spec: matchmakingSpec,
+  refusals: {
+    ALREADY_QUEUED: AlreadyQueued,
+    NOT_QUEUED: NotQueued,
+    NO_SUCH_LOBBY: NoSuchLobby,
+    LOBBY_NOT_FULL: LobbyNotFull,
+    COUNTDOWN_RUNNING: CountdownRunning,
+  },
+});
+
 const table = registerConcept({
   class: TableConcept,
   spec: tableSpec,
@@ -71,6 +92,7 @@ export const applicationConceptSet = conceptSet({
   CodeGenerating: codeGenerating,
   DominoPlaying: dominoPlaying,
   GuestSessioning: guestSessioning,
+  Matchmaking: matchmaking,
   Table: table,
 });
 export const { concepts } = applicationConceptSet;

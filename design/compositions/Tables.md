@@ -7,7 +7,9 @@ is the player at the table, so nobody can sit, leave or close in someone else's 
 
 A guest [opens a table](reaction:Tables.Open). The app asks CodeGenerating for a
 6-character code in the table-code context, opens the table with that code, and
-seats the guest in seat 0 as host. The host shares the code with friends.
+seats the guest in seat 0 as host. The host shares the code with friends. A guest who
+is waiting for a game with strangers is answered `IN_QUEUE`, here and when joining:
+they must stop waiting first.
 
 ```endpoints
 Tables.Open at /tables/open

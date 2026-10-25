@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { joinTable, openTable } from "../session.ts";
+import { findGame, joinTable, openTable } from "../session.ts";
 
 const code = ref("");
 </script>
 
 <template>
   <section>
+    <button @click="findGame">Play with strangers</button>
     <button @click="openTable">Create private table</button>
     <form @submit.prevent="joinTable(code)">
       <input v-model="code" placeholder="Join code" maxlength="6" required />

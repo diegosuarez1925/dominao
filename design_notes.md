@@ -178,3 +178,39 @@ Among many other things
 - The demo video is out of git (and `.mov`/`.mp4` are ignored): the platform rejects
   commits over 50 MB, and the recording belongs on YouTube anyway.
 - `bun run preview` runs the app exactly as the platform does, for checking before a deploy.
+
+### Matchmaking
+
+Asked for: a button to look for a game with strangers, a waiting lobby that fills as
+people join (a new one when none has room), a countdown once four are in, a way to
+leave before the game starts, and the same game as private tables afterwards. Custom
+rules come later, but lobbies must only mix players who want the same rules.
+
+- **Changed from P1.** P1's Matchmaking was a plain queue whose `formGroup` took the
+  four longest-waiting players at once. Players now wait *in a lobby* they can see
+  filling up, so the concept keeps lobbies: `enqueue` puts a player in the earliest
+  lobby with the same rules and room left (or opens one), `cancel` takes them out,
+  and `launch` hands out a full lobby's players in random order. The P1 shuffle for
+  random partners is kept.
+- **The countdown lives in the concept.** A lobby records when it filled; `launch` is
+  refused until the countdown (10 s) has run out, and anyone leaving clears it. The
+  page counts down and asks to launch at zero; the server decides, so a tab cannot
+  start a game early, and when all four tabs ask at once only the first gets through
+  (one atomic delete). I picked this over a server timer because sync-engine has no
+  timers, and it is the same "check when used" idea as session expiry.
+- **A matched game is a private-table game.** A reaction turns a launched lobby into a
+  new table (first player opens it, the others join in shuffled order) and starts
+  the game. Everything after that, the lobby screen, the game, leaving, is the
+  private-table code with no changes. Matchmaking, Table and DominoPlaying still never
+  refer to each other.
+- **Rules are a parameter already.** `enqueue` takes a rule set and only matches
+  lobbies with the same one. For now the app always passes `STANDARD`.
+- **Queue and table exclude each other.** A seated guest cannot queue (`AT_TABLE`), and
+  a queued guest cannot open or join a table (`IN_QUEUE`); ending a session also
+  leaves the queue.
+- **Same waiting room.** The four-place list is now one component (`LobbySeats`) used
+  by both the table lobby and the matchmaking lobby, so restyling one restyles both.
+
+Known gaps: if all four players close their tabs during the countdown, nobody asks to
+launch and the lobby stays full until someone leaves it. The matched table still shows
+a join code, which nobody needs.

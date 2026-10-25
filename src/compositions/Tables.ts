@@ -10,7 +10,7 @@ import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-eng
 import { concepts } from "../concepts.ts";
 import { strings } from "./validators.ts";
 
-const { CodeGenerating, GuestSessioning, Table } = concepts;
+const { CodeGenerating, GuestSessioning, Matchmaking, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
@@ -42,31 +42,45 @@ const ShowLobby = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
+/** A guest waiting for strangers must leave the queue before opening a table. */
 const Open = endpoint(
   "/tables/open",
   ({ token, session, displayName, code, table }) =>
     receive({ token })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
-      .then(Table.open({ host: session, code }).responds({ table }))
-      .then(respond({ table, code })),
+      .then(
+        where(no(Matchmaking._lobbyOf({ player: session })))
+          .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
+          .then(Table.open({ host: session, code }).responds({ table }))
+          .then(respond({ table, code }))
+          .named("not-queued"),
+        where(Matchmaking._lobbyOf({ player: session }))
+          .then(respond({ error: "IN_QUEUE" }))
+          .named("queued"),
+      ),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
-/** A code nobody holds answers NO_SUCH_TABLE here, before Table is ever asked. */
+/**
+ * A code nobody holds answers NO_SUCH_TABLE here, before Table is ever asked. A guest
+ * waiting for strangers must leave the queue first.
+ */
 const JoinByCode = endpoint(
   "/tables/join",
   ({ token, session, displayName, code, table, position }) =>
     receive({ token, code })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
-        where(Table._getByCode({ code }).is({ table }))
+        where(no(Matchmaking._lobbyOf({ player: session })), Table._getByCode({ code }).is({ table }))
           .then(Table.join({ table, player: session }).responds({ position }))
           .then(respond({ table, position }))
           .named("code-found"),
-        where(no(Table._getByCode({ code })))
+        where(no(Matchmaking._lobbyOf({ player: session })), no(Table._getByCode({ code })))
           .then(respond({ error: "NO_SUCH_TABLE" }))
           .named("code-unknown"),
+        where(Matchmaking._lobbyOf({ player: session }))
+          .then(respond({ error: "IN_QUEUE" }))
+          .named("queued"),
       ),
   { input: { required: ["token", "code"] }, validators: { input: strings("token", "code") } },
 );

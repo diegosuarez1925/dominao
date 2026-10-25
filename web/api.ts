@@ -11,5 +11,7 @@ type Answer<T> = Exclude<Awaited<T>, { error: unknown }>;
 export type Table = Answer<ReturnType<Client["tables"]["lobby"]>>["lobby"]["tables"][number];
 /** The game as this guest sees it: scores, board, their own hand, the log, and so on. */
 export type Game = Answer<ReturnType<Client["games"]["view"]>>["view"]["games"][number];
+/** The matchmaking lobby this guest waits in: who is there, and the countdown. */
+export type QueueLobby = Answer<ReturnType<Client["matchmaking"]["view"]>>["queue"]["lobbies"][number];
 export type BoardTile = Game["board"][number];
 export type Side = "LEFT" | "RIGHT";

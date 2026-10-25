@@ -2,7 +2,7 @@
 // page can take. Components read the state and call the actions; only this file talks to
 // the backend.
 import { reactive } from "vue";
-import { client, type Game, type Side, type Table } from "./api.ts";
+import { client, type Game, type QueueLobby, type Side, type Table } from "./api.ts";
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
@@ -14,12 +14,22 @@ export const state = reactive({
   me: null as { session: string; token: string; displayName: string } | null,
   table: null as Table | null,
   game: null as Game | null,
+  /** The matchmaking lobby the guest waits in, if any. */
+  queue: null as QueueLobby | null,
+  /**
+   * True for a moment after a full lobby launches, until the new table shows up, so
+   * the page says the game is starting instead of flashing back to the home screen.
+   */
+  starting: false,
   /** A message for the guest, such as why a move was refused. */
   message: "",
 });
 
 /** The last game answer as text; the game is replaced only when it changed. */
 let lastGame = "";
+/** When a launched lobby gives up waiting for its table to appear. */
+let startingUntil = 0;
+const STARTING_WAIT_MS = 8000;
 
 function say(message: string) {
   state.message = message;
@@ -47,10 +57,20 @@ export async function refresh() {
   if (me === null) {
     state.table = null;
     state.game = null;
+    state.queue = null;
+    state.starting = false;
     return;
   }
   const lobby = await client.tables.lobby({ token: me.token });
   if (!("error" in lobby)) state.table = lobby.lobby.tables[0] ?? null;
+  const queue = await client.matchmaking.view({ token: me.token });
+  if (!("error" in queue)) {
+    const next = queue.queue.lobbies[0] ?? null;
+    // A full lobby that vanished was launched; its table is on the way.
+    if (state.queue?.full && next === null) startingUntil = Date.now() + STARTING_WAIT_MS;
+    state.queue = next;
+  }
+  state.starting = state.table === null && state.queue === null && Date.now() < startingUntil;
   const view = await client.games.view({ token: me.token });
   if (!("error" in view)) {
     const game = view.view.games[0] ?? null;
@@ -104,6 +124,33 @@ export async function closeTable() {
   if (state.me === null || state.table === null) return;
   await client.tables.close({ token: state.me.token, table: state.table.table });
   say("");
+  await refresh();
+}
+
+export async function findGame() {
+  if (state.me === null) return;
+  const result = await client.matchmaking.enqueue({ token: state.me.token });
+  const reasons: Record<string, string> = { CONFLICT: "Leave your table before looking for a game." };
+  say("error" in result ? (reasons[result.error] ?? `Could not look for a game: ${result.error}`) : "");
+  await refresh();
+}
+
+export async function leaveQueue() {
+  if (state.me === null) return;
+  await client.matchmaking.leave({ token: state.me.token });
+  say("");
+  await refresh();
+}
+
+/**
+ * Asks to start the game once the countdown shows zero. Every waiting tab asks; the
+ * server refuses an early ask and lets only the first one through, so errors here
+ * are expected and not shown.
+ */
+export async function launchQueue() {
+  if (state.me === null || state.queue === null) return;
+  const result = await client.matchmaking.launch({ token: state.me.token });
+  if (!("error" in result)) startingUntil = Date.now() + STARTING_WAIT_MS;
   await refresh();
 }
 

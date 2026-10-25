@@ -91,7 +91,7 @@ export type DominaoWire = {
     output: {
       "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
     };
-    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
   };
   "/guests/me": {
     input: {
@@ -113,6 +113,53 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_NAME" | "TOKEN_IN_USE" };
   };
+  "/matchmaking/enqueue": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>>, ["lobby"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_QUEUED" | "AT_TABLE" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/matchmaking/launch": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_SEATED" | "CODE_IN_USE" | "COUNTDOWN_RUNNING" | "DUPLICATE_PLAYER" | "GAME_IN_PROGRESS" | "INVALID_INPUT" | "INVALID_LENGTH" | "LOBBY_NOT_FULL" | "NOT_QUEUED" | "NO_SUCH_LOBBY" | "NO_SUCH_TABLE" | "TABLE_FULL" | "UNKNOWN_SESSION" };
+  };
+  "/matchmaking/leave": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_QUEUED" | "UNKNOWN_SESSION" };
+  };
+  "/matchmaking/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "queue": {
+        "lobbies": {
+          "full": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["full"]>>;
+          "lobby": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>[0], ["lobby"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>>>, ["lobby"]>]>>;
+          "players": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
+          }[];
+          "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["rules"]>>;
+          "secondsLeft": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["secondsLeft"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/tables/close": {
     input: {
       "table": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>]>>;
@@ -132,7 +179,7 @@ export type DominaoWire = {
       "position": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>>, ["position"]>>;
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>[0], ["table"]>>;
     };
-    error: { error: AppWideError | "ALREADY_SEATED" | "INVALID_INPUT" | "NO_SUCH_TABLE" | "TABLE_FULL" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ALREADY_SEATED" | "INVALID_INPUT" | "IN_QUEUE" | "NO_SUCH_TABLE" | "TABLE_FULL" | "UNKNOWN_SESSION" };
   };
   "/tables/leave": {
     input: {
@@ -172,7 +219,7 @@ export type DominaoWire = {
       "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["code"]>>;
       "table": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>>, ["table"]>>;
     };
-    error: { error: AppWideError | "ALREADY_SEATED" | "CODE_IN_USE" | "INVALID_INPUT" | "INVALID_LENGTH" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ALREADY_SEATED" | "CODE_IN_USE" | "INVALID_INPUT" | "INVALID_LENGTH" | "IN_QUEUE" | "UNKNOWN_SESSION" };
   };
 };
 
@@ -277,6 +324,53 @@ export type DominaoWireHttp = {
       "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" };
+  };
+  "/matchmaking/enqueue": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>>, ["lobby"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/matchmaking/launch": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/matchmaking/leave": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/matchmaking/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "queue": {
+        "lobbies": {
+          "full": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["full"]>>;
+          "lobby": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>[0], ["lobby"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>>>, ["lobby"]>]>>;
+          "players": {
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
+          }[];
+          "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["rules"]>>;
+          "secondsLeft": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["secondsLeft"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/tables/close": {
     input: {

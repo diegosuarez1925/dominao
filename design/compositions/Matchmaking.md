@@ -1,0 +1,48 @@
+# Matchmaking
+
+Matchmaking lets a guest play with strangers when no friends are around. Matchmaking
+only groups players; it knows nothing of tables or dominoes. This composition decides
+that a group it hands out sits down at a new table, so from then on a matched game is
+played exactly like a game between friends.
+
+A guest [asks for a game](reaction:Matchmaking.Enqueue) under the standard rules,
+which are the only rules for now. They join the earliest lobby with those rules that
+still has room, or a new one. A guest already sitting at a table is answered
+`AT_TABLE`: they must leave it first.
+
+```endpoints
+Matchmaking.Enqueue at /matchmaking/enqueue
+```
+
+While waiting, a guest [looks at their lobby](reaction:Matchmaking.ShowQueue)
+through [its view](former:Matchmaking.QueueLobby): who is waiting there by name, its
+rules, whether it is full, and how many seconds are left in its countdown. The page
+asks for it every couple of seconds, so new arrivals and the countdown show up
+without reloading.
+
+```endpoints
+Matchmaking.ShowQueue at /matchmaking/view
+```
+
+A guest can [stop waiting](reaction:Matchmaking.LeaveQueue) at any time before the
+game starts, which also stops a running countdown. A guest who ends their session
+[stops waiting too](reaction:Matchmaking.LeaveQueueOnSessionEnd).
+
+```endpoints
+Matchmaking.LeaveQueue at /matchmaking/leave
+```
+
+When the countdown of a full lobby reaches zero, any player waiting in it can
+[launch it](reaction:Matchmaking.Launch); Matchmaking refuses an early launch, and
+when several players ask at once only the first succeeds. A guest waiting nowhere is
+answered `NOT_QUEUED`.
+
+```endpoints
+Matchmaking.Launch at /matchmaking/launch
+```
+
+A launched lobby is [seated at a new table](reaction:Matchmaking.SeatLaunchedLobby):
+the app asks CodeGenerating for a table code, the first of the shuffled players opens
+the table, the other three join in order, and DominoPlaying starts the game with the
+four in that order. Since the order was shuffled, partners are random. From here the
+table, its lobby and its game behave as described for private tables and games.

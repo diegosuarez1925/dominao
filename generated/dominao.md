@@ -25,8 +25,8 @@ Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
 
 #### Instances
 
-- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 19.
-  - `Context` is `CodeContext` — [Application types](../design/types.md), line 20.
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 27.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 28.
 
 ### DominoPlaying
 
@@ -60,9 +60,9 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 
 #### Instances
 
-- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 22.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 24.
-  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 23.
+- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 30.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 32.
+  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 31.
 
 ### GuestSessioning
 
@@ -84,7 +84,34 @@ Defined in [GuestSessioning](../design/concepts/GuestSessioning.md), line 1.
 
 #### Instances
 
-- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 26.
+- `GuestSessioning` — instance of `GuestSessioning` — [Application types](../design/types.md), line 34.
+
+### Matchmaking
+
+Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
+
+#### Actions
+
+- `enqueue(player: Player, rules: Rules) : returns (lobby: Lobby)`
+  - Refuses `ALREADY_QUEUED`: That player is already waiting for a game.
+- `cancel(player: Player) : returns (lobby: Lobby)`
+  - Refuses `NOT_QUEUED`: That player is not waiting for a game.
+- `launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fourth: Player)`
+  - Refuses `NO_SUCH_LOBBY`: There is no such lobby.
+  - Refuses `LOBBY_NOT_FULL`: That lobby is still waiting for players.
+  - Refuses `COUNTDOWN_RUNNING`: The countdown for that lobby has not finished.
+
+#### Queries
+
+- `_lobbyOf(player: Player) : optional (lobby: Lobby)`
+- `_status(lobby: Lobby) : optional (rules: Rules, full: Flag, secondsLeft: Number)`
+- `_entries(lobby: Lobby) : many (player: Player)`
+
+#### Instances
+
+- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 36.
+  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 37.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 38.
 
 ### Table
 
@@ -114,14 +141,15 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Instances
 
-- `Table` — instance of `Table` — [Application types](../design/types.md), line 28.
-  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 29.
+- `Table` — instance of `Table` — [Application types](../design/types.md), line 40.
+  - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 41.
 
 ## Application types
 
 Concrete types:
 
-- `CodeContext` — [Application types](../design/types.md), line 13.
+- `CodeContext` — [Application types](../design/types.md), line 21.
+- `RuleSet` — [Application types](../design/types.md), line 17.
 
 ## Formers
 
@@ -184,7 +212,7 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
 ### the lobby of (session)
 
 Authored path: `Tables.Lobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 24.
+- Covered by [Tables](../design/compositions/Tables.md), line 26.
 
 ```former
 Former "the lobby of (session)" — inputs (session); bindings (table, host, code, position, player, displayName); promises exactly one record — forms:
@@ -201,6 +229,28 @@ Former "the lobby of (session)" — inputs (session); bindings (table, host, cod
             player
             position
         table
+```
+
+### the matchmaking lobby of (session)
+
+Authored path: `Matchmaking.QueueLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 18.
+
+```former
+Former "the matchmaking lobby of (session)" — inputs (session); bindings (lobby, rules, full, secondsLeft, player, displayName); promises exactly one record — forms:
+  a record of
+    lobbies: each Matchmaking._lobbyOf (player: session) has (lobby)
+      where Matchmaking._status (lobby) has (full, rules, secondsLeft)
+      form a record of
+        full
+        lobby
+        players: each Matchmaking._entries (lobby) has (player)
+          where GuestSessioning._getName (session: player) has (displayName)
+          form a record of
+            displayName
+            player
+        rules
+        secondsLeft
 ```
 
 ## Reactions
@@ -514,11 +564,276 @@ then
   RequestBoundary.respond (requestId, session, token: code)
 ```
 
+### Matchmaking.Enqueue
+
+Authored path: `Matchmaking.Enqueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Matchmaking.Enqueue:not-seated#2
+
+Authored path: `Matchmaking.Enqueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Enqueue
+where
+  no Table._tableOf (player: session)
+then
+  Matchmaking.enqueue (player: session, rules: "STANDARD")
+```
+
+### Matchmaking.Enqueue:not-seated#3
+
+Authored path: `Matchmaking.Enqueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+
+```reaction
+when Matchmaking.enqueue (player: session, rules: "STANDARD", lobby), asked by Matchmaking.Enqueue:not-seated#2
+where
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+then
+  RequestBoundary.respond (lobby, requestId)
+```
+
+### Matchmaking.Enqueue:seated#2
+
+Authored path: `Matchmaking.Enqueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Enqueue
+where
+  Table._tableOf (player: session)
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+then
+  RequestBoundary.respond (error: "AT_TABLE", requestId)
+```
+
+### Matchmaking.Launch
+
+Authored path: `Matchmaking.Launch`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Matchmaking.Launch:not-queued#2
+
+Authored path: `Matchmaking.Launch`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
+where
+  no Matchmaking._lobbyOf (player: session)
+  earlier, RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_QUEUED", requestId)
+```
+
+### Matchmaking.Launch:queued#2
+
+Authored path: `Matchmaking.Launch`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
+where
+  Matchmaking._lobbyOf (player: session) has (lobby)
+then
+  Matchmaking.launch (lobby)
+```
+
+### Matchmaking.Launch:queued#3
+
+Authored path: `Matchmaking.Launch`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+
+```reaction
+when Matchmaking.launch (lobby, first, fourth, second, third), asked by Matchmaking.Launch:queued#2
+where
+  earlier, RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
+then
+  RequestBoundary.respond (lobby, requestId)
+```
+
+### Matchmaking.LeaveQueue
+
+Authored path: `Matchmaking.LeaveQueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/leave", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Matchmaking.LeaveQueue#2
+
+Authored path: `Matchmaking.LeaveQueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.LeaveQueue
+then
+  Matchmaking.cancel (player: session)
+```
+
+### Matchmaking.LeaveQueue#3
+
+Authored path: `Matchmaking.LeaveQueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+
+```reaction
+when Matchmaking.cancel (player: session, lobby), asked by Matchmaking.LeaveQueue#2
+where
+  earlier, RequestBoundary.request (path: "/matchmaking/leave", requestId, token)
+then
+  RequestBoundary.respond (lobby, requestId)
+```
+
+### Matchmaking.LeaveQueueOnSessionEnd
+
+Authored path: `Matchmaking.LeaveQueueOnSessionEnd`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 29.
+
+```reaction
+when GuestSessioning.end (session)
+where
+  Matchmaking._lobbyOf (player: session)
+then
+  Matchmaking.cancel (player: session)
+```
+
+### Matchmaking.SeatLaunchedLobby
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when Matchmaking.launch (first, fourth, second, third)
+then
+  CodeGenerating.generate (context: "TABLE_CODES", size: 6)
+```
+
+### Matchmaking.SeatLaunchedLobby#2
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Matchmaking.SeatLaunchedLobby
+where
+  earlier, Matchmaking.launch (first, fourth, second, third)
+then
+  Table.open (code, host: first)
+```
+
+### Matchmaking.SeatLaunchedLobby#3
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when Table.open (code, host: first, table), asked by Matchmaking.SeatLaunchedLobby#2
+where
+  earlier, Matchmaking.launch (first, fourth, second, third)
+then
+  Table.join (player: second, table)
+```
+
+### Matchmaking.SeatLaunchedLobby#4
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
+where
+  earlier, Matchmaking.launch (first, fourth, second, third)
+then
+  Table.join (player: third, table)
+```
+
+### Matchmaking.SeatLaunchedLobby#5
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
+where
+  earlier, Matchmaking.launch (first, fourth, second, third)
+then
+  Table.join (player: fourth, table)
+```
+
+### Matchmaking.SeatLaunchedLobby#6
+
+Authored path: `Matchmaking.SeatLaunchedLobby`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+
+```reaction
+when Table.join (player: fourth, table), asked by Matchmaking.SeatLaunchedLobby#5
+where
+  earlier, Table.open (code, host: first, table), asked by Matchmaking.SeatLaunchedLobby#2
+  earlier, Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
+  earlier, Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
+then
+  DominoPlaying.start (first, fourth, place: table, second, third)
+```
+
+### Matchmaking.ShowQueue
+
+Authored path: `Matchmaking.ShowQueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 17.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 24.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/view", requestId, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Matchmaking.ShowQueue#2
+
+Authored path: `Matchmaking.ShowQueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 17.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 24.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.ShowQueue
+where
+  earlier, RequestBoundary.request (path: "/matchmaking/view", requestId, token)
+then
+  RequestBoundary.respond (queue: former "the matchmaking lobby of (session)" with (session), requestId)
+```
+
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -529,8 +844,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -544,8 +859,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -558,8 +873,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -573,7 +888,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 34.
+- Covered by [Tables](../design/compositions/Tables.md), line 36.
 
 ```reaction
 when Table.leave (table)
@@ -586,7 +901,7 @@ then
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 39.
 
 ```reaction
 when Table.close (code)
@@ -597,8 +912,8 @@ then
 ### Tables.JoinByCode
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 16.
-- Covered by [Tables](../design/compositions/Tables.md), line 20.
+- Covered by [Tables](../design/compositions/Tables.md), line 18.
+- Covered by [Tables](../design/compositions/Tables.md), line 22.
 
 ```reaction
 when RequestBoundary.request (code, path: "/tables/join", requestId, token)
@@ -609,12 +924,13 @@ then
 ### Tables.JoinByCode:code-found#2
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 16.
-- Covered by [Tables](../design/compositions/Tables.md), line 20.
+- Covered by [Tables](../design/compositions/Tables.md), line 18.
+- Covered by [Tables](../design/compositions/Tables.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
 where
+  no Matchmaking._lobbyOf (player: session)
   earlier, RequestBoundary.request (code, path: "/tables/join", requestId, token)
   Table._getByCode (code) has (table)
 then
@@ -624,8 +940,8 @@ then
 ### Tables.JoinByCode:code-found#3
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 16.
-- Covered by [Tables](../design/compositions/Tables.md), line 20.
+- Covered by [Tables](../design/compositions/Tables.md), line 18.
+- Covered by [Tables](../design/compositions/Tables.md), line 22.
 
 ```reaction
 when Table.join (player: session, table, position), asked by Tables.JoinByCode:code-found#2
@@ -638,23 +954,39 @@ then
 ### Tables.JoinByCode:code-unknown#2
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 16.
-- Covered by [Tables](../design/compositions/Tables.md), line 20.
+- Covered by [Tables](../design/compositions/Tables.md), line 18.
+- Covered by [Tables](../design/compositions/Tables.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
 where
+  no Matchmaking._lobbyOf (player: session)
   earlier, RequestBoundary.request (code, path: "/tables/join", requestId, token)
   no Table._getByCode (code)
 then
   RequestBoundary.respond (error: "NO_SUCH_TABLE", requestId)
 ```
 
+### Tables.JoinByCode:queued#2
+
+Authored path: `Tables.JoinByCode`.
+- Covered by [Tables](../design/compositions/Tables.md), line 18.
+- Covered by [Tables](../design/compositions/Tables.md), line 22.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
+where
+  Matchmaking._lobbyOf (player: session)
+  earlier, RequestBoundary.request (code, path: "/tables/join", requestId, token)
+then
+  RequestBoundary.respond (error: "IN_QUEUE", requestId)
+```
+
 ### Tables.Leave
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 32.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 34.
+- Covered by [Tables](../design/compositions/Tables.md), line 43.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -665,8 +997,8 @@ then
 ### Tables.Leave#2
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 32.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 34.
+- Covered by [Tables](../design/compositions/Tables.md), line 43.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Leave
@@ -679,8 +1011,8 @@ then
 ### Tables.Leave#3
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 32.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 34.
+- Covered by [Tables](../design/compositions/Tables.md), line 43.
 
 ```reaction
 when Table.leave (player: session, table), asked by Tables.Leave#2
@@ -693,7 +1025,7 @@ then
 ### Tables.LeaveTableOnSessionEnd
 
 Authored path: `Tables.LeaveTableOnSessionEnd`.
-- Covered by [Tables](../design/compositions/Tables.md), line 33.
+- Covered by [Tables](../design/compositions/Tables.md), line 35.
 
 ```reaction
 when GuestSessioning.end (session)
@@ -707,7 +1039,7 @@ then
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 13.
+- Covered by [Tables](../design/compositions/Tables.md), line 15.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/open", requestId, token)
@@ -715,51 +1047,68 @@ then
   GuestSessioning.resume (token)
 ```
 
-### Tables.Open#2
+### Tables.Open:not-queued#2
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 13.
+- Covered by [Tables](../design/compositions/Tables.md), line 15.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Open
+where
+  no Matchmaking._lobbyOf (player: session)
 then
   CodeGenerating.generate (context: "TABLE_CODES", size: 6)
 ```
 
-### Tables.Open#3
+### Tables.Open:not-queued#3
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 13.
+- Covered by [Tables](../design/compositions/Tables.md), line 15.
 
 ```reaction
-when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Tables.Open#2
+when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Tables.Open:not-queued#2
 where
   earlier, GuestSessioning.resume (token, displayName, session), asked by Tables.Open
 then
   Table.open (code, host: session)
 ```
 
-### Tables.Open#4
+### Tables.Open:not-queued#4
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 13.
+- Covered by [Tables](../design/compositions/Tables.md), line 15.
 
 ```reaction
-when Table.open (code, host: session, table), asked by Tables.Open#3
+when Table.open (code, host: session, table), asked by Tables.Open:not-queued#3
 where
   earlier, RequestBoundary.request (path: "/tables/open", requestId, token)
 then
   RequestBoundary.respond (code, requestId, table)
 ```
 
+### Tables.Open:queued#2
+
+Authored path: `Tables.Open`.
+- Covered by [Tables](../design/compositions/Tables.md), line 8.
+- Covered by [Tables](../design/compositions/Tables.md), line 15.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.Open
+where
+  Matchmaking._lobbyOf (player: session)
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, token)
+then
+  RequestBoundary.respond (error: "IN_QUEUE", requestId)
+```
+
 ### Tables.ShowLobby
 
 Authored path: `Tables.ShowLobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 23.
-- Covered by [Tables](../design/compositions/Tables.md), line 29.
+- Covered by [Tables](../design/compositions/Tables.md), line 25.
+- Covered by [Tables](../design/compositions/Tables.md), line 31.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/lobby", requestId, token)
@@ -770,8 +1119,8 @@ then
 ### Tables.ShowLobby#2
 
 Authored path: `Tables.ShowLobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 23.
-- Covered by [Tables](../design/compositions/Tables.md), line 29.
+- Covered by [Tables](../design/compositions/Tables.md), line 25.
+- Covered by [Tables](../design/compositions/Tables.md), line 31.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.ShowLobby
@@ -794,6 +1143,10 @@ not listed here have no explicit input contract.
 - `/guests/leave` — requires `token`
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`
+- `/matchmaking/enqueue` — requires `token`
+- `/matchmaking/launch` — requires `token`
+- `/matchmaking/leave` — requires `token`
+- `/matchmaking/view` — requires `token`
 - `/tables/close` — requires `token`, `table`
 - `/tables/join` — requires `token`, `code`
 - `/tables/leave` — requires `token`, `table`
