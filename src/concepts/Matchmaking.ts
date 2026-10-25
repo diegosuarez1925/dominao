@@ -106,7 +106,7 @@ export class MatchmakingConcept {
       throw new CountdownRunning("The countdown for that lobby has not finished.");
     }
     const [first, second, third, fourth] = this.shuffle(launched.entries.map((e) => e.player));
-    return { first, second, third, fourth };
+    return { first, second, third, fourth, rules: launched.rules };
   }
 
   async _lobbyOf({ player }: { player: string }) {

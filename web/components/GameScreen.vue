@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Game } from "../api.ts";
-import { state } from "../session.ts";
+import { rulesName, state } from "../session.ts";
 import GameBoard from "./GameBoard.vue";
 import MoveLog from "./MoveLog.vue";
 import PlayerHand from "./PlayerHand.vue";
@@ -29,7 +29,8 @@ const result = computed(() => {
     message =
       last.team === -1
         ? `Match ${last.matchNumber}: ${how}, and it was a tie, so nobody scores.`
-        : `Match ${last.matchNumber}: ${how}. ${team(last.team)} score ${last.points}.`;
+        : `Match ${last.matchNumber}: ${how}. ${team(last.team)} score ${last.points}` +
+          (last.prize > 0 ? `, including a prize of ${last.prize}.` : ".");
   }
   if (game.status === "FINISHED") message += ` ${team(game.scoreA >= game.target ? 0 : 1)} win the game!`;
   return message;
@@ -38,6 +39,7 @@ const result = computed(() => {
 
 <template>
   <section>
+    <p :title="game.rulesDescription">{{ rulesName(game.rules) }} rules. {{ game.rulesDescription }}</p>
     <p>
       {{ team(0) }}: {{ game.scoreA }} · {{ team(1) }}: {{ game.scoreB }} · first to {{ game.target }} · match
       {{ game.matchNumber }}

@@ -9,14 +9,14 @@ for session tokens and one for table join codes.
 A game of dominoes is played at a private table by the guests seated there, so
 DominoPlaying's players are sessions and its places are tables.
 
-Matchmaking puts strangers who want the same rules in a lobby together. The rules
-are a named preset; for now there is only the standard game, but a lobby only ever
-mixes players who asked for the same preset, so more can be added later.
+Games are played by rule sets that DominoPlaying defines (DEFAULT, LONG and SHORT).
+A table keeps the rule set its host chose, and Matchmaking only puts strangers who
+chose the same rule set in a lobby together. Neither interprets the rules; they only
+keep and compare the rule set's name.
 
 ```types
 concrete RuleSet
-  A named set of game rules a player can ask Matchmaking for. For now the only one is
-  STANDARD: Puerto Rican rules played to 200.
+  The name of one of DominoPlaying's rule sets, such as DEFAULT, LONG or SHORT.
 
 concrete CodeContext
   The kind of code being generated: SESSION_TOKENS for guest session tokens, or
@@ -39,4 +39,5 @@ instantiate Matchmaking with
 
 instantiate Table with
   Player is GuestSessioning.Session
+  Rules is RuleSet
 ```

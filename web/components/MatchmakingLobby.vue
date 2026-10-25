@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { QueueLobby } from "../api.ts";
-import { launchQueue, leaveQueue, state } from "../session.ts";
+import { launchQueue, leaveQueue, rulesDescription, rulesName, state } from "../session.ts";
 import LobbySeats from "./LobbySeats.vue";
 
 const props = defineProps<{ queue: QueueLobby }>();
@@ -45,6 +45,7 @@ onBeforeUnmount(() => clearInterval(timer));
 <template>
   <section>
     <h2>Looking for players</h2>
+    <p>Rules: {{ rulesName(queue.rules) }}. {{ rulesDescription(queue.rules) }}</p>
     <p v-if="queue.full">Table complete! The game starts in {{ secondsLeft }}…</p>
     <p v-else>
       Waiting for {{ 4 - queue.players.length }} more

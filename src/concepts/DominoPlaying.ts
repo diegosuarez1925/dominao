@@ -7,6 +7,7 @@ export class GameNotActive extends Error {}
 export class NotYourTurn extends Error {}
 export class NotInHand extends Error {}
 export class IllegalPlay extends Error {}
+export class UnknownRules extends Error {}
 
 type Status = "ACTIVE" | "FINISHED" | "ABANDONED";
 type Side = "LEFT" | "RIGHT";
@@ -20,9 +21,48 @@ interface Result {
   matchNumber: number;
   winner: string;
   team: number;
+  /** Everything the team scored for the match, prize included. */
   points: number;
+  prize?: number;
   ending: Ending;
 }
+
+/**
+ * How a game is played. To add a rule set, add an entry here (and its name to the
+ * RuleSet type in the spec); the app lists the rule sets from `_rulesets`, so the
+ * page and matchmaking pick it up with no other changes.
+ */
+interface RuleSet {
+  target: number;
+  /** Who wins a tranque: the team holding fewer pips, or the team of the single player holding fewest. */
+  tranque: "TEAM" | "PLAYER";
+  /** Extra points for the winners of the first matches: prizes[0] for match 1, and so on. */
+  prizes: number[];
+  description: string;
+}
+
+export const RULESETS: Record<string, RuleSet> = {
+  DEFAULT: {
+    target: 200,
+    tranque: "TEAM",
+    prizes: [],
+    description: "Play to 200. A tranque goes to the team whose two hands hold fewer pips.",
+  },
+  LONG: {
+    target: 500,
+    tranque: "PLAYER",
+    prizes: [100, 75, 50, 25],
+    description:
+      "Play to 500. The winners of the first four matches get prizes of 100, 75, 50 and 25. A tranque goes to the team of the player holding the fewest pips.",
+  },
+  SHORT: {
+    target: 100,
+    tranque: "TEAM",
+    prizes: [],
+    description: "Play to 100. A tranque goes to the team whose two hands hold fewer pips.",
+  },
+};
+const DEFAULT_RULES = "DEFAULT";
 
 interface Turn {
   matchNumber: number;
@@ -36,6 +76,8 @@ interface Game {
   _id: string;
   place: string;
   players: string[];
+  /** Games started before rule sets existed have none and play by DEFAULT. */
+  rules?: string;
   status: Status;
   target: number;
   teamScores: [number, number];
@@ -57,7 +99,6 @@ interface Game {
   version: number;
 }
 
-export const TARGET_SCORE = 200;
 const SEATS = 4;
 const HAND_SIZE = 7;
 
@@ -114,6 +155,39 @@ function placed(board: Pips[], [a, b]: Pips, side: Side): Pips[] | undefined {
   return undefined;
 }
 
+function rulesOf(game: Game): RuleSet {
+  return RULESETS[game.rules ?? DEFAULT_RULES];
+}
+
+/** Seats in the match's turn order, starting with the player who started it. */
+function fromStarter(game: Game): number[] {
+  return [0, 1, 2, 3].map((step) => (game.starter + step) % SEATS);
+}
+
+/**
+ * Team rules: the team whose two hands hold fewer pips wins, and its player earliest
+ * in the match's turn order starts next. Undefined on a tie.
+ */
+function tranqueByTeam(game: Game): number | undefined {
+  const teamPips = [0, 1].map((team) => pips(game.hands.filter((_, s) => teamOf(s) === team).flat()));
+  if (teamPips[0] === teamPips[1]) return undefined;
+  const team = teamPips[0] < teamPips[1] ? 0 : 1;
+  return fromStarter(game).find((seat) => teamOf(seat) === team);
+}
+
+/**
+ * Player rules: the player holding the fewest pips wins for their team and starts
+ * next. When several hold that fewest, they win only if they are all partners (the
+ * earliest of them in turn order starts); otherwise it is a tie.
+ */
+function tranqueByPlayer(game: Game): number | undefined {
+  const order = fromStarter(game);
+  const fewest = Math.min(...order.map((seat) => pips(game.hands[seat])));
+  const lowest = order.filter((seat) => pips(game.hands[seat]) === fewest);
+  if (new Set(lowest.map(teamOf)).size > 1) return undefined;
+  return lowest[0];
+}
+
 export class DominoPlayingConcept {
   private readonly games: Collection<Game>;
 
@@ -130,13 +204,17 @@ export class DominoPlayingConcept {
     second,
     third,
     fourth,
+    rules,
   }: {
     place: string;
     first: string;
     second: string;
     third: string;
     fourth: string;
+    rules: string;
   }) {
+    const ruleSet = RULESETS[rules];
+    if (!Object.hasOwn(RULESETS, rules)) throw new UnknownRules("Those are not rules this game knows.");
     const players = [first, second, third, fourth];
     if (new Set(players).size !== SEATS) throw new DuplicatePlayer("A game needs four different players.");
     if (await this.games.findOne({ place, status: "ACTIVE" })) {
@@ -146,8 +224,9 @@ export class DominoPlayingConcept {
       _id: crypto.randomUUID(),
       place,
       players,
+      rules,
       status: "ACTIVE",
-      target: TARGET_SCORE,
+      target: ruleSet.target,
       teamScores: [0, 0],
       matchNumber: 0,
       starter: 0,
@@ -222,6 +301,7 @@ export class DominoPlayingConcept {
     if (found === null) return [];
     return [
       {
+        rules: found.rules ?? DEFAULT_RULES,
         status: found.status,
         target: found.target,
         matchNumber: found.matchNumber,
@@ -278,7 +358,17 @@ export class DominoPlayingConcept {
   async _lastResult({ game }: { game: string }) {
     const found = await this.games.findOne({ _id: game });
     const last = found?.results.at(-1);
-    return last === undefined ? [] : [last];
+    return last === undefined ? [] : [{ ...last, prize: last.prize ?? 0 }];
+  }
+
+  async _ruleset({ rules }: { rules: string }) {
+    if (!Object.hasOwn(RULESETS, rules)) return [];
+    const { target, description } = RULESETS[rules];
+    return [{ target, description }];
+  }
+
+  async _rulesets() {
+    return Object.entries(RULESETS).map(([rules, { target, description }]) => ({ rules, target, description }));
   }
 
   /** Deals a new match. The first match opens with the double six; later ones with the given starter. */
@@ -318,17 +408,19 @@ export class DominoPlayingConcept {
       }
       skipped.push(candidate);
     }
-    // Nobody can play: a tranque.
-    const teamPips = [0, 1].map((team) => pips(game.hands.filter((_, s) => teamOf(s) === team).flat()));
-    if (teamPips[0] === teamPips[1]) return this.#endMatch(game, game.starter, -1, 0, "TRANQUE");
-    const team = teamPips[0] < teamPips[1] ? 0 : 1;
-    const winner = teamOf(game.starter) === team ? game.starter : next(game.starter);
-    this.#endMatch(game, winner, team, teamPips[0] + teamPips[1], "TRANQUE");
+    // Nobody can play: a tranque. The winning team scores every pip left on the table.
+    const all = pips(game.hands.flat());
+    const winner = rulesOf(game).tranque === "TEAM" ? tranqueByTeam(game) : tranqueByPlayer(game);
+    if (winner === undefined) return this.#endMatch(game, game.starter, -1, 0, "TRANQUE");
+    this.#endMatch(game, winner, teamOf(winner), all, "TRANQUE");
   }
 
   #endMatch(game: Game, winner: number, team: number, points: number, ending: Ending) {
-    if (team !== -1) game.teamScores[team] += points;
-    game.results.push({ matchNumber: game.matchNumber, winner: game.players[winner], team, points, ending });
+    // A tie wins no prize.
+    const prize = team === -1 ? 0 : (rulesOf(game).prizes[game.matchNumber - 1] ?? 0);
+    const total = points + prize;
+    if (team !== -1) game.teamScores[team] += total;
+    game.results.push({ matchNumber: game.matchNumber, winner: game.players[winner], team, points: total, prize, ending });
     if (team !== -1 && game.teamScores[team] >= game.target) {
       game.status = "FINISHED";
       game.turn = winner;

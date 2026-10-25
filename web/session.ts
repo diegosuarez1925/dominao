@@ -2,7 +2,7 @@
 // page can take. Components read the state and call the actions; only this file talks to
 // the backend.
 import { reactive } from "vue";
-import { client, type Game, type QueueLobby, type Side, type Table } from "./api.ts";
+import { client, type Game, type QueueLobby, type RuleSet, type Side, type Table } from "./api.ts";
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
@@ -21,6 +21,8 @@ export const state = reactive({
    * the page says the game is starting instead of flashing back to the home screen.
    */
   starting: false,
+  /** The rule sets a table or a matchmaking lobby can play by, as the server lists them. */
+  rulesets: [] as RuleSet[],
   /** A message for the guest, such as why a move was refused. */
   message: "",
 });
@@ -35,9 +37,23 @@ function say(message: string) {
   state.message = message;
 }
 
+/** A rule set's name for people: "LONG" reads "Long". */
+export function rulesName(rules: string) {
+  return rules.charAt(0) + rules.slice(1).toLowerCase();
+}
+
+/** What a rule set changes, as the server describes it. */
+export function rulesDescription(rules: string) {
+  return state.rulesets.find((row) => row.rules === rules)?.description ?? "";
+}
+
 export async function resume() {
   const token = sessionStorage.getItem(TOKEN_KEY);
   state.me = null;
+  if (state.rulesets.length === 0) {
+    const listed = await client.games.rulesets({});
+    if (!("error" in listed)) state.rulesets = listed.view.rulesets;
+  }
   if (token !== null) {
     const result = await client.guests.me({ token });
     if ("error" in result) {
@@ -98,9 +114,9 @@ export async function endSession() {
   await resume();
 }
 
-export async function openTable() {
+export async function openTable(rules: string) {
   if (state.me === null) return;
-  const result = await client.tables.open({ token: state.me.token });
+  const result = await client.tables.open({ token: state.me.token, rules });
   say("error" in result ? `Could not open a table: ${result.error}` : "");
   await refresh();
 }
@@ -127,9 +143,10 @@ export async function closeTable() {
   await refresh();
 }
 
-export async function findGame() {
+/** Waits for three strangers who picked the same rules. */
+export async function findGame(rules: string) {
   if (state.me === null) return;
-  const result = await client.matchmaking.enqueue({ token: state.me.token });
+  const result = await client.matchmaking.enqueue({ token: state.me.token, rules });
   const reasons: Record<string, string> = { CONFLICT: "Leave your table before looking for a game." };
   say("error" in result ? (reasons[result.error] ?? `Could not look for a game: ${result.error}`) : "");
   await refresh();

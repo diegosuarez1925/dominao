@@ -13,9 +13,6 @@ import { strings } from "./validators.ts";
 
 const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
 
-// The only rule set for now. Lobbies already only mix players who ask for the same
-// one, so letting guests pick rules later only changes what is passed here.
-const STANDARD = "STANDARD";
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
 
@@ -47,22 +44,29 @@ const ShowQueue = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
-/** A guest already sitting at a table must leave it before looking for strangers. */
+/**
+ * A guest asks for a game under rules of their choice and only meets strangers who
+ * chose the same; rules the game does not know are answered UNKNOWN_RULES. A guest
+ * already sitting at a table must leave it first.
+ */
 const Enqueue = endpoint(
   "/matchmaking/enqueue",
-  ({ token, session, displayName, lobby }) =>
-    receive({ token })
+  ({ token, session, displayName, rules, lobby }) =>
+    receive({ token, rules })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
-        where(no(Table._tableOf({ player: session })))
-          .then(Matchmaking.enqueue({ player: session, rules: STANDARD }).responds({ lobby }))
+        where(no(Table._tableOf({ player: session })), DominoPlaying._ruleset({ rules }))
+          .then(Matchmaking.enqueue({ player: session, rules }).responds({ lobby }))
           .then(respond({ lobby }))
           .named("not-seated"),
+        where(no(Table._tableOf({ player: session })), no(DominoPlaying._ruleset({ rules })))
+          .then(respond({ error: "UNKNOWN_RULES" }))
+          .named("unknown-rules"),
         where(Table._tableOf({ player: session }))
           .then(respond({ error: "AT_TABLE" }))
           .named("seated"),
       ),
-  { input: { required: ["token"] }, validators: { input: strings("token") } },
+  { input: { required: ["token", "rules"] }, validators: { input: strings("token", "rules") } },
 );
 
 const LeaveQueue = endpoint(
@@ -96,16 +100,17 @@ const Launch = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
-// A launched lobby becomes a table: the first player opens it under a fresh code, the
-// others sit down in their shuffled order, and the game starts with no host needed.
-const SeatLaunchedLobby = reaction(({ first, second, third, fourth, code, table }) =>
-  when(Matchmaking.launch({}).responds({ first, second, third, fourth }))
+// A launched lobby becomes a table: the first player opens it under a fresh code and
+// the lobby's rules, the others sit down in their shuffled order, and the game starts
+// by those rules with no host needed.
+const SeatLaunchedLobby = reaction(({ first, second, third, fourth, rules, code, table }) =>
+  when(Matchmaking.launch({}).responds({ first, second, third, fourth, rules }))
     .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
-    .then(Table.open({ host: first, code }).responds({ table }))
+    .then(Table.open({ host: first, code, rules }).responds({ table }))
     .then(Table.join({ table, player: second }))
     .then(Table.join({ table, player: third }))
     .then(Table.join({ table, player: fourth }))
-    .then(DominoPlaying.start({ place: table, first, second, third, fourth })),
+    .then(DominoPlaying.start({ place: table, first, second, third, fourth, rules })),
 );
 
 // A guest who ends their session stops waiting for a game.

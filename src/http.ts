@@ -27,5 +27,6 @@ export const policy = httpPolicy({
     COUNTDOWN_RUNNING: "CONFLICT",
     AT_TABLE: "CONFLICT",
     IN_QUEUE: "CONFLICT",
+    UNKNOWN_RULES: "INVALID_REQUEST",
   },
 });

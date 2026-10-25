@@ -34,7 +34,8 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 
 #### Actions
 
-- `start(place: Place, first: Player, second: Player, third: Player, fourth: Player) : returns (game: Game)`
+- `start(place: Place, first: Player, second: Player, third: Player, fourth: Player, rules: RuleSet) : returns (game: Game)`
+  - Refuses `UNKNOWN_RULES`: Those are not rules this game knows.
   - Refuses `DUPLICATE_PLAYER`: A game needs four different players.
   - Refuses `GAME_IN_PROGRESS`: A game is already being played there.
 - `play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)`
@@ -51,12 +52,14 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 
 - `_activeAt(place: Place) : optional (game: Game)`
 - `_latestAt(place: Place) : optional (game: Game)`
-- `_summary(game: Game) : optional (status: Status, target: Number, matchNumber: Number, scoreA: Number, scoreB: Number, turnPlayer: Player)`
+- `_summary(game: Game) : optional (rules: RuleSet, status: Status, target: Number, matchNumber: Number, scoreA: Number, scoreB: Number, turnPlayer: Player)`
 - `_players(game: Game) : many (position: Number, player: Player, tileCount: Number)`
 - `_hand(game: Game, player: Player) : many (tile: Tile)`
 - `_board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: Number)`
 - `_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)`
-- `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, ending: Ending)`
+- `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, ending: Ending)`
+- `_ruleset(rules: RuleSet) : optional (target: Number, description: String)`
+- `_rulesets() : many (rules: RuleSet, target: Number, description: String)`
 
 #### Instances
 
@@ -96,7 +99,7 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
   - Refuses `ALREADY_QUEUED`: That player is already waiting for a game.
 - `cancel(player: Player) : returns (lobby: Lobby)`
   - Refuses `NOT_QUEUED`: That player is not waiting for a game.
-- `launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fourth: Player)`
+- `launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fourth: Player, rules: Rules)`
   - Refuses `NO_SUCH_LOBBY`: There is no such lobby.
   - Refuses `LOBBY_NOT_FULL`: That lobby is still waiting for players.
   - Refuses `COUNTDOWN_RUNNING`: The countdown for that lobby has not finished.
@@ -119,7 +122,7 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Actions
 
-- `open(host: Player, code: String) : returns (table: Table)`
+- `open(host: Player, code: String, rules: Rules) : returns (table: Table)`
   - Refuses `ALREADY_SEATED`: That player is already sitting at a table.
   - Refuses `CODE_IN_USE`: Another table already has that code.
 - `join(table: Table, player: Player) : returns (position: Number)`
@@ -134,7 +137,7 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 #### Queries
 
 - `_getByCode(code: String) : optional (table: Table)`
-- `_get(table: Table) : optional (host: Player, code: String)`
+- `_get(table: Table) : optional (host: Player, code: String, rules: Rules)`
 - `_seats(table: Table) : many (position: Number, player: Player)`
 - `_isFull(table: Table) : one (full: Flag)`
 - `_tableOf(player: Player) : optional (table: Table)`
@@ -143,13 +146,14 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 - `Table` — instance of `Table` — [Application types](../design/types.md), line 40.
   - `Player` is `GuestSessioning.Session` — [Application types](../design/types.md), line 41.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 42.
 
 ## Application types
 
 Concrete types:
 
 - `CodeContext` — [Application types](../design/types.md), line 21.
-- `RuleSet` — [Application types](../design/types.md), line 17.
+- `RuleSet` — [Application types](../design/types.md), line 18.
 
 ## Formers
 
@@ -159,14 +163,15 @@ _the authored explanation; this section records the generated shape._
 ### the game seen by (session)
 
 Authored path: `Games.GameView`.
-- Covered by [Games](../design/compositions/Games.md), line 26.
+- Covered by [Games](../design/compositions/Games.md), line 35.
 
 ```former
-Former "the game seen by (session)" — inputs (session); bindings (table, game, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, resultMatch, winner, team, points, ending, turnNumber, turnMatch, mover, move, movedTile, moverName); promises exactly one record — forms:
+Former "the game seen by (session)" — inputs (session); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, resultMatch, winner, team, points, prize, ending, turnNumber, turnMatch, mover, move, movedTile, moverName); promises exactly one record — forms:
   a record of
     games: each Table._tableOf (player: session) has (table)
       where DominoPlaying._latestAt (place: table) has (game)
-      where DominoPlaying._summary (game) has (matchNumber, scoreA, scoreB, status, target, turnPlayer)
+      where DominoPlaying._summary (game) has (matchNumber, rules, scoreA, scoreB, status, target, turnPlayer)
+      where DominoPlaying._ruleset (rules) has (description: rulesDescription)
       form a record of
         board: each DominoPlaying._board (game) has (fromFirst, left, right, tile: boardTile)
           form a record of
@@ -178,11 +183,12 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
         hand: each DominoPlaying._hand (game, player: session) has (tile)
           form a record of
             tile
-        lastResult: each DominoPlaying._lastResult (game) has (ending, matchNumber: resultMatch, points, team, winner)
+        lastResult: each DominoPlaying._lastResult (game) has (ending, matchNumber: resultMatch, points, prize, team, winner)
           form a record of
             ending
             matchNumber: resultMatch
             points
+            prize
             team
             winner
         log: each DominoPlaying._log (game) has (matchNumber: turnMatch, move, player: mover, tile: movedTile, turn: turnNumber)
@@ -202,6 +208,8 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
             player
             position
             tileCount
+        rules
+        rulesDescription
         scoreA
         scoreB
         status
@@ -212,16 +220,17 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
 ### the lobby of (session)
 
 Authored path: `Tables.Lobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 26.
+- Covered by [Tables](../design/compositions/Tables.md), line 27.
 
 ```former
-Former "the lobby of (session)" — inputs (session); bindings (table, host, code, position, player, displayName); promises exactly one record — forms:
+Former "the lobby of (session)" — inputs (session); bindings (table, host, code, rules, position, player, displayName); promises exactly one record — forms:
   a record of
     tables: each Table._tableOf (player: session) has (table)
-      where Table._get (table) has (code, host)
+      where Table._get (table) has (code, host, rules)
       form a record of
         code
         host
+        rules
         seats: each Table._seats (table) has (player, position)
           where GuestSessioning._getName (session: player) has (displayName)
           form a record of
@@ -234,7 +243,7 @@ Former "the lobby of (session)" — inputs (session); bindings (table, host, cod
 ### the matchmaking lobby of (session)
 
 Authored path: `Matchmaking.QueueLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 18.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 19.
 
 ```former
 Former "the matchmaking lobby of (session)" — inputs (session); bindings (lobby, rules, full, secondsLeft, player, displayName); promises exactly one record — forms:
@@ -251,6 +260,21 @@ Former "the matchmaking lobby of (session)" — inputs (session); bindings (lobb
             player
         rules
         secondsLeft
+```
+
+### the rule sets
+
+Authored path: `Games.Rulesets`.
+- Covered by [Games](../design/compositions/Games.md), line 10.
+
+```former
+Former "the rule sets" — inputs (); bindings (rules, target, description); promises exactly one record — forms:
+  a record of
+    rulesets: each DominoPlaying._rulesets () has (description, rules, target)
+      form a record of
+        description
+        rules
+        target
 ```
 
 ## Reactions
@@ -278,7 +302,7 @@ then
 ### Games.AbandonGameWhenPlayerLeaves
 
 Authored path: `Games.AbandonGameWhenPlayerLeaves`.
-- Covered by [Games](../design/compositions/Games.md), line 35.
+- Covered by [Games](../design/compositions/Games.md), line 45.
 
 ```reaction
 when Table.leave (table)
@@ -291,7 +315,7 @@ then
 ### Games.AbandonGameWhenTableCloses
 
 Authored path: `Games.AbandonGameWhenTableCloses`.
-- Covered by [Games](../design/compositions/Games.md), line 36.
+- Covered by [Games](../design/compositions/Games.md), line 46.
 
 ```reaction
 when Table.close (table, code)
@@ -304,8 +328,8 @@ then
 ### Games.Play
 
 Authored path: `Games.Play`.
-- Covered by [Games](../design/compositions/Games.md), line 16.
-- Covered by [Games](../design/compositions/Games.md), line 22.
+- Covered by [Games](../design/compositions/Games.md), line 25.
+- Covered by [Games](../design/compositions/Games.md), line 31.
 
 ```reaction
 when RequestBoundary.request (game, path: "/games/play", requestId, side, tile, token)
@@ -316,8 +340,8 @@ then
 ### Games.Play#2
 
 Authored path: `Games.Play`.
-- Covered by [Games](../design/compositions/Games.md), line 16.
-- Covered by [Games](../design/compositions/Games.md), line 22.
+- Covered by [Games](../design/compositions/Games.md), line 25.
+- Covered by [Games](../design/compositions/Games.md), line 31.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.Play
@@ -330,8 +354,8 @@ then
 ### Games.Play#3
 
 Authored path: `Games.Play`.
-- Covered by [Games](../design/compositions/Games.md), line 16.
-- Covered by [Games](../design/compositions/Games.md), line 22.
+- Covered by [Games](../design/compositions/Games.md), line 25.
+- Covered by [Games](../design/compositions/Games.md), line 31.
 
 ```reaction
 when DominoPlaying.play (game, player: session, side, tile), asked by Games.Play#2
@@ -341,11 +365,23 @@ then
   RequestBoundary.respond (game, requestId)
 ```
 
+### Games.ShowRulesets
+
+Authored path: `Games.ShowRulesets`.
+- Covered by [Games](../design/compositions/Games.md), line 9.
+- Covered by [Games](../design/compositions/Games.md), line 14.
+
+```reaction
+when RequestBoundary.request (path: "/games/rulesets", requestId)
+then
+  RequestBoundary.respond (requestId, view: former "the rule sets")
+```
+
 ### Games.StartGame
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
 when RequestBoundary.request (path: "/games/start", requestId, token)
@@ -356,31 +392,31 @@ then
 ### Games.StartGame:host-of-full-table#2
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
 where
   Table._tableOf (player: session) has (table)
-  Table._get (table) has (host: session)
+  Table._get (table) has (host: session, rules)
   Table._isFull (table) has (full: true)
   Table._seats (table) has (player: first, position: 0)
   Table._seats (table) has (player: second, position: 1)
   Table._seats (table) has (player: third, position: 2)
   Table._seats (table) has (player: fourth, position: 3)
 then
-  DominoPlaying.start (first, fourth, place: table, second, third)
+  DominoPlaying.start (first, fourth, place: table, rules, second, third)
 ```
 
 ### Games.StartGame:host-of-full-table#3
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
-when DominoPlaying.start (first, fourth, place: table, second, third, game), asked by Games.StartGame:host-of-full-table#2
+when DominoPlaying.start (first, fourth, place: table, rules, second, third, game), asked by Games.StartGame:host-of-full-table#2
 where
   earlier, RequestBoundary.request (path: "/games/start", requestId, token)
 then
@@ -390,8 +426,8 @@ then
 ### Games.StartGame:not-host#2
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
@@ -406,8 +442,8 @@ then
 ### Games.StartGame:not-seated#2
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
@@ -421,8 +457,8 @@ then
 ### Games.StartGame:table-not-full#2
 
 Authored path: `Games.StartGame`.
-- Covered by [Games](../design/compositions/Games.md), line 8.
-- Covered by [Games](../design/compositions/Games.md), line 13.
+- Covered by [Games](../design/compositions/Games.md), line 17.
+- Covered by [Games](../design/compositions/Games.md), line 22.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.StartGame
@@ -438,8 +474,8 @@ then
 ### Games.ViewGame
 
 Authored path: `Games.ViewGame`.
-- Covered by [Games](../design/compositions/Games.md), line 25.
-- Covered by [Games](../design/compositions/Games.md), line 31.
+- Covered by [Games](../design/compositions/Games.md), line 34.
+- Covered by [Games](../design/compositions/Games.md), line 41.
 
 ```reaction
 when RequestBoundary.request (path: "/games/view", requestId, token)
@@ -450,8 +486,8 @@ then
 ### Games.ViewGame#2
 
 Authored path: `Games.ViewGame`.
-- Covered by [Games](../design/compositions/Games.md), line 25.
-- Covered by [Games](../design/compositions/Games.md), line 31.
+- Covered by [Games](../design/compositions/Games.md), line 34.
+- Covered by [Games](../design/compositions/Games.md), line 41.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Games.ViewGame
@@ -568,10 +604,10 @@ then
 
 Authored path: `Matchmaking.Enqueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 15.
 
 ```reaction
-when RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+when RequestBoundary.request (path: "/matchmaking/enqueue", requestId, rules, token)
 then
   GuestSessioning.resume (token)
 ```
@@ -580,26 +616,28 @@ then
 
 Authored path: `Matchmaking.Enqueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 15.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Enqueue
 where
   no Table._tableOf (player: session)
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, rules, token)
+  DominoPlaying._ruleset (rules)
 then
-  Matchmaking.enqueue (player: session, rules: "STANDARD")
+  Matchmaking.enqueue (player: session, rules)
 ```
 
 ### Matchmaking.Enqueue:not-seated#3
 
 Authored path: `Matchmaking.Enqueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 15.
 
 ```reaction
-when Matchmaking.enqueue (player: session, rules: "STANDARD", lobby), asked by Matchmaking.Enqueue:not-seated#2
+when Matchmaking.enqueue (player: session, rules, lobby), asked by Matchmaking.Enqueue:not-seated#2
 where
-  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, rules, token)
 then
   RequestBoundary.respond (lobby, requestId)
 ```
@@ -608,22 +646,38 @@ then
 
 Authored path: `Matchmaking.Enqueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 14.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 15.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Enqueue
 where
   Table._tableOf (player: session)
-  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, token)
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, rules, token)
 then
   RequestBoundary.respond (error: "AT_TABLE", requestId)
+```
+
+### Matchmaking.Enqueue:unknown-rules#2
+
+Authored path: `Matchmaking.Enqueue`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 8.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 15.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Enqueue
+where
+  no Table._tableOf (player: session)
+  earlier, RequestBoundary.request (path: "/matchmaking/enqueue", requestId, rules, token)
+  no DominoPlaying._ruleset (rules)
+then
+  RequestBoundary.respond (error: "UNKNOWN_RULES", requestId)
 ```
 
 ### Matchmaking.Launch
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
 
 ```reaction
 when RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
@@ -634,8 +688,8 @@ then
 ### Matchmaking.Launch:not-queued#2
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
@@ -649,8 +703,8 @@ then
 ### Matchmaking.Launch:queued#2
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
@@ -663,8 +717,8 @@ then
 ### Matchmaking.Launch:queued#3
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 36.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 41.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
 
 ```reaction
 when Matchmaking.launch (lobby, first, fourth, second, third), asked by Matchmaking.Launch:queued#2
@@ -677,8 +731,8 @@ then
 ### Matchmaking.LeaveQueue
 
 Authored path: `Matchmaking.LeaveQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
 
 ```reaction
 when RequestBoundary.request (path: "/matchmaking/leave", requestId, token)
@@ -689,8 +743,8 @@ then
 ### Matchmaking.LeaveQueue#2
 
 Authored path: `Matchmaking.LeaveQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.LeaveQueue
@@ -701,8 +755,8 @@ then
 ### Matchmaking.LeaveQueue#3
 
 Authored path: `Matchmaking.LeaveQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 27.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 32.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
 
 ```reaction
 when Matchmaking.cancel (player: session, lobby), asked by Matchmaking.LeaveQueue#2
@@ -715,7 +769,7 @@ then
 ### Matchmaking.LeaveQueueOnSessionEnd
 
 Authored path: `Matchmaking.LeaveQueueOnSessionEnd`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 29.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 30.
 
 ```reaction
 when GuestSessioning.end (session)
@@ -728,10 +782,10 @@ then
 ### Matchmaking.SeatLaunchedLobby
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
-when Matchmaking.launch (first, fourth, second, third)
+when Matchmaking.launch (first, fourth, rules, second, third)
 then
   CodeGenerating.generate (context: "TABLE_CODES", size: 6)
 ```
@@ -739,25 +793,25 @@ then
 ### Matchmaking.SeatLaunchedLobby#2
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
 when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Matchmaking.SeatLaunchedLobby
 where
-  earlier, Matchmaking.launch (first, fourth, second, third)
+  earlier, Matchmaking.launch (first, fourth, rules, second, third)
 then
-  Table.open (code, host: first)
+  Table.open (code, host: first, rules)
 ```
 
 ### Matchmaking.SeatLaunchedLobby#3
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
-when Table.open (code, host: first, table), asked by Matchmaking.SeatLaunchedLobby#2
+when Table.open (code, host: first, rules, table), asked by Matchmaking.SeatLaunchedLobby#2
 where
-  earlier, Matchmaking.launch (first, fourth, second, third)
+  earlier, Matchmaking.launch (first, fourth, rules, second, third)
 then
   Table.join (player: second, table)
 ```
@@ -765,12 +819,12 @@ then
 ### Matchmaking.SeatLaunchedLobby#4
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
 when Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
 where
-  earlier, Matchmaking.launch (first, fourth, second, third)
+  earlier, Matchmaking.launch (first, fourth, rules, second, third)
 then
   Table.join (player: third, table)
 ```
@@ -778,12 +832,12 @@ then
 ### Matchmaking.SeatLaunchedLobby#5
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
 when Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
 where
-  earlier, Matchmaking.launch (first, fourth, second, third)
+  earlier, Matchmaking.launch (first, fourth, rules, second, third)
 then
   Table.join (player: fourth, table)
 ```
@@ -791,23 +845,23 @@ then
 ### Matchmaking.SeatLaunchedLobby#6
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
 
 ```reaction
 when Table.join (player: fourth, table), asked by Matchmaking.SeatLaunchedLobby#5
 where
-  earlier, Table.open (code, host: first, table), asked by Matchmaking.SeatLaunchedLobby#2
+  earlier, Table.open (code, host: first, rules, table), asked by Matchmaking.SeatLaunchedLobby#2
   earlier, Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
   earlier, Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
 then
-  DominoPlaying.start (first, fourth, place: table, second, third)
+  DominoPlaying.start (first, fourth, place: table, rules, second, third)
 ```
 
 ### Matchmaking.ShowQueue
 
 Authored path: `Matchmaking.ShowQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 17.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 24.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 18.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 25.
 
 ```reaction
 when RequestBoundary.request (path: "/matchmaking/view", requestId, token)
@@ -818,8 +872,8 @@ then
 ### Matchmaking.ShowQueue#2
 
 Authored path: `Matchmaking.ShowQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 17.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 24.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 18.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 25.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.ShowQueue
@@ -832,8 +886,8 @@ then
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 38.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -844,8 +898,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 38.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -859,8 +913,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 38.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -873,8 +927,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 38.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -888,7 +942,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 36.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
 
 ```reaction
 when Table.leave (table)
@@ -901,7 +955,7 @@ then
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 39.
+- Covered by [Tables](../design/compositions/Tables.md), line 40.
 
 ```reaction
 when Table.close (code)
@@ -912,8 +966,8 @@ then
 ### Tables.JoinByCode
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 18.
-- Covered by [Tables](../design/compositions/Tables.md), line 22.
+- Covered by [Tables](../design/compositions/Tables.md), line 19.
+- Covered by [Tables](../design/compositions/Tables.md), line 23.
 
 ```reaction
 when RequestBoundary.request (code, path: "/tables/join", requestId, token)
@@ -924,8 +978,8 @@ then
 ### Tables.JoinByCode:code-found#2
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 18.
-- Covered by [Tables](../design/compositions/Tables.md), line 22.
+- Covered by [Tables](../design/compositions/Tables.md), line 19.
+- Covered by [Tables](../design/compositions/Tables.md), line 23.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
@@ -940,8 +994,8 @@ then
 ### Tables.JoinByCode:code-found#3
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 18.
-- Covered by [Tables](../design/compositions/Tables.md), line 22.
+- Covered by [Tables](../design/compositions/Tables.md), line 19.
+- Covered by [Tables](../design/compositions/Tables.md), line 23.
 
 ```reaction
 when Table.join (player: session, table, position), asked by Tables.JoinByCode:code-found#2
@@ -954,8 +1008,8 @@ then
 ### Tables.JoinByCode:code-unknown#2
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 18.
-- Covered by [Tables](../design/compositions/Tables.md), line 22.
+- Covered by [Tables](../design/compositions/Tables.md), line 19.
+- Covered by [Tables](../design/compositions/Tables.md), line 23.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
@@ -970,8 +1024,8 @@ then
 ### Tables.JoinByCode:queued#2
 
 Authored path: `Tables.JoinByCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 18.
-- Covered by [Tables](../design/compositions/Tables.md), line 22.
+- Covered by [Tables](../design/compositions/Tables.md), line 19.
+- Covered by [Tables](../design/compositions/Tables.md), line 23.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.JoinByCode
@@ -985,8 +1039,8 @@ then
 ### Tables.Leave
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 34.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
+- Covered by [Tables](../design/compositions/Tables.md), line 35.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -997,8 +1051,8 @@ then
 ### Tables.Leave#2
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 34.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
+- Covered by [Tables](../design/compositions/Tables.md), line 35.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Leave
@@ -1011,8 +1065,8 @@ then
 ### Tables.Leave#3
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 34.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
+- Covered by [Tables](../design/compositions/Tables.md), line 35.
+- Covered by [Tables](../design/compositions/Tables.md), line 44.
 
 ```reaction
 when Table.leave (player: session, table), asked by Tables.Leave#2
@@ -1025,7 +1079,7 @@ then
 ### Tables.LeaveTableOnSessionEnd
 
 Authored path: `Tables.LeaveTableOnSessionEnd`.
-- Covered by [Tables](../design/compositions/Tables.md), line 35.
+- Covered by [Tables](../design/compositions/Tables.md), line 36.
 
 ```reaction
 when GuestSessioning.end (session)
@@ -1039,10 +1093,10 @@ then
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 15.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
 
 ```reaction
-when RequestBoundary.request (path: "/tables/open", requestId, token)
+when RequestBoundary.request (path: "/tables/open", requestId, rules, token)
 then
   GuestSessioning.resume (token)
 ```
@@ -1051,12 +1105,14 @@ then
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 15.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Open
 where
   no Matchmaking._lobbyOf (player: session)
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, rules, token)
+  DominoPlaying._ruleset (rules)
 then
   CodeGenerating.generate (context: "TABLE_CODES", size: 6)
 ```
@@ -1065,26 +1121,27 @@ then
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 15.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
 
 ```reaction
 when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Tables.Open:not-queued#2
 where
   earlier, GuestSessioning.resume (token, displayName, session), asked by Tables.Open
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, rules, token)
 then
-  Table.open (code, host: session)
+  Table.open (code, host: session, rules)
 ```
 
 ### Tables.Open:not-queued#4
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 15.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
 
 ```reaction
-when Table.open (code, host: session, table), asked by Tables.Open:not-queued#3
+when Table.open (code, host: session, rules, table), asked by Tables.Open:not-queued#3
 where
-  earlier, RequestBoundary.request (path: "/tables/open", requestId, token)
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, rules, token)
 then
   RequestBoundary.respond (code, requestId, table)
 ```
@@ -1093,22 +1150,38 @@ then
 
 Authored path: `Tables.Open`.
 - Covered by [Tables](../design/compositions/Tables.md), line 8.
-- Covered by [Tables](../design/compositions/Tables.md), line 15.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Open
 where
   Matchmaking._lobbyOf (player: session)
-  earlier, RequestBoundary.request (path: "/tables/open", requestId, token)
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, rules, token)
 then
   RequestBoundary.respond (error: "IN_QUEUE", requestId)
+```
+
+### Tables.Open:unknown-rules#2
+
+Authored path: `Tables.Open`.
+- Covered by [Tables](../design/compositions/Tables.md), line 8.
+- Covered by [Tables](../design/compositions/Tables.md), line 16.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.Open
+where
+  no Matchmaking._lobbyOf (player: session)
+  earlier, RequestBoundary.request (path: "/tables/open", requestId, rules, token)
+  no DominoPlaying._ruleset (rules)
+then
+  RequestBoundary.respond (error: "UNKNOWN_RULES", requestId)
 ```
 
 ### Tables.ShowLobby
 
 Authored path: `Tables.ShowLobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 25.
-- Covered by [Tables](../design/compositions/Tables.md), line 31.
+- Covered by [Tables](../design/compositions/Tables.md), line 26.
+- Covered by [Tables](../design/compositions/Tables.md), line 32.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/lobby", requestId, token)
@@ -1119,8 +1192,8 @@ then
 ### Tables.ShowLobby#2
 
 Authored path: `Tables.ShowLobby`.
-- Covered by [Tables](../design/compositions/Tables.md), line 25.
-- Covered by [Tables](../design/compositions/Tables.md), line 31.
+- Covered by [Tables](../design/compositions/Tables.md), line 26.
+- Covered by [Tables](../design/compositions/Tables.md), line 32.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.ShowLobby
@@ -1143,7 +1216,7 @@ not listed here have no explicit input contract.
 - `/guests/leave` — requires `token`
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`
-- `/matchmaking/enqueue` — requires `token`
+- `/matchmaking/enqueue` — requires `token`, `rules`
 - `/matchmaking/launch` — requires `token`
 - `/matchmaking/leave` — requires `token`
 - `/matchmaking/view` — requires `token`
@@ -1151,4 +1224,4 @@ not listed here have no explicit input contract.
 - `/tables/join` — requires `token`, `code`
 - `/tables/leave` — requires `token`, `table`
 - `/tables/lobby` — requires `token`
-- `/tables/open` — requires `token`
+- `/tables/open` — requires `token`, `rules`

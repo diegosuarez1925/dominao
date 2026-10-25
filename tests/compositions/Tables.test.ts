@@ -42,7 +42,7 @@ const tableCodes = () => testDb.db.collection("codeGenerating.codes").countDocum
 
 test("the journey: Abuelo opens a table and his three brothers join by code", async () => {
   const abuelo = await guest("Abuelo");
-  const opened = await call("/tables/open", { token: abuelo.token });
+  const opened = await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" });
   expect(opened.status).toBe(200);
   const { table, code } = opened.body;
   expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
@@ -60,6 +60,7 @@ test("the journey: Abuelo opens a table and his three brothers join by code", as
       table,
       code,
       host: abuelo.session,
+      rules: "DEFAULT",
       seats: [
         { position: 0, player: abuelo.session, displayName: "Abuelo" },
         { position: 1, player: brothers[0].session, displayName: "Papo" },
@@ -79,13 +80,13 @@ test("a code that belongs to no table is not found", async () => {
 });
 
 test("an invented token cannot open a table", async () => {
-  expect((await call("/tables/open", { token: "made-up" })).status).toBe(401);
+  expect((await call("/tables/open", { token: "made-up", rules: "DEFAULT" })).status).toBe(401);
 });
 
 test("when the last player leaves, the table closes and its code is freed", async () => {
   const abuelo = await guest("Abuelo");
   const papo = await guest("Papo");
-  const { table, code } = (await call("/tables/open", { token: abuelo.token })).body;
+  const { table, code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
   expect(await tableCodes()).toBe(1);
 
@@ -101,7 +102,7 @@ test("when the last player leaves, the table closes and its code is freed", asyn
 test("only the host can close a table with people at it", async () => {
   const abuelo = await guest("Abuelo");
   const papo = await guest("Papo");
-  const { table, code } = (await call("/tables/open", { token: abuelo.token })).body;
+  const { table, code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
 
   expect(await call("/tables/close", { token: papo.token, table })).toEqual({
@@ -116,7 +117,7 @@ test("only the host can close a table with people at it", async () => {
 test("a guest who leaves the app also leaves their table", async () => {
   const abuelo = await guest("Abuelo");
   const papo = await guest("Papo");
-  const { code } = (await call("/tables/open", { token: abuelo.token })).body;
+  const { code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
 
   await call("/guests/leave", { token: papo.token });
@@ -126,4 +127,19 @@ test("a guest who leaves the app also leaves their table", async () => {
   // The last guest leaving the app closes the table and frees its code.
   await call("/guests/leave", { token: abuelo.token });
   expect(await tableCodes()).toBe(0);
+});
+
+test("a table is opened with rules, and unknown or missing rules are refused", async () => {
+  const abuelo = await guest("Abuelo");
+  expect(await call("/tables/open", { token: abuelo.token, rules: "BLITZ" })).toEqual({
+    status: 400,
+    body: { error: "INVALID_REQUEST" },
+  });
+  expect((await call("/tables/open", { token: abuelo.token })).status).toBe(400);
+  // Nothing was left behind: no table, and no code taken.
+  expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables).toEqual([]);
+  expect(await tableCodes()).toBe(0);
+
+  await call("/tables/open", { token: abuelo.token, rules: "LONG" });
+  expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0].rules).toBe("LONG");
 });

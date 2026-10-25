@@ -3,11 +3,12 @@
 ## Purpose
 
 Let a specific group of people sit down together at a table they can find by its
-code.
+code, to play by the rules its host chose.
 
 ## Principle
 
-Abuelo opens a table with the code "K7QF2M" and sits in seat 0 as its host. His three
+Abuelo opens a table with the code "K7QF2M" and the rules he wants to play by, and
+sits in seat 0 as its host. His three
 brothers join the table they found by that code and fill seats 1, 2 and 3; a fifth
 person who tries to join is refused because the table is full. When Abuelo leaves,
 the brother in the lowest seat becomes host. Once everyone has left, the table can
@@ -18,6 +19,10 @@ be closed, which deletes it and hands back its code.
 ```types
 external Player
   The person who sits at a table.
+
+external Rules
+  The rules the people at a table will play by. Table keeps them for the table but
+  never interprets them.
 ```
 
 ## State
@@ -26,6 +31,7 @@ external Player
 a set of Tables with
   a host Player
   a unique code String
+  a rules Rules
 
 a set of Seats with
   a table Table
@@ -39,7 +45,7 @@ Rule: a table's host is seated at that table
 ## Actions
 
 ```actions
-open(host: Player, code: String) : returns (table: Table)
+open(host: Player, code: String, rules: Rules) : returns (table: Table)
   where host is seated at some table
   then
     refuses ALREADY_SEATED "That player is already sitting at a table."
@@ -48,7 +54,7 @@ open(host: Player, code: String) : returns (table: Table)
     refuses CODE_IN_USE "Another table already has that code."
   where host is not seated, and no table has this code
   then
-    add a new table with host and code
+    add a new table with host, code and rules
     seat host at position 0 of the table
     returns table
 
@@ -94,8 +100,9 @@ close(table: Table) : returns (code: String)
 _getByCode(code: String) : optional (table: Table)
   Answers the table with this code, and no row when no table has it.
 
-_get(table: Table) : optional (host: Player, code: String)
-  Answers the table's host and code, and no row when the table does not exist.
+_get(table: Table) : optional (host: Player, code: String, rules: Rules)
+  Answers the table's host, code and rules, and no row when the table does not
+  exist.
 
 _seats(table: Table) : many (position: Number, player: Player)
   Answers every seat at the table in order of position, and no rows when nobody sits

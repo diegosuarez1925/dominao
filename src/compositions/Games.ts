@@ -24,6 +24,8 @@ const GameView = former(
     {
       table,
       game,
+      rules,
+      rulesDescription,
       status,
       target,
       matchNumber,
@@ -43,6 +45,7 @@ const GameView = former(
       winner,
       team,
       points,
+      prize,
       ending,
       turnNumber,
       turnMatch,
@@ -56,10 +59,13 @@ const GameView = former(
       games: each(Table._tableOf({ player: session }).is({ table }))
         .where(
           DominoPlaying._latestAt({ place: table }).is({ game }),
-          DominoPlaying._summary({ game }).is({ status, target, matchNumber, scoreA, scoreB, turnPlayer }),
+          DominoPlaying._summary({ game }).is({ rules, status, target, matchNumber, scoreA, scoreB, turnPlayer }),
+          DominoPlaying._ruleset({ rules }).is({ description: rulesDescription }),
         )
         .form({
           game,
+          rules,
+          rulesDescription,
           status,
           target,
           matchNumber,
@@ -80,8 +86,8 @@ const GameView = former(
             .where(GuestSessioning._getName({ session: mover }).is({ displayName: moverName }))
             .form({ turn: turnNumber, matchNumber: turnMatch, player: mover, displayName: moverName, move, tile: movedTile }),
           lastResult: each(
-            DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, ending }),
-          ).form({ matchNumber: resultMatch, winner, team, points, ending }),
+            DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, prize, ending }),
+          ).form({ matchNumber: resultMatch, winner, team, points, prize, ending }),
         }),
     }),
 );
@@ -95,23 +101,35 @@ const ViewGame = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
-/** The host starts a game once all four seats are taken; seat order is turn order. */
+/** Every rule set a table or a matchmaking lobby can play by, for the page to offer. */
+const Rulesets = former("the rule sets", (_, { rules, target, description }) =>
+  form({
+    rulesets: each(DominoPlaying._rulesets({}).is({ rules, target, description })).form({ rules, target, description }),
+  }),
+);
+
+const ShowRulesets = endpoint("/games/rulesets", () => receive({}).then(respond({ view: Rulesets({}) })));
+
+/**
+ * The host starts a game once all four seats are taken; seat order is turn order, and
+ * the game is played by the rules the table was opened with.
+ */
 const StartGame = endpoint(
   "/games/start",
-  ({ token, session, displayName, table, first, second, third, fourth, game }) =>
+  ({ token, session, displayName, table, first, second, third, fourth, rules, game }) =>
     receive({ token })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
         where(
           Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session }),
+          Table._get({ table }).is({ host: session, rules }),
           Table._isFull({ table }).is({ full: true }),
           Table._seats({ table }).is({ position: 0, player: first }),
           Table._seats({ table }).is({ position: 1, player: second }),
           Table._seats({ table }).is({ position: 2, player: third }),
           Table._seats({ table }).is({ position: 3, player: fourth }),
         )
-          .then(DominoPlaying.start({ place: table, first, second, third, fourth }).responds({ game }))
+          .then(DominoPlaying.start({ place: table, first, second, third, fourth, rules }).responds({ game }))
           .then(respond({ game }))
           .named("host-of-full-table"),
         where(
@@ -160,6 +178,8 @@ const AbandonGameWhenTableCloses = reaction(({ table, code, game }) =>
 );
 
 export const composition = {
+  Rulesets,
+  ShowRulesets,
   GameView,
   ViewGame,
   StartGame,

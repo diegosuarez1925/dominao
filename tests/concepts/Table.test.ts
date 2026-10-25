@@ -26,7 +26,7 @@ afterAll(async () => {
 });
 
 test("principle: four sit by code, a fifth is refused, the host passes on, and the empty table closes", async () => {
-  const { table } = await tables.open({ host: "abuelo", code: "K7QF2M" });
+  const { table } = await tables.open({ host: "abuelo", code: "K7QF2M", rules: "LONG" });
   expect(await tables._getByCode({ code: "K7QF2M" })).toEqual([{ table }]);
 
   expect(await tables.join({ table, player: "papo" })).toEqual({ position: 1 });
@@ -37,7 +37,7 @@ test("principle: four sit by code, a fifth is refused, the host passes on, and t
   await expect(tables.join({ table, player: "stranger" })).rejects.toThrow(TableFull);
 
   await tables.leave({ table, player: "abuelo" });
-  expect(await tables._get({ table })).toEqual([{ host: "papo", code: "K7QF2M" }]);
+  expect(await tables._get({ table })).toEqual([{ host: "papo", code: "K7QF2M", rules: "LONG" }]);
 
   for (const player of ["papo", "nando", "cheo"]) await tables.leave({ table, player });
   expect(await tables._seats({ table })).toEqual([]);
@@ -46,21 +46,21 @@ test("principle: four sit by code, a fifth is refused, the host passes on, and t
 });
 
 test("a player sits at only one table at a time", async () => {
-  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA" });
-  await expect(tables.open({ host: "abuelo", code: "BBBBBB" })).rejects.toThrow(AlreadySeated);
-  const other = await tables.open({ host: "papo", code: "BBBBBB" });
+  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
+  await expect(tables.open({ host: "abuelo", code: "BBBBBB", rules: "DEFAULT" })).rejects.toThrow(AlreadySeated);
+  const other = await tables.open({ host: "papo", code: "BBBBBB", rules: "DEFAULT" });
   await expect(tables.join({ table: other.table, player: "abuelo" })).rejects.toThrow(AlreadySeated);
   await expect(tables.join({ table, player: "abuelo" })).rejects.toThrow(AlreadySeated);
   expect(await tables._tableOf({ player: "abuelo" })).toEqual([{ table }]);
 });
 
 test("two tables cannot share a code", async () => {
-  await tables.open({ host: "abuelo", code: "AAAAAA" });
-  await expect(tables.open({ host: "papo", code: "AAAAAA" })).rejects.toThrow(CodeInUse);
+  await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
+  await expect(tables.open({ host: "papo", code: "AAAAAA", rules: "DEFAULT" })).rejects.toThrow(CodeInUse);
 });
 
 test("a freed seat is taken by the next player to join", async () => {
-  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA" });
+  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
   await tables.join({ table, player: "papo" });
   await tables.join({ table, player: "nando" });
   await tables.leave({ table, player: "papo" });
@@ -73,7 +73,7 @@ test("a freed seat is taken by the next player to join", async () => {
 });
 
 test("when five rush for three seats at once, exactly three sit down", async () => {
-  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA" });
+  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
   const results = await Promise.allSettled(
     ["a", "b", "c", "d", "e"].map((player) => tables.join({ table, player })),
   );
@@ -84,14 +84,14 @@ test("when five rush for three seats at once, exactly three sit down", async () 
 test("unknown tables and players who are not seated are refused", async () => {
   await expect(tables.join({ table: "nope", player: "papo" })).rejects.toThrow(NoSuchTable);
   await expect(tables.close({ table: "nope" })).rejects.toThrow(NoSuchTable);
-  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA" });
+  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
   await expect(tables.leave({ table, player: "papo" })).rejects.toThrow(NotSeated);
 });
 
 test("closing a table unseats everyone still there", async () => {
-  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA" });
+  const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
   await tables.join({ table, player: "papo" });
   await tables.close({ table });
   expect(await tables._tableOf({ player: "papo" })).toEqual([]);
-  await expect(tables.open({ host: "papo", code: "AAAAAA" })).resolves.toHaveProperty("table");
+  await expect(tables.open({ host: "papo", code: "AAAAAA", rules: "DEFAULT" })).resolves.toHaveProperty("table");
 });

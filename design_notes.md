@@ -204,7 +204,7 @@ rules come later, but lobbies must only mix players who want the same rules.
   private-table code with no changes. Matchmaking, Table and DominoPlaying still never
   refer to each other.
 - **Rules are a parameter already.** `enqueue` takes a rule set and only matches
-  lobbies with the same one. For now the app always passes `STANDARD`.
+  lobbies with the same one. (Step 6 replaced the placeholder `STANDARD` with real rule sets.)
 - **Queue and table exclude each other.** A seated guest cannot queue (`AT_TABLE`), and
   a queued guest cannot open or join a table (`IN_QUEUE`); ending a session also
   leaves the queue.
@@ -214,3 +214,30 @@ rules come later, but lobbies must only mix players who want the same rules.
 Known gaps: if all four players close their tabs during the countdown, nobody asks to
 launch and the lobby stays full until someone leaves it. The matched table still shows
 a join code, which nobody needs.
+
+### Rule sets
+
+- **DominoPlaying owns the rules.** A rule set is a named entry in one table in the
+  concept (`RULESETS` in `src/concepts/DominoPlaying.ts`): the score to reach, how a
+  tranque is settled (`TEAM` or `PLAYER`), the prizes for the first matches, and a
+  sentence describing it. `DEFAULT` is 200 by team, `LONG` is 500 by player with
+  prizes 100/75/50/25, `SHORT` is 100 by team. `start` takes the rule set's name and
+  refuses one it does not know (`UNKNOWN_RULES`, answered as 400).
+- **Adding a rule set is one entry.** The home screen's picker, the lobby texts and
+  `/games/rulesets` all read the same list, so a new entry shows up everywhere with no
+  other change. A brand-new kind of rule (not just new numbers) needs a field in
+  `RuleSet` and the code that uses it.
+- **Table and Matchmaking only carry the name.** Both keep the rule set they were
+  opened or queued with as an opaque `Rules` value and never read it; the syncs check
+  it against DominoPlaying before opening a table or queueing, and pass it on when the
+  game starts. Matchmaking already matched only equal rules, so strangers who picked
+  different rule sets never share a lobby.
+- **Choices I made where the request was open** (easy to change):
+  - Prizes go by match number and go to the team that wins the match; a tied
+    tranque wins nothing, and that match's prize is not carried over.
+  - In a `PLAYER` tranque the winning team scores all four hands' pips, as in a team
+    tranque, and the winner starts the next match. If the fewest pips are tied
+    between opponents it is a tie (no points); if tied between partners, the one
+    earlier in turn order starts.
+  - Tables opened before rule sets existed have no rules and their games play
+    `DEFAULT`.

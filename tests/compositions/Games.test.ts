@@ -34,12 +34,12 @@ async function call(path: string, body: unknown) {
 }
 
 /** Four guests sit at one table; the first is the host. */
-async function fullTable() {
+async function fullTable(rules = "DEFAULT") {
   const guests = [];
   for (const displayName of ["Abuelo", "Papo", "Nando", "Cheo"]) {
     guests.push((await call("/guests/start", { displayName })).body as { session: string; token: string });
   }
-  const { table, code } = (await call("/tables/open", { token: guests[0].token })).body;
+  const { table, code } = (await call("/tables/open", { token: guests[0].token, rules })).body;
   for (const guest of guests.slice(1)) await call("/tables/join", { token: guest.token, code });
   return { guests, table, code };
 }
@@ -50,7 +50,7 @@ test("only the host of a full table can start a game", async () => {
   const abuelo = (await call("/guests/start", { displayName: "Abuelo" })).body;
   const papo = (await call("/guests/start", { displayName: "Papo" })).body;
   expect((await call("/games/start", { token: abuelo.token })).body).toEqual({ error: "NOT_FOUND" });
-  const { code } = (await call("/tables/open", { token: abuelo.token })).body;
+  const { code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
   expect((await call("/games/start", { token: abuelo.token })).status).toBe(409);
   expect((await call("/games/start", { token: papo.token })).status).toBe(403);
@@ -128,4 +128,20 @@ test("a player leaving the table abandons the game", async () => {
   await call("/tables/join", { token: newcomer.token, code });
   expect((await call("/games/start", { token: guests[0].token })).status).toBe(200);
   expect((await view(newcomer.token)).status).toBe("ACTIVE");
+});
+
+test("the rule sets are listed, and a table's rules decide its game's target", async () => {
+  const { rulesets } = (await call("/games/rulesets", {})).body.view;
+  expect(rulesets.map(({ rules, target }: { rules: string; target: number }) => ({ rules, target }))).toEqual([
+    { rules: "DEFAULT", target: 200 },
+    { rules: "LONG", target: 500 },
+    { rules: "SHORT", target: 100 },
+  ]);
+  for (const row of rulesets) expect(row.description).toBeString();
+
+  const { guests } = await fullTable("SHORT");
+  await call("/games/start", { token: guests[0].token });
+  const game = await view(guests[1].token);
+  expect(game).toMatchObject({ rules: "SHORT", target: 100 });
+  expect(game.rulesDescription).toBe(rulesets[2].description);
 });

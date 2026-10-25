@@ -5,9 +5,10 @@ only groups players; it knows nothing of tables or dominoes. This composition de
 that a group it hands out sits down at a new table, so from then on a matched game is
 played exactly like a game between friends.
 
-A guest [asks for a game](reaction:Matchmaking.Enqueue) under the standard rules,
-which are the only rules for now. They join the earliest lobby with those rules that
-still has room, or a new one. A guest already sitting at a table is answered
+A guest [asks for a game](reaction:Matchmaking.Enqueue) under the rule set they
+choose, and only ever meets strangers who chose the same one: they join the earliest
+lobby with those rules that still has room, or a new one. Rules DominoPlaying does
+not know are answered `UNKNOWN_RULES`. A guest already sitting at a table is answered
 `AT_TABLE`: they must leave it first.
 
 ```endpoints
@@ -43,6 +44,6 @@ Matchmaking.Launch at /matchmaking/launch
 
 A launched lobby is [seated at a new table](reaction:Matchmaking.SeatLaunchedLobby):
 the app asks CodeGenerating for a table code, the first of the shuffled players opens
-the table, the other three join in order, and DominoPlaying starts the game with the
-four in that order. Since the order was shuffled, partners are random. From here the
+the table under the lobby's rules, the other three join in order, and DominoPlaying
+starts the game by those rules with the four in that order. Since the order was shuffled, partners are random. From here the
 table, its lobby and its game behave as described for private tables and games.

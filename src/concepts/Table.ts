@@ -10,6 +10,8 @@ interface TableDoc {
   _id: string;
   host: string;
   code: string;
+  /** What the players agreed to play by. Table only keeps it; it never reads it. */
+  rules: string;
 }
 
 interface Seat {
@@ -35,14 +37,14 @@ export class TableConcept {
     this.seats = db.collection<Seat>("table.seats");
   }
 
-  async open({ host, code }: { host: string; code: string }) {
+  async open({ host, code, rules }: { host: string; code: string; rules: string }) {
     await this.#ensureIndexes();
     if (await this.seats.findOne({ player: host })) {
       throw new AlreadySeated("That player is already sitting at a table.");
     }
     const table = crypto.randomUUID();
     try {
-      await this.tables.insertOne({ _id: table, host, code });
+      await this.tables.insertOne({ _id: table, host, code, rules });
     } catch (error) {
       if (isDuplicate(error)) throw new CodeInUse("Another table already has that code.");
       throw error;
@@ -105,7 +107,8 @@ export class TableConcept {
 
   async _get({ table }: { table: string }) {
     const found = await this.tables.findOne({ _id: table });
-    return found === null ? [] : [{ host: found.host, code: found.code }];
+    // Tables opened before rules existed have none.
+    return found === null ? [] : [{ host: found.host, code: found.code, rules: found.rules ?? "" }];
   }
 
   async _seats({ table }: { table: string }) {

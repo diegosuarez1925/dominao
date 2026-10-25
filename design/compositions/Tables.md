@@ -5,9 +5,10 @@ knows nothing about dominoes, so the game can change without touching it. Every
 endpoint here first resumes the guest's session from their token, and that session
 is the player at the table, so nobody can sit, leave or close in someone else's name.
 
-A guest [opens a table](reaction:Tables.Open). The app asks CodeGenerating for a
-6-character code in the table-code context, opens the table with that code, and
-seats the guest in seat 0 as host. The host shares the code with friends. A guest who
+A guest [opens a table](reaction:Tables.Open) under the rule set they choose. Rules
+DominoPlaying does not know are answered `UNKNOWN_RULES`. The app asks CodeGenerating
+for a 6-character code in the table-code context, opens the table with that code and
+those rules, and seats the guest in seat 0 as host. The host shares the code with friends. A guest who
 is waiting for a game with strangers is answered `IN_QUEUE`, here and when joining:
 they must stop waiting first.
 
@@ -23,7 +24,7 @@ Tables.JoinByCode at /tables/join
 ```
 
 Anyone can [see their lobby](reaction:Tables.ShowLobby): the
-[lobby](former:Tables.Lobby) shows the table they sit at, its code and host, and who
+[lobby](former:Tables.Lobby) shows the table they sit at, its code, rules and host, and who
 sits in each seat by display name. The page asks again every couple of seconds, so
 new arrivals appear without reloading.
 

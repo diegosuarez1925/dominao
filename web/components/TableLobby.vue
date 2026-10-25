@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Table } from "../api.ts";
-import { closeTable, leaveTable, startGame, state } from "../session.ts";
+import { closeTable, leaveTable, rulesDescription, rulesName, startGame, state } from "../session.ts";
 import LobbySeats from "./LobbySeats.vue";
 
 const props = defineProps<{ table: Table }>();
@@ -24,6 +24,7 @@ const canStart = computed(() => isHost.value && props.table.seats.length === 4 &
 <template>
   <section>
     <h2>Table {{ table.code }}</h2>
+    <p v-if="table.rules">Rules: {{ rulesName(table.rules) }}. {{ rulesDescription(table.rules) }}</p>
     <p>Share this code with your friends. Seats 0 and 2 are partners, as are 1 and 3.</p>
     <LobbySeats :seats="seats" />
     <button v-if="canStart" @click="startGame">Start game</button>

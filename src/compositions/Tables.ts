@@ -10,7 +10,7 @@ import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-eng
 import { concepts } from "../concepts.ts";
 import { strings } from "./validators.ts";
 
-const { CodeGenerating, GuestSessioning, Matchmaking, Table } = concepts;
+const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
@@ -18,14 +18,15 @@ const CODE_SIZE = 6;
 /** The table the guest sits at, if any, with every seat and the name of who sits there. */
 const Lobby = former(
   "the lobby of (session)",
-  ({ session }, { table, host, code, position, player, displayName }) =>
+  ({ session }, { table, host, code, rules, position, player, displayName }) =>
     form({
       tables: each(Table._tableOf({ player: session }).is({ table }))
-        .where(Table._get({ table }).is({ host, code }))
+        .where(Table._get({ table }).is({ host, code, rules }))
         .form({
           table,
           code,
           host,
+          rules,
           seats: each(Table._seats({ table }).is({ position, player }))
             .where(GuestSessioning._getName({ session: player }).is({ displayName }))
             .form({ position, player, displayName }),
@@ -42,23 +43,29 @@ const ShowLobby = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
-/** A guest waiting for strangers must leave the queue before opening a table. */
+/**
+ * The host picks the rules the table will play by; rules the game does not know are
+ * answered UNKNOWN_RULES. A guest waiting for strangers must leave the queue first.
+ */
 const Open = endpoint(
   "/tables/open",
-  ({ token, session, displayName, code, table }) =>
-    receive({ token })
+  ({ token, session, displayName, rules, code, table }) =>
+    receive({ token, rules })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
-        where(no(Matchmaking._lobbyOf({ player: session })))
+        where(no(Matchmaking._lobbyOf({ player: session })), DominoPlaying._ruleset({ rules }))
           .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
-          .then(Table.open({ host: session, code }).responds({ table }))
+          .then(Table.open({ host: session, code, rules }).responds({ table }))
           .then(respond({ table, code }))
           .named("not-queued"),
+        where(no(Matchmaking._lobbyOf({ player: session })), no(DominoPlaying._ruleset({ rules })))
+          .then(respond({ error: "UNKNOWN_RULES" }))
+          .named("unknown-rules"),
         where(Matchmaking._lobbyOf({ player: session }))
           .then(respond({ error: "IN_QUEUE" }))
           .named("queued"),
       ),
-  { input: { required: ["token"] }, validators: { input: strings("token") } },
+  { input: { required: ["token", "rules"] }, validators: { input: strings("token", "rules") } },
 );
 
 /**

@@ -14,6 +14,7 @@ import {
   NoSuchGame,
   NotInHand,
   NotYourTurn,
+  UnknownRules,
 } from "./concepts/DominoPlaying.ts";
 import {
   GuestSessioningConcept,
@@ -55,6 +56,7 @@ const dominoPlaying = registerConcept({
     NOT_YOUR_TURN: NotYourTurn,
     NOT_IN_HAND: NotInHand,
     ILLEGAL_PLAY: IllegalPlay,
+    UNKNOWN_RULES: UnknownRules,
   },
 });
 

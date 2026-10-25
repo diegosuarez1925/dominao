@@ -68,7 +68,13 @@ test("principle: four strangers fill a lobby, a leaver stops the countdown, and 
   expect(await matchmaking._status({ lobby })).toEqual([{ rules: "STANDARD", full: true, secondsLeft: 0 }]);
 
   // Launching hands out the players in shuffled order (reversed here) and empties the queue.
-  expect(await matchmaking.launch({ lobby })).toEqual({ first: "tito", second: "cheo", third: "nando", fourth: "abuelo" });
+  expect(await matchmaking.launch({ lobby })).toEqual({
+    first: "tito",
+    second: "cheo",
+    third: "nando",
+    fourth: "abuelo",
+    rules: "STANDARD",
+  });
   expect(await matchmaking._status({ lobby })).toEqual([]);
   expect(await matchmaking._entries({ lobby })).toEqual([]);
   for (const player of ["abuelo", "nando", "cheo", "tito"]) expect(await matchmaking._lobbyOf({ player })).toEqual([]);

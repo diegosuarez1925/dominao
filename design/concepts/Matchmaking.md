@@ -13,7 +13,8 @@ same rules join his lobby one by one, in the order they asked; when the fourth
 arrives the lobby is full and a short countdown begins. If one of them leaves before
 it ends, the countdown stops and the lobby waits for someone else. Once a full
 lobby's countdown has run out, it is launched: the lobby is removed and its four
-players are handed out in a random order, which is the order they will sit in.
+players are handed out in a random order, which is the order they will sit in,
+together with the rules they asked for.
 
 ## Types
 
@@ -68,7 +69,7 @@ cancel(player: Player) : returns (lobby: Lobby)
     if the lobby has no entries left, remove it
     returns lobby
 
-launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fourth: Player)
+launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fourth: Player, rules: Rules)
   where lobby is not in Lobbies
   then
     refuses NO_SUCH_LOBBY "There is no such lobby."
@@ -82,7 +83,7 @@ launch(lobby: Lobby) : returns (first: Player, second: Player, third: Player, fo
   then
     put the lobby's four players in a random order, which is the order they will sit in
     remove lobby and its entries
-    returns first, second, third, fourth
+    returns first, second, third, fourth, rules
 ```
 
 ## Queries

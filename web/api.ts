@@ -13,5 +13,7 @@ export type Table = Answer<ReturnType<Client["tables"]["lobby"]>>["lobby"]["tabl
 export type Game = Answer<ReturnType<Client["games"]["view"]>>["view"]["games"][number];
 /** The matchmaking lobby this guest waits in: who is there, and the countdown. */
 export type QueueLobby = Answer<ReturnType<Client["matchmaking"]["view"]>>["queue"]["lobbies"][number];
+/** A rule set the guest can pick: its name, the score to reach, and what it changes. */
+export type RuleSet = Answer<ReturnType<Client["games"]["rulesets"]>>["view"]["rulesets"][number];
 export type BoardTile = Game["board"][number];
 export type Side = "LEFT" | "RIGHT";
