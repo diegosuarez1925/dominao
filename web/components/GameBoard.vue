@@ -19,17 +19,20 @@ onMounted(() => {
 onBeforeUnmount(() => observer.disconnect());
 
 const MAX_UNIT = 34;
-const unit = computed(() => Math.min(MAX_UNIT, Math.floor(width.value / BOARD_UNITS)));
 const placed = computed(() => layOut(props.board));
+// The board's box in grid units; doubles across the line can stick out by half a unit.
+const left = computed(() => Math.min(0, ...placed.value.map((p) => p.x)));
+const right = computed(() => Math.max(BOARD_UNITS, ...placed.value.map((p) => p.x + p.w)));
 const top = computed(() => Math.min(0, ...placed.value.map((p) => p.y)));
-const bottom = computed(() => Math.max(1, ...placed.value.map((p) => p.y + (p.vertical ? 2 : 1))));
+const bottom = computed(() => Math.max(1, ...placed.value.map((p) => p.y + p.h)));
+const unit = computed(() => Math.min(MAX_UNIT, Math.floor(width.value / (right.value - left.value))));
 </script>
 
 <template>
   <div ref="element" class="board-frame">
     <div
       class="board"
-      :style="{ width: `${BOARD_UNITS * unit}px`, height: `${(bottom - top) * unit}px`, '--unit': `${unit}px` }"
+      :style="{ width: `${(right - left) * unit}px`, height: `${(bottom - top) * unit}px`, '--unit': `${unit}px` }"
     >
       <DominoTile
         v-for="p in placed"
@@ -38,7 +41,12 @@ const bottom = computed(() => Math.max(1, ...placed.value.map((p) => p.y + (p.ve
         :second="p.second"
         :vertical="p.vertical"
         class="placed"
-        :style="{ left: `${p.x * unit}px`, top: `${(p.y - top) * unit}px` }"
+        :style="{
+          left: `${(p.x - left) * unit}px`,
+          top: `${(p.y - top) * unit}px`,
+          width: `${p.w * unit - 2}px`,
+          height: `${p.h * unit - 2}px`,
+        }"
       />
     </div>
   </div>
@@ -61,15 +69,8 @@ const bottom = computed(() => Math.max(1, ...placed.value.map((p) => p.y + (p.ve
 
 .placed {
   position: absolute;
-  width: calc(2 * var(--unit) - 2px);
-  height: calc(var(--unit) - 2px);
   margin: 1px;
   animation: land 0.35s ease-out;
-}
-
-.placed.vertical {
-  width: calc(var(--unit) - 2px);
-  height: calc(2 * var(--unit) - 2px);
 }
 
 /* A newly played tile drops onto the table. */

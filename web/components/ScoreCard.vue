@@ -1,12 +1,25 @@
 <script setup lang="ts">
 // The score table: us against them, the target, the match being played and how the
 // last match went. It folds down to one line.
-import { computed } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import type { Game } from "../api.ts";
+import { useCountUp } from "../countUp.ts";
 import { rulesName } from "../session.ts";
 
-const props = defineProps<{ game: Game; myTeam: number; lastResult: string }>();
+/** `hold` keeps the old scores showing while a match's celebration plays. */
+const props = defineProps<{ game: Game; myTeam: number; lastResult: string; hold?: boolean }>();
 const open = defineModel<boolean>("open", { default: true });
+
+// Scores count up to their new value when a match is won.
+const targetA = ref(props.game.scoreA);
+const targetB = ref(props.game.scoreB);
+watchEffect(() => {
+  if (props.hold) return;
+  targetA.value = props.game.scoreA;
+  targetB.value = props.game.scoreB;
+});
+const shownA = useCountUp(() => targetA.value, 1400);
+const shownB = useCountUp(() => targetB.value, 1400);
 
 const teams = computed(() => {
   const names = (team: number) =>
@@ -14,7 +27,7 @@ const teams = computed(() => {
       .filter((p) => p.position % 2 === team)
       .map((p) => p.displayName)
       .join(" & ");
-  const score = (team: number) => (team === 0 ? props.game.scoreA : props.game.scoreB);
+  const score = (team: number) => (team === 0 ? shownA.value : shownB.value);
   const us = props.myTeam;
   const them = 1 - us;
   return [

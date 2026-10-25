@@ -7,6 +7,7 @@ import { computed, ref, watch } from "vue";
 import type { Game } from "../api.ts";
 import { dismissGame, startGame, state } from "../session.ts";
 import GameBoard from "./GameBoard.vue";
+import MatchCelebration from "./MatchCelebration.vue";
 import MoveLog from "./MoveLog.vue";
 import OpponentSeat from "./OpponentSeat.vue";
 import PlayerBadge from "./PlayerBadge.vue";
@@ -42,22 +43,58 @@ const team = (seatOrTeam: number) => (seatOrTeam % 2 === myTeam.value ? "Us" : "
 const lastResult = computed(() => {
   const last = props.game.lastResult[0];
   if (last === undefined) return "";
-  const how = last.ending === "DOMINO" ? `${name(last.winner)} dominoed` : "Tranque";
+  const how =
+    last.special === "CAPICU"
+      ? `Capicú by ${name(last.winner)}`
+      : last.special === "CHUCHAZO"
+        ? `Chuchazo by ${name(last.winner)}`
+        : last.ending === "DOMINO"
+          ? `${name(last.winner)} dominoed`
+          : "Tranque";
   if (last.team === -1) return `Match ${last.matchNumber}: ${how}, a tie. Nobody scores.`;
-  const prize = last.prize > 0 ? ` (with a ${last.prize} prize)` : "";
+  const extra = last.prize + last.bonus;
+  const prize = extra > 0 ? ` (${extra} of it prizes and bonuses)` : "";
   return `Match ${last.matchNumber}: ${how}. ${team(last.team)} +${last.points}${prize}.`;
 });
 
-// When a match ends, its result shows over the board for a few seconds.
-const toast = ref("");
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
+// When a match ends while the guest watches, it is celebrated. (Opening the page on a
+// game whose match ended earlier does not replay it.)
+const celebrating = ref<Game["lastResult"][number] | null>(null);
 watch(
   () => props.game.lastResult[0]?.matchNumber,
   (match, before) => {
-    if (match === undefined || before === undefined || match === before) return;
-    toast.value = lastResult.value;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast.value = ""), 5000);
+    if (match === undefined || match === before) return;
+    celebrating.value = props.game.lastResult[0];
+  },
+);
+const teamNames = (team: number) =>
+  props.game.players
+    .filter((p) => p.position % 2 === team)
+    .map((p) => p.displayName)
+    .join(" & ");
+
+// Players who could not play just now say "¡Paso!" for a moment. Skips arrive with the
+// log, sometimes several at once.
+const passing = ref(new Set<string>());
+watch(
+  () => props.game.log.length,
+  (length, before) => {
+    if (before === undefined || length <= before) return;
+    const fresh = [...props.game.log]
+      .sort((a, b) => a.turn - b.turn)
+      .slice(before)
+      .filter((turn) => turn.move === "SKIPPED");
+    for (const [index, turn] of fresh.entries()) {
+      // One after another, in turn order.
+      setTimeout(() => {
+        passing.value = new Set([...passing.value, turn.player]);
+        setTimeout(() => {
+          const rest = new Set(passing.value);
+          rest.delete(turn.player);
+          passing.value = rest;
+        }, 1600);
+      }, index * 500);
+    }
   },
 );
 
@@ -91,7 +128,7 @@ const logOpen = remembered("dominao.logOpen", false);
 <template>
   <section class="game-table">
     <div class="area-score">
-      <ScoreCard v-model:open="scoreOpen" :game="game" :my-team="myTeam" :last-result="lastResult" />
+      <ScoreCard v-model:open="scoreOpen" :game="game" :my-team="myTeam" :last-result="lastResult" :hold="!!celebrating" />
     </div>
 
     <div v-for="seat in others" :key="seat.side" :class="`area-${seat.side}`">
@@ -102,16 +139,14 @@ const logOpen = remembered("dominao.logOpen", false);
         :note="seat.turn ? 'playing…' : seat.note"
         :tile-count="seat.player.tileCount"
         :active="seat.turn"
+        :passed="passing.has(seat.player.player)"
       />
     </div>
 
     <div class="area-board felt">
       <GameBoard :board="game.board" />
       <Transition name="pop">
-        <p v-if="toast" class="toast">{{ toast }}</p>
-      </Transition>
-      <Transition name="pop">
-        <div v-if="ending" class="ending">
+        <div v-if="ending && !celebrating" class="ending">
           <h3 class="panel-title">{{ ending.title }}</h3>
           <p class="panel-text">{{ ending.text }}</p>
           <div class="row ending-actions">
@@ -127,11 +162,24 @@ const logOpen = remembered("dominao.logOpen", false);
         :name="me?.displayName ?? state.me?.displayName"
         :note="myTurn ? 'your turn: pick a tile' : 'you'"
         :active="myTurn"
+        :passed="passing.has(state.me?.session ?? '')"
       />
       <PlayerHand :hand="game.hand" :board="game.board" :my-turn="myTurn" />
     </div>
 
     <MoveLog v-model:open="logOpen" :log="game.log" />
+
+    <Transition name="pop">
+      <MatchCelebration
+        v-if="celebrating"
+        :key="celebrating.matchNumber"
+        :result="celebrating"
+        :winner-name="name(celebrating.winner)"
+        :ours="celebrating.team === myTeam"
+        :team-names="celebrating.team === -1 ? '' : teamNames(celebrating.team)"
+        @done="celebrating = null"
+      />
+    </Transition>
   </section>
 </template>
 
@@ -183,22 +231,6 @@ const logOpen = remembered("dominao.logOpen", false);
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-}
-
-.toast {
-  position: absolute;
-  top: var(--space-3);
-  left: 50%;
-  translate: -50% 0;
-  max-width: 90%;
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  text-align: center;
-  color: var(--color-text);
-  background: var(--color-accent-soft);
-  box-shadow: var(--shadow-md);
 }
 
 .ending {

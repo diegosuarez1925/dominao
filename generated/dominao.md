@@ -57,7 +57,7 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 - `_hand(game: Game, player: Player) : many (tile: Tile)`
 - `_board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: Number)`
 - `_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)`
-- `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, ending: Ending)`
+- `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)`
 - `_ruleset(rules: RuleSet) : optional (target: Number, description: String)`
 - `_rulesets() : many (rules: RuleSet, target: Number, description: String)`
 
@@ -166,7 +166,7 @@ Authored path: `Games.GameView`.
 - Covered by [Games](../design/compositions/Games.md), line 35.
 
 ```former
-Former "the game seen by (session)" — inputs (session); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, resultMatch, winner, team, points, prize, ending, turnNumber, turnMatch, mover, move, movedTile, moverName); promises exactly one record — forms:
+Former "the game seen by (session)" — inputs (session); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, resultMatch, winner, team, points, prize, special, bonus, ending, turnNumber, turnMatch, mover, move, movedTile, moverName); promises exactly one record — forms:
   a record of
     games: each Table._tableOf (player: session) has (table)
       where DominoPlaying._latestAt (place: table) has (game)
@@ -183,12 +183,14 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
         hand: each DominoPlaying._hand (game, player: session) has (tile)
           form a record of
             tile
-        lastResult: each DominoPlaying._lastResult (game) has (ending, matchNumber: resultMatch, points, prize, team, winner)
+        lastResult: each DominoPlaying._lastResult (game) has (bonus, ending, matchNumber: resultMatch, points, prize, special, team, winner)
           form a record of
+            bonus
             ending
             matchNumber: resultMatch
             points
             prize
+            special
             team
             winner
         log: each DominoPlaying._log (game) has (matchNumber: turnMatch, move, player: mover, tile: movedTile, turn: turnNumber)

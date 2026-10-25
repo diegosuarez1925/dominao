@@ -13,6 +13,11 @@ type Status = "ACTIVE" | "FINISHED" | "ABANDONED";
 type Side = "LEFT" | "RIGHT";
 type Ending = "DOMINO" | "TRANQUE";
 type Move = "PLAYED" | "SKIPPED";
+/**
+ * A celebrated way to win a match by domino. CAPICU: the last tile, not a double,
+ * could have been played on either end of the board. CHUCHAZO: the last tile is 0-0.
+ */
+type Special = "CAPICU" | "CHUCHAZO" | "NONE";
 
 /** A tile as its two numbers, smaller first. */
 type Pips = [number, number];
@@ -24,6 +29,9 @@ interface Result {
   /** Everything the team scored for the match, prize included. */
   points: number;
   prize?: number;
+  /** Results recorded before specials existed have neither field. */
+  special?: Special;
+  bonus?: number;
   ending: Ending;
 }
 
@@ -38,6 +46,8 @@ interface RuleSet {
   tranque: "TEAM" | "PLAYER";
   /** Extra points for the winners of the first matches: prizes[0] for match 1, and so on. */
   prizes: number[];
+  /** Extra points for winning a match with a Capicú or a Chuchazo. */
+  bonuses: { CAPICU: number; CHUCHAZO: number };
   description: string;
 }
 
@@ -46,19 +56,22 @@ export const RULESETS: Record<string, RuleSet> = {
     target: 200,
     tranque: "TEAM",
     prizes: [],
+    bonuses: { CAPICU: 0, CHUCHAZO: 0 },
     description: "Play to 200. A tranque goes to the team whose two hands hold fewer pips.",
   },
   LONG: {
     target: 500,
     tranque: "PLAYER",
     prizes: [100, 75, 50, 25],
+    bonuses: { CAPICU: 100, CHUCHAZO: 100 },
     description:
-      "Play to 500. The winners of the first four matches get prizes of 100, 75, 50 and 25. A tranque goes to the team of the player holding the fewest pips.",
+      "Play to 500. The winners of the first four matches get prizes of 100, 75, 50 and 25, and a Capicú or a Chuchazo is worth 100 more. A tranque goes to the team of the player holding the fewest pips.",
   },
   SHORT: {
     target: 100,
     tranque: "TEAM",
     prizes: [],
+    bonuses: { CAPICU: 0, CHUCHAZO: 0 },
     description: "Play to 100. A tranque goes to the team whose two hands hold fewer pips.",
   },
 };
@@ -153,6 +166,15 @@ function placed(board: Pips[], [a, b]: Pips, side: Side): Pips[] | undefined {
     if (b === end.right) return [...board, [b, a]];
   }
   return undefined;
+}
+
+/** Whether playing this tile as the last one is a Capicú or a Chuchazo, given the board before it. */
+function specialOf([a, b]: Pips, board: Pips[]): Special {
+  if (a === 0 && b === 0) return "CHUCHAZO";
+  const end = ends(board);
+  if (end === undefined || a === b) return "NONE";
+  const fits = (n: number) => a === n || b === n;
+  return fits(end.left) && fits(end.right) ? "CAPICU" : "NONE";
 }
 
 function rulesOf(game: Game): RuleSet {
@@ -266,7 +288,7 @@ export class DominoPlayingConcept {
       log: [...(found.log ?? []), { matchNumber: found.matchNumber, seat, move: "PLAYED", tile: tileName(pipsOfTile) }],
     };
     updated.hands[seat].splice(index, 1);
-    this.#afterPlay(updated, seat);
+    this.#afterPlay(updated, seat, specialOf(pipsOfTile, found.board));
 
     const { version } = found;
     const result = await this.games.replaceOne({ _id: game, version }, { ...updated, version: version + 1 });
@@ -358,7 +380,7 @@ export class DominoPlayingConcept {
   async _lastResult({ game }: { game: string }) {
     const found = await this.games.findOne({ _id: game });
     const last = found?.results.at(-1);
-    return last === undefined ? [] : [{ ...last, prize: last.prize ?? 0 }];
+    return last === undefined ? [] : [{ ...last, prize: last.prize ?? 0, special: last.special ?? "NONE", bonus: last.bonus ?? 0 }];
   }
 
   async _ruleset({ rules }: { rules: string }) {
@@ -391,11 +413,14 @@ export class DominoPlayingConcept {
     this.#afterPlay(game, holder);
   }
 
-  /** Ends the match if it is over, and otherwise passes the turn to the next player who can play. */
-  #afterPlay(game: Game, seat: number) {
+  /**
+   * Ends the match if it is over, and otherwise passes the turn to the next player who
+   * can play. `special` says what the tile just played would make of a domino.
+   */
+  #afterPlay(game: Game, seat: number, special: Special = "NONE") {
     if (game.hands[seat].length === 0) {
       const points = pips(game.hands.filter((_, other) => other !== seat).flat());
-      return this.#endMatch(game, seat, teamOf(seat), points, "DOMINO");
+      return this.#endMatch(game, seat, teamOf(seat), points, "DOMINO", special);
     }
     const skipped: number[] = [];
     for (let candidate = next(seat), step = 0; step < SEATS; candidate = next(candidate), step++) {
@@ -415,12 +440,22 @@ export class DominoPlayingConcept {
     this.#endMatch(game, winner, teamOf(winner), all, "TRANQUE");
   }
 
-  #endMatch(game: Game, winner: number, team: number, points: number, ending: Ending) {
+  #endMatch(game: Game, winner: number, team: number, points: number, ending: Ending, special: Special = "NONE") {
     // A tie wins no prize.
     const prize = team === -1 ? 0 : (rulesOf(game).prizes[game.matchNumber - 1] ?? 0);
-    const total = points + prize;
+    const bonus = special === "NONE" ? 0 : rulesOf(game).bonuses[special];
+    const total = points + prize + bonus;
     if (team !== -1) game.teamScores[team] += total;
-    game.results.push({ matchNumber: game.matchNumber, winner: game.players[winner], team, points: total, prize, ending });
+    game.results.push({
+      matchNumber: game.matchNumber,
+      winner: game.players[winner],
+      team,
+      points: total,
+      prize,
+      special,
+      bonus,
+      ending,
+    });
     if (team !== -1 && game.teamScores[team] >= game.target) {
       game.status = "FINISHED";
       game.turn = winner;

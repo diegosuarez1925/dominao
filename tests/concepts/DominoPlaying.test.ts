@@ -146,7 +146,7 @@ test("a domino: the player's team scores the pips left in the other three hands,
   await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
   // Points: 3+3+0+4 (papo) + 6+6 (nando) + 0+1 (cheo) = 23, for team A (abuelo and nando).
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "abuelo", team: 0, points: 23, prize: 0, ending: "DOMINO" },
+    { matchNumber: 1, winner: "abuelo", team: 0, points: 23, prize: 0, special: "NONE", bonus: 0, ending: "DOMINO" },
   ]);
   expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 23, scoreB: 0, turnPlayer: "abuelo" });
   // A fresh deal, an empty board, and Abuelo may open with any tile.
@@ -167,7 +167,7 @@ test("a tranque: the team with fewer pips scores everything, and its earliest pl
   // Team A holds 6+6+5+5 + 0+0 = 22; team B holds 1+1 + 2+3 = 7, so team B wins 29.
   // The match's turn order began with Nando (seat 2, team A), so Cheo (seat 3) is team B's earliest.
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "cheo", team: 1, points: 29, prize: 0, ending: "TRANQUE" },
+    { matchNumber: 1, winner: "cheo", team: 1, points: 29, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
   ]);
   expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 0, scoreB: 29, turnPlayer: "cheo" });
 });
@@ -182,7 +182,7 @@ test("a tied tranque scores nothing and the same player starts again", async () 
   });
   await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, ending: "TRANQUE" },
+    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
   ]);
   expect(await summary(game)).toMatchObject({ scoreA: 0, scoreB: 0, turnPlayer: "nando" });
 });
@@ -296,7 +296,7 @@ test("long games give prizes of 100, 75, 50 and 25 to the winners of the first f
     await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
     // The same 23 points as in DEFAULT, plus the match's prize.
     expect(await dominoes._lastResult({ game })).toEqual([
-      { matchNumber: index + 1, winner: "abuelo", team: 0, points: 23 + prize, prize, ending: "DOMINO" },
+      { matchNumber: index + 1, winner: "abuelo", team: 0, points: 23 + prize, prize, special: "NONE", bonus: 0, ending: "DOMINO" },
     ]);
     expect(await summary(game)).toMatchObject({ scoreA: 23 + prize, scoreB: 0 });
   }
@@ -314,7 +314,7 @@ test("long games settle a tranque by the single player holding fewest pips, priz
   });
   await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: 0, points: 29 + 100, prize: 100, ending: "TRANQUE" },
+    { matchNumber: 1, winner: "nando", team: 0, points: 29 + 100, prize: 100, special: "NONE", bonus: 0, ending: "TRANQUE" },
   ]);
   // Nando won the tranque, so he starts the next match.
   expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 129, scoreB: 0, turnPlayer: "nando" });
@@ -331,7 +331,7 @@ test("in a long game, opponents tied for fewest pips tie the tranque: no points 
   });
   await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, ending: "TRANQUE" },
+    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
   ]);
   expect(await summary(game)).toMatchObject({ scoreA: 0, scoreB: 0, turnPlayer: "nando" });
 });
@@ -349,7 +349,66 @@ test("in a long game, partners tied for fewest pips win the tranque, and the ear
   await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
   // All pips: 2 + 12 + 2 + 5 = 21, plus the first match's prize of 100.
   expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "abuelo", team: 0, points: 121, prize: 100, ending: "TRANQUE" },
+    { matchNumber: 1, winner: "abuelo", team: 0, points: 121, prize: 100, special: "NONE", bonus: 0, ending: "TRANQUE" },
   ]);
   expect(await summary(game)).toMatchObject({ turnPlayer: "abuelo" });
+});
+
+// Capicú and Chuchazo
+
+/** The other three hands of the domino tests: 10 + 12 + 1 = 23 pips. */
+const others = [["3-3", "0-4"], ["6-6"], ["0-1"]];
+
+test("a capicú: the last tile could go on either end; long games pay 100 for it", async () => {
+  // Ends 2 and 5, and Abuelo's last tile is 2-5.
+  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG", matchNumber: 5 });
+  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
+  expect(await dominoes._lastResult({ game })).toEqual([
+    { matchNumber: 5, winner: "abuelo", team: 0, points: 123, prize: 0, special: "CAPICU", bonus: 100, ending: "DOMINO" },
+  ]);
+  expect(await summary(game)).toMatchObject({ scoreA: 123 });
+});
+
+test("prizes and bonuses add up: a capicú in a long game's first match", async () => {
+  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG" });
+  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "RIGHT" });
+  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ points: 223, prize: 100, special: "CAPICU", bonus: 100 });
+});
+
+test("a capicú is recorded under other rules too, but pays nothing extra", async () => {
+  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0 });
+  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
+  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ points: 23, special: "CAPICU", bonus: 0 });
+});
+
+test("a capicú also counts when both ends show the same number", async () => {
+  // Ends 2 and 2: 2-5 could be played on either.
+  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-2"], turn: 0, rules: "LONG", matchNumber: 5 });
+  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
+  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ special: "CAPICU", bonus: 100 });
+});
+
+test("a last double is never a capicú, and a last tile that fits one end only is a plain domino", async () => {
+  const double = await rig({ hands: [["5-5"], ...others], board: ["5-2", "2-5"], turn: 0, rules: "LONG", matchNumber: 5 });
+  await dominoes.play({ game: double, player: "abuelo", tile: "5-5", side: "LEFT" });
+  expect((await dominoes._lastResult({ game: double }))[0]).toMatchObject({ points: 23, special: "NONE", bonus: 0 });
+
+  await testDb.db.dropDatabase();
+  const plain = await rig({ hands: [["2-6"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG", matchNumber: 5 });
+  await dominoes.play({ game: plain, player: "abuelo", tile: "2-6", side: "LEFT" });
+  expect((await dominoes._lastResult({ game: plain }))[0]).toMatchObject({ special: "NONE", bonus: 0 });
+});
+
+test("a chuchazo: winning with the double blank; long games pay 100 for it", async () => {
+  const game = await rig({ hands: [["0-0"], ["3-3", "1-4"], ["6-6"], ["2-1"]], board: ["0-5"], turn: 0, rules: "LONG", matchNumber: 5 });
+  await dominoes.play({ game, player: "abuelo", tile: "0-0", side: "LEFT" });
+  // 3+3+1+4 + 6+6 + 2+1 = 26, plus 100.
+  expect(await dominoes._lastResult({ game })).toEqual([
+    { matchNumber: 5, winner: "abuelo", team: 0, points: 126, prize: 0, special: "CHUCHAZO", bonus: 100, ending: "DOMINO" },
+  ]);
+
+  await testDb.db.dropDatabase();
+  const short = await rig({ hands: [["0-0"], ["3-3", "1-4"], ["6-6"], ["2-1"]], board: ["0-5"], turn: 0, rules: "SHORT" });
+  await dominoes.play({ game: short, player: "abuelo", tile: "0-0", side: "LEFT" });
+  expect((await dominoes._lastResult({ game: short }))[0]).toMatchObject({ points: 26, special: "CHUCHAZO", bonus: 0 });
 });

@@ -46,6 +46,8 @@ const GameView = former(
       team,
       points,
       prize,
+      special,
+      bonus,
       ending,
       turnNumber,
       turnMatch,
@@ -86,8 +88,8 @@ const GameView = former(
             .where(GuestSessioning._getName({ session: mover }).is({ displayName: moverName }))
             .form({ turn: turnNumber, matchNumber: turnMatch, player: mover, displayName: moverName, move, tile: movedTile }),
           lastResult: each(
-            DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, prize, ending }),
-          ).form({ matchNumber: resultMatch, winner, team, points, prize, ending }),
+            DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
+          ).form({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
         }),
     }),
 );

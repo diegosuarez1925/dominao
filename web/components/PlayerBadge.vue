@@ -1,12 +1,15 @@
 <script setup lang="ts">
 // A player at the table: their initial in a circle, their name, and a note such as
 // "you" or "partner". The player whose turn it is glows. An empty seat shows a dashed
-// circle instead.
-defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean }>();
+// circle instead. A player who just passed shakes and says so in a bubble.
+defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean; passed?: boolean }>();
 </script>
 
 <template>
-  <div class="badge" :class="{ active, stacked, empty: !name }">
+  <div class="badge" :class="{ active, stacked, passed, empty: !name }">
+    <Transition name="pop">
+      <span v-if="passed" class="pass-bubble" role="status">¡Paso!</span>
+    </Transition>
     <span class="avatar badge-avatar" aria-hidden="true">{{ name ? name.charAt(0).toUpperCase() : "?" }}</span>
     <span class="badge-text">
       <span class="badge-name">{{ name ?? "Waiting…" }}</span>
@@ -17,6 +20,7 @@ defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean 
 
 <style scoped>
 .badge {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -94,6 +98,48 @@ defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean 
     box-shadow:
       0 0 0 3px var(--color-accent),
       0 0 18px 4px rgb(169 207 226 / 0.6);
+  }
+}
+
+/* Passing: a speech bubble over the player and a shake of the head. */
+.pass-bubble {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(100% + 0.4rem);
+  left: 50%;
+  translate: -50% 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font: 400 1rem var(--font-display);
+  white-space: nowrap;
+  color: var(--color-primary);
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.pass-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 0.4rem solid transparent;
+  border-top-color: var(--white);
+}
+
+.passed .badge-avatar {
+  animation: no-no 0.6s ease;
+  background: var(--line);
+}
+
+@keyframes no-no {
+  20%,
+  60% {
+    transform: rotate(-14deg);
+  }
+  40%,
+  80% {
+    transform: rotate(14deg);
   }
 }
 

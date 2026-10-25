@@ -17,3 +17,5 @@ export type QueueLobby = Answer<ReturnType<Client["matchmaking"]["view"]>>["queu
 export type RuleSet = Answer<ReturnType<Client["games"]["rulesets"]>>["view"]["rulesets"][number];
 export type BoardTile = Game["board"][number];
 export type Side = "LEFT" | "RIGHT";
+/** How a match ended, as the game reports it. */
+export type MatchResult = Game["lastResult"][number];

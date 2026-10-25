@@ -5,12 +5,12 @@
 import DominoTile from "./DominoTile.vue";
 import PlayerBadge from "./PlayerBadge.vue";
 
-defineProps<{ name: string; note: string; tileCount: number; active: boolean; side: "top" | "left" | "right" }>();
+defineProps<{ name: string; note: string; tileCount: number; active: boolean; passed: boolean; side: "top" | "left" | "right" }>();
 </script>
 
 <template>
   <div class="opponent" :class="`opponent--${side}`">
-    <PlayerBadge :name="name" :note="note" :active="active" stacked />
+    <PlayerBadge :name="name" :note="note" :active="active" :passed="passed" stacked />
     <TransitionGroup tag="div" name="tile" class="backs" :aria-label="`${tileCount} tiles`">
       <DominoTile v-for="n in tileCount" :key="n" face-down :vertical="side === 'top'" class="back" />
     </TransitionGroup>

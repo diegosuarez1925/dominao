@@ -294,3 +294,26 @@ a join code, which nobody needs.
   remembered in the page (`dismissedGame`), and a new game shows again on its own.
 - Known gap: the score card shows the last match only; a match-by-match history would
   need the backend to keep every result.
+
+### Capicú, Chuchazo, crossways doubles and match animations
+
+- **Capicú and Chuchazo live in DominoPlaying.** A domino whose last tile is 0-0 is a
+  `CHUCHAZO`; one whose last tile is not a double and fit both ends of the board
+  before it was played is a `CAPICU`. Every rule set records them in the match result
+  (`special`, `bonus`); only LONG pays (`bonuses: { CAPICU: 100, CHUCHAZO: 100 }` in
+  its `RULESETS` entry), on top of the pips and any prize.
+  - Choice to confirm: a last tile that fits when both ends show the same number
+    (3-5 on ends 3 and 3) counts as a Capicú, since it "could be played at either
+    end". If that should not count, it is one condition in `specialOf`.
+- **Doubles lie across the line.** `layOut` stands a double across a flat run (and
+  lays it across a drop), centred on the line. At a corner a double keeps the snake
+  going from one of its ends, never its long side; `tests/web/board.test.ts` checks
+  no overlaps and that every tile touches the one before it.
+- **Match celebrations.** When a match ends, `MatchCelebration.vue` covers the table:
+  ¡Dominó! / ¡Tranque! / ¡Capicú! / ¡Chuchazo!, who won, then the points line by line
+  (pips, prize, bonus) and a counting total, with falling dominoes. Capicú adds
+  turning light rays and a glow; Chuchazo slams a double blank down and shakes the
+  screen. The score table holds the old scores until it closes, then counts up. Tap to
+  skip. Opening the page later does not replay it.
+- **Passes.** A player who is skipped shows a "¡Paso!" bubble and shakes their head;
+  several skips play one after another.

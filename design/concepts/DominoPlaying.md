@@ -17,8 +17,9 @@ left in the other three hands and a new match is dealt, which Abuelo starts with
 tile. If the line is blocked so nobody can play (a tranque), the team holding fewer
 pips scores all the pips in the four hands. The first team to reach 200 wins the
 game. Under the LONG rules the same four would play to 500, the winners of the first
-four matches would earn prizes on top of their points, and a tranque would go to the
-team of the single player holding the fewest pips.
+four matches would earn prizes on top of their points, a match won with a Capicú or
+a Chuchazo would earn 100 more, and a tranque would go to the team of the single
+player holding the fewest pips.
 
 ## Types
 
@@ -45,12 +46,19 @@ Ending is DOMINO or TRANQUE
 Move is PLAYED or SKIPPED
   What happened on a player's turn: they played a tile, or they could not play.
 
+Special is CAPICU or CHUCHAZO or NONE
+  A celebrated way to win a match by domino. CAPICU: the last tile, not a double,
+  could have been played on either end of the board. CHUCHAZO: the last tile is the
+  double blank (0-0). NONE: any other ending.
+
 RuleSet is DEFAULT or LONG or SHORT
   The rules a game is played by. DEFAULT plays to 200 and settles a tranque by team:
   the team whose two hands hold fewer pips wins it. SHORT is DEFAULT played to 100.
   LONG plays to 500, settles a tranque by player: the team of the player whose own
   hand holds the fewest pips wins it, and gives the winning team a prize on top of
-  its points for each of the first four matches: 100, 75, 50 and 25.
+  its points for each of the first four matches: 100, 75, 50 and 25, and a bonus
+  of 100 for a match won with a Capicú or a Chuchazo. Every rule set records a
+  Capicú or Chuchazo; only LONG pays for it.
 ```
 
 ## State
@@ -92,8 +100,10 @@ a set of Results with
   a team Number
   a points Number
   a prize Number
+  a special Special
+  a bonus Number
   an ending Ending
-Rule: points include the prize
+Rule: points include the prize and the bonus
 ```
 
 ## Actions
@@ -141,6 +151,7 @@ play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)
     otherwise, if no player can play, the match ends in a TRANQUE and its winning team scores the pips in all four hands; by team rules, the team whose two hands hold fewer pips wins, and its player earliest in the match's turn order starts the next match; by player rules, the player holding the fewest pips wins for their team and starts the next match (when several hold that fewest, they win only if they are all partners, and the earliest of them in turn order starts); on a tie nobody scores and the same player starts again
     otherwise, pass the turn to the next player who can play, skipping those who cannot
     when a match is won, the winning team also gets the rules' prize for that match, if any; a tie wins no prize
+    when a match ends in a DOMINO whose last tile is 0-0, it is a CHUCHAZO; when that last tile is not a double and either of its numbers matched each end of the board before it was played, it is a CAPICU; the winning team also gets the rules' bonus for it
     when a match ends, record its result; if the scoring team reached the target the game becomes FINISHED, and otherwise a new match is dealt and its starter plays first with any tile
     returns game
 
@@ -192,10 +203,10 @@ _log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move
   rows when the game does not exist. The number keeps two skips by the same player in
   the same match apart.
 
-_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, ending: Ending)
+_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)
   Answers how the most recent finished match ended, and no row before any match has
-  ended. Points include the prize. On a tied tranque, team is -1 and points and
-  prize are 0.
+  ended. Points include the prize and the bonus. On a tied tranque, team is -1 and
+  points, prize and bonus are 0, and special is NONE.
 
 _ruleset(rules: RuleSet) : optional (target: Number, description: String)
   Answers the target of a rule set and a sentence describing it, and no row when the
