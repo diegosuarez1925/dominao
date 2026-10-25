@@ -241,3 +241,25 @@ a join code, which nobody needs.
     earlier in turn order starts.
   - Tables opened before rule sets existed have no rules and their games play
     `DEFAULT`.
+
+### Home screen styling
+
+- **One stylesheet for shared pieces.** `web/styles.css` starts with design tokens
+  (colors, fonts, spacing, corners, shadows as CSS variables), then the base page,
+  layout helpers (`.page`, `.grid-2`, `.row`, `.stack`) and components (`.logo`, `.btn`
+  with `--secondary`/`--ghost`/`--small`/`--block`, `.input`, `.select`, `.field`,
+  `.panel`, `.media`, `.avatar`, `.chip`, `.notice`, `.divider`). Every action button is
+  a `.btn`, so changing that one rule restyles all of them. Components keep only
+  one-off styles in their own `.vue` file.
+- **Colors:** a muted red (`--red-*`) for the page and main buttons, light blue
+  (`--blue-*`) for accents (panel strips, focus rings, the logo's "!"), cream and white
+  for panels. Fonts: Bungee for the logo and panel titles, Nunito for text (Google Fonts).
+- **Background:** an SVG pattern of white outlined dominoes on a red gradient, on a
+  fixed layer that drifts diagonally over 90 s; it holds still for people who ask their
+  system for reduced motion.
+- **Layout:** a header with the logo on the left and the guest's chip (initial, name,
+  Leave) on the right; it wraps under the logo on phones. The two ways to play are two
+  panels side by side that stack below about 42rem. Each panel has its own rules
+  picker (`RulesPicker.vue`).
+- Lobbies and the game are not restyled yet; they sit in a plain panel so they stay
+  readable on the red background.

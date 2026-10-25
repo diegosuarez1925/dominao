@@ -1,16 +1,444 @@
-/* Page-wide styles; each component keeps its own styles next to its template. */
-body {
-  font-family: system-ui, sans-serif;
-  max-width: 40rem;
-  margin: 2rem auto;
-  padding: 0 1rem;
+/*
+ * DOMINAO's shared styles. Everything a screen reuses lives here, in this order:
+ *   1. Design tokens: colors, type, spacing, corners, shadows. Change these to restyle the app.
+ *   2. Base: page, text, the moving domino background.
+ *   3. Layout: the header, the page column, grids.
+ *   4. Components: .logo, .btn, .input, .select, .field, .panel, .media, .chip, .notice.
+ * A component's own one-off styles stay in its .vue file.
+ */
+
+/* 1. Design tokens */
+:root {
+  /* Reds: the main color, kept muted. */
+  --red-900: #4a1416;
+  --red-800: #6b1d20;
+  --red-700: #8c2a2c;
+  --red-600: #a83a38;
+  --red-500: #bf4f4a;
+  /* Light blue: the accent. */
+  --blue-300: #a9cfe2;
+  --blue-200: #c8e0ec;
+  --blue-100: #e6f1f7;
+  /* Whites and inks. */
+  --white: #ffffff;
+  --cream: #fbf7f2;
+  --ink: #2a1f1f;
+  --ink-soft: #6d5c5b;
+  --line: #e3d8d3;
+
+  --color-background: var(--red-700);
+  --color-surface: var(--cream);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-soft);
+  --color-primary: var(--red-600);
+  --color-primary-hover: var(--red-700);
+  --color-on-primary: var(--white);
+  --color-accent: var(--blue-300);
+  --color-accent-soft: var(--blue-100);
+  --color-focus: var(--blue-300);
+
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.85rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(40 10 10 / 0.18);
+  --shadow-md: 0 6px 20px rgb(40 10 10 / 0.25);
+
+  --page-width: 64rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
 }
 
-form {
-  display: flex;
-  gap: 0.5rem;
+/* 2. Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
+/*
+ * The background: a tiling of white dominoes on red, drifting slowly. It sits on its own
+ * fixed layer behind everything, so it never scrolls with the page.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--color-background);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='2'%3E%3Cg transform='translate(22 26) rotate(-18)'%3E%3Crect width='56' height='28' rx='5'/%3E%3Cpath d='M28 4v20'/%3E%3C/g%3E%3Cg transform='translate(118 18) rotate(64)'%3E%3Crect width='56' height='28' rx='5'/%3E%3Cpath d='M28 4v20'/%3E%3C/g%3E%3Cg transform='translate(60 104) rotate(22)'%3E%3Crect width='56' height='28' rx='5'/%3E%3Cpath d='M28 4v20'/%3E%3C/g%3E%3Cg transform='translate(150 120) rotate(-70)'%3E%3Crect width='56' height='28' rx='5'/%3E%3Cpath d='M28 4v20'/%3E%3C/g%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.2'%3E%3Cg transform='translate(22 26) rotate(-18)'%3E%3Ccircle cx='14' cy='14' r='3'/%3E%3Ccircle cx='36' cy='8' r='2.6'/%3E%3Ccircle cx='48' cy='20' r='2.6'/%3E%3C/g%3E%3Cg transform='translate(118 18) rotate(64)'%3E%3Ccircle cx='8' cy='8' r='2.6'/%3E%3Ccircle cx='20' cy='20' r='2.6'/%3E%3Ccircle cx='42' cy='14' r='3'/%3E%3C/g%3E%3Cg transform='translate(60 104) rotate(22)'%3E%3Ccircle cx='8' cy='8' r='2.6'/%3E%3Ccircle cx='14' cy='14' r='2.6'/%3E%3Ccircle cx='20' cy='20' r='2.6'/%3E%3Ccircle cx='36' cy='8' r='2.6'/%3E%3Ccircle cx='48' cy='20' r='2.6'/%3E%3C/g%3E%3Cg transform='translate(150 120) rotate(-70)'%3E%3Ccircle cx='14' cy='14' r='3'/%3E%3Ccircle cx='36' cy='8' r='2.6'/%3E%3Ccircle cx='48' cy='8' r='2.6'/%3E%3Ccircle cx='36' cy='20' r='2.6'/%3E%3Ccircle cx='48' cy='20' r='2.6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(ellipse at top, var(--red-600), var(--red-800) 75%);
+  background-size: 180px 180px, cover;
+  animation: drift 90s linear infinite;
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0, center;
+  }
+  to {
+    background-position: 360px 180px, center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+  }
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  margin: 0 0 var(--space-3);
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--color-primary);
 }
 
 li {
-  margin: 0.5rem 0;
+  margin: var(--space-2) 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* 3. Layout */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: var(--space-5) var(--gutter) var(--space-4);
+}
+
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 0 var(--gutter) var(--space-7);
+}
+
+/* Columns that fall back to one column on narrow screens. */
+.grid-2 {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+/* 4. Components */
+
+/* The DOMINAO! wordmark. */
+.logo {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 7vw, 3.75rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--white);
+  text-shadow:
+    0 3px 0 var(--red-900),
+    0 6px 18px rgb(0 0 0 / 0.3);
+}
+
+.logo .logo-accent {
+  color: var(--color-accent);
+}
+
+/* Buttons: one class for every action button; modifiers change the look. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  font: 700 1rem/1.2 var(--font-body);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    transform 0.1s,
+    box-shadow 0.15s;
+}
+
+.btn:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* A quieter button: outlined in the main color. */
+.btn--secondary {
+  color: var(--color-primary);
+  background: var(--white);
+  border-color: var(--color-primary);
+}
+
+.btn--secondary:hover {
+  background: var(--color-accent-soft);
+}
+
+/* A button on the red background, such as Leave in the header. */
+.btn--ghost {
+  color: var(--white);
+  background: transparent;
+  border-color: rgb(255 255 255 / 0.6);
+  box-shadow: none;
+}
+
+.btn--ghost:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.btn--small {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-4);
+  font-size: 0.9rem;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* Text boxes and drop-downs share one look. */
+.input,
+.select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: 1rem/1.3 var(--font-body);
+  color: var(--color-text);
+  background: var(--white);
+  transition: border-color 0.15s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(169 207 226 / 0.5);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* A short code typed in capitals, such as a table's join code. */
+.input--code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* A labelled form control: label above, control, then an optional hint. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* In a row, a field takes the room its neighbours leave. */
+.row > .field {
+  flex: 1 1 12rem;
+}
+
+.field-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* A white card that holds one part of a screen. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  overflow: hidden;
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  padding-top: calc(clamp(var(--space-4), 4vw, var(--space-6)) + 6px);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* The light-blue strip along the top of every panel. */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: var(--color-accent);
+}
+
+.panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: var(--color-primary);
+}
+
+.panel-text {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* Separates two parts of a panel, with an optional word in the middle. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+
+/* A picture or illustration: fills its box and keeps its shape. */
+.media {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-accent-soft);
+}
+
+.media--square {
+  aspect-ratio: 1;
+}
+
+.media--wide {
+  aspect-ratio: 16 / 9;
+}
+
+/* A small round avatar, such as the guest's initial. */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  border-radius: 50%;
+  font-weight: 800;
+  color: var(--red-800);
+  background: var(--color-accent);
+}
+
+/* A pill showing who is signed in. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-1);
+  border-radius: var(--radius-pill);
+  color: var(--white);
+  background: rgb(0 0 0 / 0.18);
+  min-width: 0;
+}
+
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.chip-label {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.chip-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 10rem;
+}
+
+/* A message for the guest, such as why something was refused. */
+.notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-accent-soft);
 }
