@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "../../src/assembly.ts";
+import { CodeGeneratingConcept } from "../../src/concepts/CodeGenerating.ts";
 import { policy } from "../../src/http.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
@@ -38,7 +39,9 @@ async function guest(displayName: string) {
   return body as { session: string; token: string };
 }
 
-const tableCodes = () => testDb.db.collection("codeGenerating.codes").countDocuments({ context: "TABLE_CODES" });
+/** Whether CodeGenerating still holds a table code, asked through its own query. */
+const taken = async (code: string) =>
+  !(await new CodeGeneratingConcept(testDb.db)._isAvailable({ context: "TABLE_CODES", code })).available;
 
 test("the journey: Abuelo opens a table and his three brothers join by code", async () => {
   const abuelo = await guest("Abuelo");
@@ -88,7 +91,7 @@ test("when the last player leaves, the table closes and its code is freed", asyn
   const papo = await guest("Papo");
   const { table, code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
-  expect(await tableCodes()).toBe(1);
+  expect(await taken(code)).toBe(true);
 
   await call("/tables/leave", { token: abuelo.token, table });
   // Papo is host now, and the table is still open.
@@ -96,7 +99,7 @@ test("when the last player leaves, the table closes and its code is freed", asyn
 
   await call("/tables/leave", { token: papo.token, table });
   expect((await call("/tables/join", { token: abuelo.token, code })).status).toBe(404);
-  expect(await tableCodes()).toBe(0);
+  expect(await taken(code)).toBe(false);
 });
 
 test("only the host can close a table with people at it", async () => {
@@ -111,7 +114,7 @@ test("only the host can close a table with people at it", async () => {
   });
   expect((await call("/tables/close", { token: abuelo.token, table })).body).toEqual({ table });
   expect((await call("/tables/lobby", { token: papo.token })).body.lobby.tables).toEqual([]);
-  expect(await tableCodes()).toBe(0);
+  expect(await taken(code)).toBe(false);
 });
 
 test("a guest who leaves the app also leaves their table", async () => {
@@ -126,7 +129,7 @@ test("a guest who leaves the app also leaves their table", async () => {
 
   // The last guest leaving the app closes the table and frees its code.
   await call("/guests/leave", { token: abuelo.token });
-  expect(await tableCodes()).toBe(0);
+  expect(await taken(code)).toBe(false);
 });
 
 test("a table is opened with rules, and unknown or missing rules are refused", async () => {
@@ -136,10 +139,29 @@ test("a table is opened with rules, and unknown or missing rules are refused", a
     body: { error: "INVALID_REQUEST" },
   });
   expect((await call("/tables/open", { token: abuelo.token })).status).toBe(400);
-  // Nothing was left behind: no table, and no code taken.
+  // Nothing was left behind: no table, and Abuelo is free to open one.
   expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables).toEqual([]);
-  expect(await tableCodes()).toBe(0);
 
   await call("/tables/open", { token: abuelo.token, rules: "LONG" });
   expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0].rules).toBe("LONG");
+});
+
+test("a guest already seated cannot join a second table, nor leave one they are not at", async () => {
+  const abuelo = await guest("Abuelo");
+  const papo = await guest("Papo");
+  const first = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
+  const second = (await call("/tables/open", { token: papo.token, rules: "DEFAULT" })).body;
+
+  expect((await call("/tables/join", { token: abuelo.token, code: second.code })).status).toBe(409);
+  expect((await call("/tables/join", { token: abuelo.token, code: first.code })).status).toBe(409);
+  expect((await call("/tables/leave", { token: abuelo.token, table: second.table })).status).toBe(404);
+  // Both tables are as they were.
+  expect((await call("/tables/lobby", { token: papo.token })).body.lobby.tables[0].seats).toHaveLength(1);
+  expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0].seats).toHaveLength(1);
+});
+
+test("a guest at a table cannot also wait for a game with strangers", async () => {
+  const abuelo = await guest("Abuelo");
+  await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" });
+  expect((await call("/matchmaking/enqueue", { token: abuelo.token, rules: "DEFAULT" })).status).toBe(409);
 });

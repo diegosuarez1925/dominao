@@ -1,3 +1,8 @@
+// DominoPlaying is tested only through its actions and queries. Deals come from a
+// seeded shuffle handed to the concept, so a seed always deals the same hands, and a
+// simple player (tests/support/dominoes.ts) plays forward until the case a test is
+// about happens. Expected scores are worked out from the hands read through the
+// concept's queries, following the rules, not copied from the code.
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import {
   DominoPlayingConcept,
@@ -11,16 +16,25 @@ import {
   UnknownRules,
 } from "../../src/concepts/DominoPlaying.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
+import {
+  choose,
+  type Ending,
+  fits,
+  isDouble,
+  numbers,
+  pipsOf,
+  playUntil,
+  saveBlank,
+  seededShuffle,
+  snapshot,
+} from "../support/dominoes.ts";
 
 let testDb: TestDb;
-let dominoes: DominoPlayingConcept;
-const players = { first: "abuelo", second: "papo", third: "nando", fourth: "cheo", rules: "DEFAULT" };
+const players = { first: "abuelo", second: "papo", third: "nando", fourth: "cheo" };
 const seats = [players.first, players.second, players.third, players.fourth];
-const TARGET_SCORE = RULESETS.DEFAULT.target;
-
-// Without a shuffle the tiles are dealt in set order: 0-0 … 0-6 to the first player,
-// 1-1 … 1-6, 2-2 to the second, 2-3 … 3-5 to the third, and 3-6 … 6-6 to the fourth.
-const noShuffle = <T>(items: T[]) => items;
+/** Seats 0 and 2 are team 0 (Abuelo and Nando); seats 1 and 3 are team 1. */
+const teamOf = (player: string) => seats.indexOf(player) % 2;
+const partners = (a: string, b: string) => teamOf(a) === teamOf(b);
 
 beforeAll(async () => {
   testDb = await openTestDb();
@@ -28,231 +42,286 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await testDb.db.dropDatabase();
-  dominoes = new DominoPlayingConcept(testDb.db, noShuffle);
 });
 
 afterAll(async () => {
   await testDb.close();
 });
 
-const games = () => testDb.db.collection("dominoPlaying.games");
-const tiles = (...names: string[]) => names.map((name) => name.split("-").map(Number));
-
-/** Starts a game, then replaces its state with the given hands, board and turn. */
-async function rig(state: {
-  hands: string[][];
-  board: string[];
-  turn: number;
-  starter?: number;
-  teamScores?: number[];
-  rules?: string;
-  matchNumber?: number;
-}) {
-  const { game } = await dominoes.start({ place: "table", ...players, rules: state.rules ?? "DEFAULT" });
-  await games().updateOne(
-    { _id: game as never },
-    {
-      $set: {
-        hands: state.hands.map((hand) => tiles(...hand)),
-        board: tiles(...state.board),
-        turn: state.turn,
-        starter: state.starter ?? 0,
-        teamScores: state.teamScores ?? [0, 0],
-        leftCount: 0,
-        log: [],
-        matchNumber: state.matchNumber ?? 1,
-      },
-    },
-  );
-  return game;
+/** A game whose deals follow the given seed. */
+async function seeded(seed: number, rules = "DEFAULT") {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(seed));
+  const { game } = await dominoes.start({ place: `table-${rules}-${seed}`, ...players, rules });
+  return { dominoes, game };
 }
 
-async function summary(game: string) {
-  return (await dominoes._summary({ game }))[0];
+/**
+ * Plays seeded games, starting from `seed`, until a match ends the way `wanted`
+ * accepts. The seed given is one known to get there quickly; later ones are only
+ * tried if a change to the concept moved the case elsewhere.
+ */
+async function endingWhere(rules: string, seed: number, wanted: (ending: Ending) => boolean, player = choose) {
+  for (let tried = seed; tried < seed + 300; tried++) {
+    const { dominoes, game } = await seeded(tried, rules);
+    const ending = await playUntil(dominoes, game, wanted, player);
+    if (ending !== undefined) return { dominoes, game, ending };
+  }
+  throw new Error(`No ${rules} game from seed ${seed} on reached the case under test`);
 }
 
-test("the first match opens with the double six, and the turn passes on", async () => {
-  const { game } = await dominoes.start({ place: "table", ...players });
-  // Cheo (fourth) holds the double six with the unshuffled deal and plays it at once.
+/** The players of a match in turn order, from the one who started it. */
+const fromStarter = (starter: string) => [0, 1, 2, 3].map((step) => seats[(seats.indexOf(starter) + step) % 4]);
+const allPips = (hands: Record<string, string[]>) => pipsOf(Object.values(hands).flat());
+const teamPips = (hands: Record<string, string[]>, team: number) =>
+  pipsOf(seats.filter((player) => teamOf(player) === team).flatMap((player) => hands[player]));
+
+/** The match result the rules call for, worked out from the hands at the end. */
+function expectedResult({ before, player, tile, handsAfter }: Ending, rules: string) {
+  const ruleSet = RULESETS[rules];
+  const order = fromStarter(before.starter);
+  let winner: string;
+  let team: number;
+  let points: number;
+  let ending: "DOMINO" | "TRANQUE";
+  let special: "CAPICU" | "CHUCHAZO" | "NONE" = "NONE";
+  if (handsAfter[player].length === 0) {
+    ending = "DOMINO";
+    winner = player;
+    team = teamOf(player);
+    points = allPips(handsAfter);
+    if (tile === "0-0") special = "CHUCHAZO";
+    else if (!isDouble(tile) && before.ends && fits(tile, before.ends.left) && fits(tile, before.ends.right)) {
+      special = "CAPICU";
+    }
+  } else {
+    ending = "TRANQUE";
+    points = allPips(handsAfter);
+    if (ruleSet.tranque === "TEAM") {
+      const [a, b] = [teamPips(handsAfter, 0), teamPips(handsAfter, 1)];
+      team = a === b ? -1 : a < b ? 0 : 1;
+      winner = team === -1 ? before.starter : order.find((p) => teamOf(p) === team)!;
+    } else {
+      const fewest = Math.min(...order.map((p) => pipsOf(handsAfter[p])));
+      const lowest = order.filter((p) => pipsOf(handsAfter[p]) === fewest);
+      const tied = lowest.some((p) => !partners(p, lowest[0]));
+      team = tied ? -1 : teamOf(lowest[0]);
+      winner = tied ? before.starter : lowest[0];
+    }
+    if (team === -1) points = 0;
+  }
+  const prize = team === -1 ? 0 : (ruleSet.prizes[before.matchNumber - 1] ?? 0);
+  const bonus = special === "NONE" ? 0 : ruleSet.bonuses[special];
+  return { matchNumber: before.matchNumber, winner, team, points: points + prize + bonus, prize, special, bonus, ending };
+}
+
+/** After a match: the winning team's score went up by its points, and the winner starts the next one. */
+async function expectNextMatch({ before, result, summary }: Ending, dominoes: DominoPlayingConcept, game: string) {
+  expect(summary.scoreA).toBe(before.scoreA + (result.team === 0 ? result.points : 0));
+  expect(summary.scoreB).toBe(before.scoreB + (result.team === 1 ? result.points : 0));
+  if (summary.status === "FINISHED") return;
+  expect(summary).toMatchObject({ matchNumber: before.matchNumber + 1, turnPlayer: result.winner });
+  // A fresh deal and an empty board; the winner may open with any tile.
+  expect(await dominoes._board({ game })).toEqual([]);
+  expect((await dominoes._players({ game })).map((row) => row.tileCount)).toEqual([7, 7, 7, 7]);
+}
+
+// The principle and single plays
+
+test("the first match opens with the double six, played by whoever holds it, and the turn passes on", async () => {
+  const { dominoes, game } = await seeded(1);
+  const log = await dominoes._log({ game });
+  expect(log).toHaveLength(1);
+  const opener = log[0].player;
+  expect(log[0]).toEqual({ turn: 1, matchNumber: 1, player: opener, move: "PLAYED", tile: "6-6" });
   expect(await dominoes._board({ game })).toEqual([{ tile: "6-6", left: 6, right: 6, fromFirst: 0 }]);
-  expect(await dominoes._log({ game })).toEqual([{ turn: 1, matchNumber: 1, player: "cheo", move: "PLAYED", tile: "6-6" }]);
-  const counts = (await dominoes._players({ game })).map((row) => row.tileCount);
-  expect(counts).toEqual([7, 7, 7, 6]);
-  // Abuelo (next after Cheo) holds 0-6, so it is his turn.
-  expect(await summary(game)).toMatchObject({ status: "ACTIVE", matchNumber: 1, scoreA: 0, scoreB: 0, turnPlayer: "abuelo" });
-  expect((await dominoes._hand({ game, player: "abuelo" })).map((row) => row.tile)).toEqual([
-    "0-0", "0-1", "0-2", "0-3", "0-4", "0-5", "0-6",
-  ]);
+  const counts = await dominoes._players({ game });
+  for (const row of counts) expect(row.tileCount).toBe(row.player === opener ? 6 : 7);
+  const summary = (await dominoes._summary({ game }))[0];
+  expect(summary).toMatchObject({ status: "ACTIVE", rules: "DEFAULT", target: 200, matchNumber: 1, scoreA: 0, scoreB: 0 });
+  expect(summary.turnPlayer).not.toBe(opener);
 });
 
 test("a tile goes on the end it matches, and its other number becomes the new end", async () => {
-  const game = await rig({
-    hands: [["2-3", "4-4"], ["3-1"], ["0-0"], ["6-6"]],
-    board: ["5-1", "1-2"],
-    turn: 0,
-  });
-  await dominoes.play({ game, player: "abuelo", tile: "3-2", side: "RIGHT" });
-  const board = await dominoes._board({ game });
-  expect(board.map(({ left, right }) => [left, right])).toEqual([[5, 1], [1, 2], [2, 3]]);
+  const { dominoes, game } = await seeded(1);
+  for (let plays = 0; plays < 6; plays++) {
+    const before = await snapshot(dominoes, game);
+    const player = (await dominoes._summary({ game }))[0].turnPlayer;
+    const move = choose(before.hands[player], before.ends)!;
+    await dominoes.play({ game, player, ...move });
+    const board = await dominoes._board({ game });
+    const [a, b] = numbers(move.tile);
+    if (move.side === "LEFT") {
+      const matched = before.ends!.left;
+      expect(board[0]).toMatchObject({ left: a === matched ? b : a, right: matched });
+      expect(board.at(-1)!.right).toBe(before.ends!.right);
+    } else {
+      const matched = before.ends!.right;
+      expect(board.at(-1)).toMatchObject({ left: matched, right: a === matched ? b : a });
+      expect(board[0].left).toBe(before.ends!.left);
+    }
+    // The tile left the player's hand, and nowhere else.
+    expect((await dominoes._hand({ game, player })).map((row) => row.tile)).not.toContain(move.tile);
+  }
 });
 
 test("each board tile knows how far it lies from the match's first tile", async () => {
-  const game = await rig({ hands: [["1-6", "0-0"], ["6-2", "3-3"], ["1-1", "4-4"], ["2-2", "5-5"]], board: ["6-6"], turn: 0 });
-  await dominoes.play({ game, player: "abuelo", tile: "1-6", side: "LEFT" });
-  await dominoes.play({ game, player: "papo", tile: "6-2", side: "RIGHT" });
-  await dominoes.play({ game, player: "nando", tile: "1-1", side: "LEFT" });
+  const { dominoes, game } = await seeded(1);
+  for (let plays = 0; plays < 8; plays++) {
+    const before = await snapshot(dominoes, game);
+    const player = (await dominoes._summary({ game }))[0].turnPlayer;
+    await dominoes.play({ game, player, ...choose(before.hands[player], before.ends)! });
+  }
   const board = await dominoes._board({ game });
-  expect(board.map(({ tile, fromFirst }) => [tile, fromFirst])).toEqual([
-    ["1-1", -2],
-    ["1-6", -1],
-    ["6-6", 0],
-    ["2-6", 1],
-  ]);
+  const first = board.findIndex((row) => row.tile === "6-6");
+  expect(board.map((row) => row.fromFirst)).toEqual(board.map((_, index) => index - first));
 });
 
-test("illegal moves are refused", async () => {
-  const game = await rig({ hands: [["2-3", "4-4"], ["1-5"], ["0-0"], ["6-6"]], board: ["5-2"], turn: 0 });
-  await expect(dominoes.play({ game, player: "papo", tile: "1-5", side: "LEFT" })).rejects.toThrow(NotYourTurn);
-  await expect(dominoes.play({ game, player: "abuelo", tile: "6-6", side: "LEFT" })).rejects.toThrow(NotInHand);
-  await expect(dominoes.play({ game, player: "abuelo", tile: "4-4", side: "LEFT" })).rejects.toThrow(IllegalPlay);
-  await expect(dominoes.play({ game, player: "abuelo", tile: "2-3", side: "LEFT" })).rejects.toThrow(IllegalPlay);
-  await expect(dominoes.play({ game, player: "abuelo", tile: "2-3", side: "RIGHT" })).resolves.toEqual({ game });
+test("illegal moves are refused and change nothing", async () => {
+  const { dominoes, game } = await seeded(1);
+  const before = await snapshot(dominoes, game);
+  const turnPlayer = (await dominoes._summary({ game }))[0].turnPlayer;
+  const waiting = seats.find((p) => p !== turnPlayer)!;
+  const hand = before.hands[turnPlayer];
+  const misfit = hand.find((tile) => !fits(tile, 6))!;
+  expect(misfit).toBeDefined();
+
+  await expect(dominoes.play({ game, player: waiting, tile: before.hands[waiting][0], side: "LEFT" })).rejects.toThrow(NotYourTurn);
+  await expect(dominoes.play({ game, player: turnPlayer, tile: "6-6", side: "LEFT" })).rejects.toThrow(NotInHand);
+  await expect(dominoes.play({ game, player: turnPlayer, tile: "9-9", side: "LEFT" })).rejects.toThrow(NotInHand);
+  await expect(dominoes.play({ game, player: turnPlayer, tile: misfit, side: "RIGHT" })).rejects.toThrow(IllegalPlay);
+  await expect(dominoes.play({ game: "no-such-game", player: turnPlayer, tile: misfit, side: "LEFT" })).rejects.toThrow();
+
+  expect(await snapshot(dominoes, game)).toEqual(before);
+  expect(await dominoes._log({ game })).toHaveLength(1);
 });
 
-test("players who cannot play are skipped automatically", async () => {
-  // The board is 5-3, so its ends are 5 and 3.
-  const game = await rig({
-    hands: [["3-6", "0-0"], ["1-1", "2-2"], ["1-2", "4-4"], ["6-1", "5-5"]],
-    board: ["5-3"],
-    turn: 0,
+test("players who cannot play are skipped, and only they are", async () => {
+  const { dominoes, game } = await seeded(1);
+  let skips = 0;
+  for (let plays = 0; plays < 200 && skips < 5; plays++) {
+    const summary = (await dominoes._summary({ game }))[0];
+    const before = await snapshot(dominoes, game);
+    const player = summary.turnPlayer;
+    const logBefore = (await dominoes._log({ game })).length;
+    await dominoes.play({ game, player, ...choose(before.hands[player], before.ends)! });
+    const after = await snapshot(dominoes, game);
+    if (after.matchNumber !== before.matchNumber) continue; // The match ended; skips don't apply.
+    const fresh = (await dominoes._log({ game })).sort((a, b) => a.turn - b.turn).slice(logBefore + 1);
+    // Every player between this one and the next to play was skipped, in order, and
+    // none of them held a tile that fits; the next player does.
+    const next = (await dominoes._summary({ game }))[0].turnPlayer;
+    const between = fromStarter(player).slice(1, fromStarter(player).indexOf(next));
+    expect(fresh.map((row) => [row.player, row.move])).toEqual(between.map((p) => [p, "SKIPPED"]));
+    for (const skipped of between) expect(choose(after.hands[skipped], after.ends)).toBeUndefined();
+    expect(choose(after.hands[next], after.ends)).toBeDefined();
+    skips += between.length;
+  }
+  expect(skips).toBeGreaterThan(0);
+});
+
+// How matches end and score
+
+test("a domino: the team of the player who goes out scores the pips left in the other three hands, and the winner starts next", async () => {
+  const { dominoes, game, ending } = await endingWhere("DEFAULT", 1, (e) => e.result.ending === "DOMINO");
+  expect(ending.handsAfter[ending.player]).toEqual([]);
+  expect(ending.result).toEqual({
+    matchNumber: ending.before.matchNumber,
+    winner: ending.player,
+    team: teamOf(ending.player),
+    points: allPips(ending.handsAfter),
+    prize: 0,
+    special: expect.any(String),
+    bonus: 0,
+    ending: "DOMINO",
   });
-  await dominoes.play({ game, player: "abuelo", tile: "3-6", side: "RIGHT" });
-  // Ends are now 5 and 6. Papo (1-1, 2-2) and Nando (1-2, 4-4) cannot play; Cheo can.
-  expect((await summary(game)).turnPlayer).toBe("cheo");
-  // The log shows Abuelo's play and the two skips.
-  expect(await dominoes._log({ game })).toEqual([
-    { turn: 1, matchNumber: 1, player: "abuelo", move: "PLAYED", tile: "3-6" },
-    { turn: 2, matchNumber: 1, player: "papo", move: "SKIPPED", tile: "" },
-    { turn: 3, matchNumber: 1, player: "nando", move: "SKIPPED", tile: "" },
-  ]);
+  await expectNextMatch(ending, dominoes, game);
 });
 
-test("a domino: the player's team scores the pips left in the other three hands, and the winner starts next", async () => {
-  const game = await rig({
-    hands: [["1-2"], ["3-3", "0-4"], ["6-6"], ["0-1"]],
-    board: ["2-5"],
-    turn: 0,
+test("a tranque: the team holding fewer pips scores them all, and its player earliest in turn order starts next", async () => {
+  const { dominoes, game, ending } = await endingWhere("DEFAULT", 1, (e) => e.result.ending === "TRANQUE" && e.result.team !== -1);
+  // Nobody could play on, and nobody went out.
+  for (const hand of Object.values(ending.handsAfter)) expect(hand.length).toBeGreaterThan(0);
+  const [a, b] = [teamPips(ending.handsAfter, 0), teamPips(ending.handsAfter, 1)];
+  const team = a < b ? 0 : 1;
+  expect(ending.result).toMatchObject({
+    team,
+    winner: fromStarter(ending.before.starter).find((p) => teamOf(p) === team),
+    points: a + b,
+    ending: "TRANQUE",
+    special: "NONE",
   });
-  await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
-  // Points: 3+3+0+4 (papo) + 6+6 (nando) + 0+1 (cheo) = 23, for team A (abuelo and nando).
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "abuelo", team: 0, points: 23, prize: 0, special: "NONE", bonus: 0, ending: "DOMINO" },
-  ]);
-  expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 23, scoreB: 0, turnPlayer: "abuelo" });
-  // A fresh deal, an empty board, and Abuelo may open with any tile.
-  expect(await dominoes._board({ game })).toEqual([]);
-  expect((await dominoes._players({ game })).map((row) => row.tileCount)).toEqual([7, 7, 7, 7]);
-  await expect(dominoes.play({ game, player: "abuelo", tile: "0-3", side: "LEFT" })).resolves.toEqual({ game });
+  await expectNextMatch(ending, dominoes, game);
 });
 
-test("a tranque: the team with fewer pips scores everything, and its earliest player starts next", async () => {
-  // Ends 4 and 4 after Papo's play, and nobody holds a 4.
-  const game = await rig({
-    hands: [["6-6", "5-5"], ["0-4", "1-1"], ["0-0"], ["2-3"]],
-    board: ["4-1", "1-0"],
-    turn: 1,
-    starter: 2,
-  });
-  await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
-  // Team A holds 6+6+5+5 + 0+0 = 22; team B holds 1+1 + 2+3 = 7, so team B wins 29.
-  // The match's turn order began with Nando (seat 2, team A), so Cheo (seat 3) is team B's earliest.
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "cheo", team: 1, points: 29, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
-  ]);
-  expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 0, scoreB: 29, turnPlayer: "cheo" });
+test("a tied tranque scores nothing, and the same player starts again", async () => {
+  const { dominoes, game, ending } = await endingWhere("DEFAULT", 3, (e) => e.result.ending === "TRANQUE" && e.result.team === -1);
+  expect(teamPips(ending.handsAfter, 0)).toBe(teamPips(ending.handsAfter, 1));
+  expect(ending.result).toMatchObject({ team: -1, points: 0, prize: 0, winner: ending.before.starter });
+  await expectNextMatch(ending, dominoes, game);
 });
 
-test("a tied tranque scores nothing and the same player starts again", async () => {
-  const game = await rig({
-    // After Papo's play: team A holds 6-6 and 1-1 (14), team B holds 5-5 and 1-3 (14).
-    hands: [["6-6"], ["0-4", "5-5"], ["1-1"], ["1-3"]],
-    board: ["4-1", "1-0"],
-    turn: 1,
-    starter: 2,
-  });
-  await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
-  ]);
-  expect(await summary(game)).toMatchObject({ scoreA: 0, scoreB: 0, turnPlayer: "nando" });
+test("whole games follow the rules at every match end, finish at their target, and never lose a tile, under every rule set", async () => {
+  for (const [index, rules] of Object.keys(RULESETS).entries()) {
+    const { dominoes, game } = await seeded(100 + index, rules);
+    let matches = 0;
+    let ending: Ending | undefined;
+    while (
+      (ending = await playUntil(dominoes, game, (e) => {
+        expect(e.result).toEqual(expectedResult(e, rules));
+        return true;
+      }))
+    ) {
+      matches++;
+      await expectNextMatch(ending, dominoes, game);
+      const held = (await dominoes._players({ game })).reduce((sum, row) => sum + row.tileCount, 0);
+      if (ending.summary.status === "ACTIVE") expect(held).toBe(28);
+      if (ending.summary.status === "FINISHED") break;
+    }
+    const final = (await dominoes._summary({ game }))[0];
+    expect(final).toMatchObject({ status: "FINISHED", rules, target: RULESETS[rules].target });
+    // The game ended on the match that took a team to the target, and not before.
+    expect(Math.max(final.scoreA, final.scoreB)).toBeGreaterThanOrEqual(RULESETS[rules].target);
+    expect(Math.max(ending!.before.scoreA, ending!.before.scoreB)).toBeLessThan(RULESETS[rules].target);
+    expect(matches).toBeGreaterThan(1);
+    // A finished game takes no more plays, and no longer blocks a new one at its place.
+    await expect(dominoes.play({ game, player: final.turnPlayer, tile: "0-0", side: "LEFT" })).rejects.toThrow(GameNotActive);
+    await expect(dominoes.start({ place: `table-${rules}-${100 + index}`, ...players, rules })).resolves.toHaveProperty("game");
+  }
+}, 120_000);
+
+test("two plays sent at once for the same turn: one counts, the other is refused", async () => {
+  const { dominoes, game } = await seeded(1);
+  const before = await snapshot(dominoes, game);
+  const player = (await dominoes._summary({ game }))[0].turnPlayer;
+  const move = choose(before.hands[player], before.ends)!;
+  const results = await Promise.allSettled([dominoes.play({ game, player, ...move }), dominoes.play({ game, player, ...move })]);
+  expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+  expect(refused.reason).toBeInstanceOf(NotYourTurn);
+  // The tile was played once: it left the hand, and the log holds one play for it.
+  expect((await dominoes._log({ game })).filter((row) => row.tile === move.tile)).toHaveLength(1);
+  expect((await dominoes._hand({ game, player })).length).toBe(before.hands[player].length - 1);
 });
 
-test(`the first team to reach ${TARGET_SCORE} wins the game`, async () => {
-  const game = await rig({
-    hands: [["1-2"], ["3-3"], ["6-6"], ["0-1"]],
-    board: ["2-5"],
-    turn: 0,
-    teamScores: [190, 150],
-  });
-  await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
-  // 3+3 + 6+6 + 0+1 = 19 points takes team A from 190 to 209.
-  expect(await summary(game)).toMatchObject({ status: "FINISHED", scoreA: 209, scoreB: 150 });
-  await expect(dominoes.play({ game, player: "abuelo", tile: "0-0", side: "LEFT" })).rejects.toThrow(GameNotActive);
-  // A finished game no longer blocks a new one at the same place.
-  await expect(dominoes.start({ place: "table", ...players })).resolves.toHaveProperty("game");
-});
+// Starting and abandoning
 
 test("one active game per place, four different players, and abandoning ends it", async () => {
-  await expect(dominoes.start({ place: "t", ...players, fourth: "abuelo" })).rejects.toThrow(DuplicatePlayer);
-  const { game } = await dominoes.start({ place: "t", ...players });
-  await expect(dominoes.start({ place: "t", ...players })).rejects.toThrow(GameInProgress);
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
+  await expect(dominoes.start({ place: "t", ...players, fourth: "abuelo", rules: "DEFAULT" })).rejects.toThrow(DuplicatePlayer);
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  await expect(dominoes.start({ place: "t", ...players, rules: "DEFAULT" })).rejects.toThrow(GameInProgress);
   expect(await dominoes._activeAt({ place: "t" })).toEqual([{ game }]);
   await dominoes.abandon({ game });
   expect(await dominoes._activeAt({ place: "t" })).toEqual([]);
   expect(await dominoes._latestAt({ place: "t" })).toEqual([{ game }]);
+  expect((await dominoes._summary({ game }))[0].status).toBe("ABANDONED");
   await expect(dominoes.abandon({ game })).rejects.toThrow(GameNotActive);
 });
-
-test("whole random games always finish, never lose a tile, and never refuse a legal move, under every rule set", async () => {
-  const random = new DominoPlayingConcept(testDb.db);
-  for (let round = 0; round < 15; round++) {
-    const rules = Object.keys(RULESETS)[round % Object.keys(RULESETS).length];
-    const { game } = await random.start({ place: `place-${round}`, ...players, rules });
-    for (let moves = 0; moves < 5000; moves++) {
-      const state = (await random._summary({ game }))[0];
-      if (state.status === "FINISHED") break;
-      const board = await random._board({ game });
-      const held = (await random._players({ game })).reduce((sum, row) => sum + row.tileCount, 0);
-      expect(held + board.length).toBe(28);
-      const hand = (await random._hand({ game, player: state.turnPlayer })).map((row) => row.tile);
-      const left = board[0]?.left;
-      const right = board.at(-1)?.right;
-      // Play the first tile that fits anywhere: the concept guarantees the player has one.
-      const choice = hand
-        .flatMap((tile) => {
-          const [a, b] = tile.split("-").map(Number);
-          if (board.length === 0) return [{ tile, side: "LEFT" }];
-          return [
-            ...(a === left || b === left ? [{ tile, side: "LEFT" }] : []),
-            ...(a === right || b === right ? [{ tile, side: "RIGHT" }] : []),
-          ];
-        })
-        .at(0);
-      expect(choice).toBeDefined();
-      await random.play({ game, player: state.turnPlayer, ...choice! });
-    }
-    const final = (await random._summary({ game }))[0];
-    expect(final.status).toBe("FINISHED");
-    expect(final.rules).toBe(rules);
-    expect(final.target).toBe(RULESETS[rules].target);
-    expect(Math.max(final.scoreA, final.scoreB)).toBeGreaterThanOrEqual(RULESETS[rules].target);
-    expect(seats).toContain(final.turnPlayer);
-  }
-}, 60_000);
 
 // Rule sets
 
 test("the rule sets are listed with their targets, and a game plays to its rules' target", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
   expect((await dominoes._rulesets()).map(({ rules, target }) => ({ rules, target }))).toEqual([
     { rules: "DEFAULT", target: 200 },
     { rules: "LONG", target: 500 },
@@ -261,154 +330,124 @@ test("the rule sets are listed with their targets, and a game plays to its rules
   expect(await dominoes._ruleset({ rules: "LONG" })).toEqual([{ target: 500, description: RULESETS.LONG.description }]);
   expect(await dominoes._ruleset({ rules: "BLITZ" })).toEqual([]);
   const { game } = await dominoes.start({ place: "long-table", ...players, rules: "LONG" });
-  expect(await summary(game)).toMatchObject({ rules: "LONG", target: 500, status: "ACTIVE" });
+  expect((await dominoes._summary({ game }))[0]).toMatchObject({ rules: "LONG", target: 500, status: "ACTIVE" });
 });
 
 test("unknown rules are refused and no game is started", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
   await expect(dominoes.start({ place: "t", ...players, rules: "BLITZ" })).rejects.toThrow(UnknownRules);
   expect(await dominoes._latestAt({ place: "t" })).toEqual([]);
 });
 
-test("short games end at 100", async () => {
-  const game = await rig({
-    hands: [["1-2"], ["3-3"], ["6-6"], ["0-1"]],
-    board: ["2-5"],
-    turn: 0,
-    teamScores: [90, 50],
-    rules: "SHORT",
-  });
-  await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
-  // 3+3 + 6+6 + 0+1 = 19 takes team A from 90 to 109, past 100 (it would not have ended a DEFAULT game).
-  expect(await summary(game)).toMatchObject({ status: "FINISHED", scoreA: 109, target: 100 });
-});
-
 test("long games give prizes of 100, 75, 50 and 25 to the winners of the first four matches, then none", async () => {
+  const { dominoes, game } = await seeded(1, "LONG");
   const prizes = [100, 75, 50, 25, 0, 0];
   for (const [index, prize] of prizes.entries()) {
-    await testDb.db.dropDatabase();
-    const game = await rig({
-      hands: [["1-2"], ["3-3", "0-4"], ["6-6"], ["0-1"]],
-      board: ["2-5"],
-      turn: 0,
-      rules: "LONG",
-      matchNumber: index + 1,
-    });
-    await dominoes.play({ game, player: "abuelo", tile: "1-2", side: "LEFT" });
-    // The same 23 points as in DEFAULT, plus the match's prize.
-    expect(await dominoes._lastResult({ game })).toEqual([
-      { matchNumber: index + 1, winner: "abuelo", team: 0, points: 23 + prize, prize, special: "NONE", bonus: 0, ending: "DOMINO" },
-    ]);
-    expect(await summary(game)).toMatchObject({ scoreA: 23 + prize, scoreB: 0 });
+    const ending = (await playUntil(dominoes, game))!;
+    expect(ending.result.matchNumber).toBe(index + 1);
+    // A tied match wins no prize.
+    expect(ending.result.prize).toBe(ending.result.team === -1 ? 0 : prize);
+    expect(ending.result.points).toBe(
+      ending.result.team === -1 ? 0 : allPips(ending.handsAfter) + ending.result.prize + ending.result.bonus,
+    );
+    await expectNextMatch(ending, dominoes, game);
   }
 });
 
-test("long games settle a tranque by the single player holding fewest pips, prize included", async () => {
-  // The same hands as the DEFAULT tranque: by team, team B (7 pips) beats team A (22),
-  // but Nando alone holds 0 pips, the fewest of anyone, so team A wins here.
-  const game = await rig({
-    hands: [["6-6", "5-5"], ["0-4", "1-1"], ["0-0"], ["2-3"]],
-    board: ["4-1", "1-0"],
-    turn: 1,
-    starter: 2,
-    rules: "LONG",
+test("long games settle a tranque by the single player holding fewest pips", async () => {
+  const { dominoes, game, ending } = await endingWhere("LONG", 1, (e) => {
+    if (e.result.ending !== "TRANQUE") return false;
+    const counts = seats.map((p) => pipsOf(e.handsAfter[p]));
+    return counts.filter((c) => c === Math.min(...counts)).length === 1;
   });
-  await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: 0, points: 29 + 100, prize: 100, special: "NONE", bonus: 0, ending: "TRANQUE" },
-  ]);
-  // Nando won the tranque, so he starts the next match.
-  expect(await summary(game)).toMatchObject({ matchNumber: 2, scoreA: 129, scoreB: 0, turnPlayer: "nando" });
+  const lowest = seats.reduce((a, b) => (pipsOf(ending.handsAfter[a]) <= pipsOf(ending.handsAfter[b]) ? a : b));
+  expect(ending.result).toMatchObject({
+    winner: lowest,
+    team: teamOf(lowest),
+    points: allPips(ending.handsAfter) + ending.result.prize,
+    ending: "TRANQUE",
+  });
+  await expectNextMatch(ending, dominoes, game);
 });
 
 test("in a long game, opponents tied for fewest pips tie the tranque: no points and no prize", async () => {
-  // After Papo's play, Papo (0-2) and Nando (1-1) both hold 2 pips, and they are opponents.
-  const game = await rig({
-    hands: [["6-6"], ["0-4", "0-2"], ["1-1"], ["2-3"]],
-    board: ["4-1", "1-0"],
-    turn: 1,
-    starter: 2,
-    rules: "LONG",
+  const { dominoes, game, ending } = await endingWhere("LONG", 2, (e) => {
+    if (e.result.ending !== "TRANQUE") return false;
+    const fewest = Math.min(...seats.map((p) => pipsOf(e.handsAfter[p])));
+    const lowest = seats.filter((p) => pipsOf(e.handsAfter[p]) === fewest);
+    return lowest.some((p) => !partners(p, lowest[0]));
   });
-  await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "nando", team: -1, points: 0, prize: 0, special: "NONE", bonus: 0, ending: "TRANQUE" },
-  ]);
-  expect(await summary(game)).toMatchObject({ scoreA: 0, scoreB: 0, turnPlayer: "nando" });
+  expect(ending.result).toMatchObject({ team: -1, points: 0, prize: 0, winner: ending.before.starter });
+  await expectNextMatch(ending, dominoes, game);
 });
 
 test("in a long game, partners tied for fewest pips win the tranque, and the earlier of them starts", async () => {
-  // After Papo's play, Abuelo (1-1) and Nando (0-2) both hold 2 pips, and they are partners.
-  // The match began with Cheo (seat 3), so Abuelo (seat 0) comes before Nando (seat 2).
-  const game = await rig({
-    hands: [["1-1"], ["0-4", "6-6"], ["0-2"], ["2-3"]],
-    board: ["4-1", "1-0"],
-    turn: 1,
-    starter: 3,
-    rules: "LONG",
+  const { dominoes, game, ending } = await endingWhere("LONG", 11, (e) => {
+    if (e.result.ending !== "TRANQUE") return false;
+    const fewest = Math.min(...seats.map((p) => pipsOf(e.handsAfter[p])));
+    const lowest = seats.filter((p) => pipsOf(e.handsAfter[p]) === fewest);
+    return lowest.length === 2 && partners(lowest[0], lowest[1]);
   });
-  await dominoes.play({ game, player: "papo", tile: "0-4", side: "RIGHT" });
-  // All pips: 2 + 12 + 2 + 5 = 21, plus the first match's prize of 100.
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 1, winner: "abuelo", team: 0, points: 121, prize: 100, special: "NONE", bonus: 0, ending: "TRANQUE" },
-  ]);
-  expect(await summary(game)).toMatchObject({ turnPlayer: "abuelo" });
+  const fewest = Math.min(...seats.map((p) => pipsOf(ending.handsAfter[p])));
+  const earlier = fromStarter(ending.before.starter).find((p) => pipsOf(ending.handsAfter[p]) === fewest)!;
+  expect(ending.result).toMatchObject({ winner: earlier, team: teamOf(earlier), points: allPips(ending.handsAfter) + ending.result.prize });
+  await expectNextMatch(ending, dominoes, game);
 });
 
 // Capicú and Chuchazo
 
-/** The other three hands of the domino tests: 10 + 12 + 1 = 23 pips. */
-const others = [["3-3", "0-4"], ["6-6"], ["0-1"]];
+/** A domino whose last tile is not a double and fit both ends, as they stood before it. */
+const capicu = (e: Ending, sameEnds: boolean) =>
+  e.result.ending === "DOMINO" &&
+  !isDouble(e.tile) &&
+  e.before.ends !== undefined &&
+  fits(e.tile, e.before.ends.left) &&
+  fits(e.tile, e.before.ends.right) &&
+  (e.before.ends.left === e.before.ends.right) === sameEnds;
 
 test("a capicú: the last tile could go on either end; long games pay 100 for it", async () => {
-  // Ends 2 and 5, and Abuelo's last tile is 2-5.
-  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG", matchNumber: 5 });
-  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 5, winner: "abuelo", team: 0, points: 123, prize: 0, special: "CAPICU", bonus: 100, ending: "DOMINO" },
-  ]);
-  expect(await summary(game)).toMatchObject({ scoreA: 123 });
-});
-
-test("prizes and bonuses add up: a capicú in a long game's first match", async () => {
-  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG" });
-  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "RIGHT" });
-  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ points: 223, prize: 100, special: "CAPICU", bonus: 100 });
+  const { ending } = await endingWhere("LONG", 1, (e) => capicu(e, false));
+  expect(ending.result).toMatchObject({
+    special: "CAPICU",
+    bonus: 100,
+    points: allPips(ending.handsAfter) + ending.result.prize + 100,
+  });
 });
 
 test("a capicú is recorded under other rules too, but pays nothing extra", async () => {
-  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-5"], turn: 0 });
-  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
-  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ points: 23, special: "CAPICU", bonus: 0 });
+  const { ending } = await endingWhere("DEFAULT", 1, (e) => capicu(e, false));
+  expect(ending.result).toMatchObject({ special: "CAPICU", bonus: 0, points: allPips(ending.handsAfter) });
 });
 
 test("a capicú also counts when both ends show the same number", async () => {
-  // Ends 2 and 2: 2-5 could be played on either.
-  const game = await rig({ hands: [["2-5"], ...others], board: ["2-4", "4-2"], turn: 0, rules: "LONG", matchNumber: 5 });
-  await dominoes.play({ game, player: "abuelo", tile: "2-5", side: "LEFT" });
-  expect((await dominoes._lastResult({ game }))[0]).toMatchObject({ special: "CAPICU", bonus: 100 });
+  const { ending } = await endingWhere("DEFAULT", 9, (e) => capicu(e, true));
+  expect(ending.result).toMatchObject({ special: "CAPICU" });
 });
 
-test("a last double is never a capicú, and a last tile that fits one end only is a plain domino", async () => {
-  const double = await rig({ hands: [["5-5"], ...others], board: ["5-2", "2-5"], turn: 0, rules: "LONG", matchNumber: 5 });
-  await dominoes.play({ game: double, player: "abuelo", tile: "5-5", side: "LEFT" });
-  expect((await dominoes._lastResult({ game: double }))[0]).toMatchObject({ points: 23, special: "NONE", bonus: 0 });
+test("a last double is never a capicú, even when it fits both ends", async () => {
+  const { ending } = await endingWhere(
+    "LONG",
+    11,
+    (e) => e.result.ending === "DOMINO" && isDouble(e.tile) && e.tile !== "0-0" && e.before.ends?.left === e.before.ends?.right,
+  );
+  expect(ending.result).toMatchObject({ special: "NONE", bonus: 0, points: allPips(ending.handsAfter) + ending.result.prize });
+});
 
-  await testDb.db.dropDatabase();
-  const plain = await rig({ hands: [["2-6"], ...others], board: ["2-4", "4-5"], turn: 0, rules: "LONG", matchNumber: 5 });
-  await dominoes.play({ game: plain, player: "abuelo", tile: "2-6", side: "LEFT" });
-  expect((await dominoes._lastResult({ game: plain }))[0]).toMatchObject({ special: "NONE", bonus: 0 });
+test("a last tile that fits one end only is a plain domino", async () => {
+  const { ending } = await endingWhere(
+    "LONG",
+    1,
+    (e) => e.result.ending === "DOMINO" && !isDouble(e.tile) && !capicu(e, false) && !capicu(e, true),
+  );
+  expect(ending.result).toMatchObject({ special: "NONE", bonus: 0 });
 });
 
 test("a chuchazo: winning with the double blank; long games pay 100 for it", async () => {
-  const game = await rig({ hands: [["0-0"], ["3-3", "1-4"], ["6-6"], ["2-1"]], board: ["0-5"], turn: 0, rules: "LONG", matchNumber: 5 });
-  await dominoes.play({ game, player: "abuelo", tile: "0-0", side: "LEFT" });
-  // 3+3+1+4 + 6+6 + 2+1 = 26, plus 100.
-  expect(await dominoes._lastResult({ game })).toEqual([
-    { matchNumber: 5, winner: "abuelo", team: 0, points: 126, prize: 0, special: "CHUCHAZO", bonus: 100, ending: "DOMINO" },
-  ]);
-
-  await testDb.db.dropDatabase();
-  const short = await rig({ hands: [["0-0"], ["3-3", "1-4"], ["6-6"], ["2-1"]], board: ["0-5"], turn: 0, rules: "SHORT" });
-  await dominoes.play({ game: short, player: "abuelo", tile: "0-0", side: "LEFT" });
-  expect((await dominoes._lastResult({ game: short }))[0]).toMatchObject({ points: 26, special: "CHUCHAZO", bonus: 0 });
+  // The simple player rarely keeps the double blank to the end, so these players save it.
+  const { ending } = await endingWhere("LONG", 1, (e) => e.result.ending === "DOMINO" && e.tile === "0-0", saveBlank);
+  expect(ending.result).toMatchObject({
+    special: "CHUCHAZO",
+    bonus: 100,
+    points: allPips(ending.handsAfter) + ending.result.prize + 100,
+  });
 });

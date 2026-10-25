@@ -1,0 +1,107 @@
+bun test v1.4.2 (744846f84)
+
+tests/web/board.test.ts:
+(pass) plain tiles snake without overlapping, on both arms [1.78ms]
+(pass) a turn takes two standing tiles, leaving a gap between runs [0.39ms]
+(pass) doubles lie across the line, centred on it [0.40ms]
+(pass) a double at either corner keeps the snake going from its end [0.90ms]
+
+tests/concepts/Table.test.ts:
+(pass) principle: four sit by code, a fifth is refused, the host passes on, and the empty table closes [101.84ms]
+(pass) a player sits at only one table at a time [40.07ms]
+(pass) two tables cannot share a code [33.01ms]
+(pass) a freed seat is taken by the next player to join [45.51ms]
+(pass) when five rush for three seats at once, exactly three sit down [55.59ms]
+(pass) unknown tables and players who are not seated are refused [26.44ms]
+(pass) closing a table unseats everyone still there [45.70ms]
+
+tests/concepts/Matchmaking.test.ts:
+(pass) principle: four strangers fill a lobby, a leaver stops the countdown, and the full lobby launches [52.33ms]
+(pass) a fifth player starts a new lobby rather than overfilling a full one [32.23ms]
+(pass) players who leave free a seat, and the earliest lobby with room fills first [39.80ms]
+(pass) only players asking for the same rules share a lobby [32.87ms]
+(pass) the last player to leave removes the lobby, and they can queue again [31.23ms]
+(pass) many players queueing at once never put more than four in a lobby [94.02ms]
+(pass) errors: queueing twice, leaving when not queued, and launching too early or a missing lobby [42.54ms]
+(pass) a full lobby launches once even when all four ask at the same moment [28.07ms]
+
+tests/concepts/GuestSessioning.test.ts:
+(pass) principle: a guest resumes with their token, until they stay away too long [21.35ms]
+(pass) resuming counts as activity, so an active guest never expires [26.73ms]
+(pass) display names are trimmed and must be 1 to 20 characters [15.00ms]
+(pass) two guests may share a name but never a token [30.20ms]
+(pass) an invented token is refused [2.94ms]
+(pass) ending a session makes its token unknown [15.65ms]
+
+tests/concepts/CodeGenerating.test.ts:
+(pass) principle: a code is taken until it is removed [16.85ms]
+(pass) codes have the requested size, 6 by default, and a readable alphabet [13.57ms]
+(pass) sizes of 5 or less, or fractions, are refused [1.23ms]
+(pass) codes never repeat within a context, even when requested at the same moment [175.12ms]
+(pass) removing a code that is not in use is refused [14.94ms]
+
+tests/concepts/DominoPlaying.test.ts:
+(pass) the first match opens with the double six, played by whoever holds it, and the turn passes on [15.39ms]
+(pass) a tile goes on the end it matches, and its other number becomes the new end [73.01ms]
+(pass) each board tile knows how far it lies from the match's first tile [77.19ms]
+(pass) illegal moves are refused and change nothing [24.48ms]
+(pass) players who cannot play are skipped, and only they are [476.15ms]
+(pass) a domino: the team of the player who goes out scores the pips left in the other three hands, and the winner starts next [509.34ms]
+(pass) a tranque: the team holding fewer pips scores them all, and its player earliest in turn order starts next [91.04ms]
+(pass) a tied tranque scores nothing, and the same player starts again [890.15ms]
+(pass) whole games follow the rules at every match end, finish at their target, and never lose a tile, under every rule set [3496.99ms]
+(pass) two plays sent at once for the same turn: one counts, the other is refused [21.01ms]
+(pass) one active game per place, four different players, and abandoning ends it [18.02ms]
+(pass) the rule sets are listed with their targets, and a game plays to its rules' target [9.07ms]
+(pass) unknown rules are refused and no game is started [2.25ms]
+(pass) long games give prizes of 100, 75, 50 and 25 to the winners of the first four matches, then none [1102.14ms]
+(pass) long games settle a tranque by the single player holding fewest pips [78.78ms]
+(pass) in a long game, opponents tied for fewest pips tie the tranque: no points and no prize [3467.29ms]
+(pass) in a long game, partners tied for fewest pips win the tranque, and the earlier of them starts [1159.47ms]
+(pass) a capicú: the last tile could go on either end; long games pay 100 for it [837.98ms]
+(pass) a capicú is recorded under other rules too, but pays nothing extra [655.94ms]
+(pass) a capicú also counts when both ends show the same number [1207.81ms]
+(pass) a last double is never a capicú, even when it fits both ends [419.94ms]
+(pass) a last tile that fits one end only is a plain domino [519.62ms]
+(pass) a chuchazo: winning with the double blank; long games pay 100 for it [1605.28ms]
+
+tests/compositions/Tables.test.ts:
+(pass) the journey: Abuelo opens a table and his three brothers join by code [142.33ms]
+(pass) a code that belongs to no table is not found [23.89ms]
+(pass) an invented token cannot open a table [4.26ms]
+(pass) when the last player leaves, the table closes and its code is freed [78.89ms]
+(pass) only the host can close a table with people at it [52.79ms]
+(pass) a guest who leaves the app also leaves their table [72.50ms]
+(pass) a table is opened with rules, and unknown or missing rules are refused [46.13ms]
+(pass) a guest already seated cannot join a second table, nor leave one they are not at [73.12ms]
+(pass) a guest at a table cannot also wait for a game with strangers [43.25ms]
+
+tests/compositions/Guests.test.ts:
+(pass) a guest starts a session, is recognized by token, and leaves [33.31ms]
+(pass) an empty name is a bad request, and a missing name is invalid input [1.93ms]
+
+tests/compositions/Matchmaking.test.ts:
+(pass) four strangers fill a lobby, count down, and are seated at a new table with a game started [570.95ms]
+(pass) a guest can leave the queue before the game starts, which stops the countdown [439.74ms]
+(pass) ending a session leaves the queue [47.03ms]
+(pass) queueing and sitting at a table exclude each other [63.24ms]
+(pass) only someone waiting in the lobby can launch it, and an unknown guest is turned away [415.49ms]
+(pass) players are only matched with others who chose the same rules [509.17ms]
+(pass) a launched LONG lobby starts a game to 500 [442.07ms]
+(pass) queueing with unknown or missing rules is refused [21.41ms]
+
+tests/compositions/Games.test.ts:
+(pass) only the host of a full table can start a game [71.76ms]
+(pass) each player sees the same game but only their own hand [101.58ms]
+(pass) four guests play a whole game to 200 through the API [4830.88ms]
+(pass) playing out of turn is refused [88.77ms]
+(pass) a player leaving the table abandons the game [126.77ms]
+(pass) the rule sets are listed, and a table's rules decide its game's target [88.03ms]
+(pass) a guest who is not at the table cannot play in its game, nor see it [142.98ms]
+(pass) players at another table see their own game only [122.81ms]
+(pass) a tile that does not fit, or is not in the hand, is refused through the API [112.71ms]
+
+ 81 pass
+ 0 fail
+ 1666 expect() calls
+Ran 81 tests across 10 files. [27.02s]

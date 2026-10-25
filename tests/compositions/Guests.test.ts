@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "../../src/assembly.ts";
+import { CodeGeneratingConcept } from "../../src/concepts/CodeGenerating.ts";
 import { policy } from "../../src/http.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
@@ -35,8 +36,8 @@ test("a guest starts a session, is recognized by token, and leaves", async () =>
   expect(started.status).toBe(200);
   const { session, token } = started.body;
   expect(token).toMatch(/^[A-HJ-NP-Z2-9]{32}$/);
-  const tokenCodes = testDb.db.collection("codeGenerating.codes");
-  expect(await tokenCodes.countDocuments({ context: "SESSION_TOKENS", code: token })).toBe(1);
+  const tokens = new CodeGeneratingConcept(testDb.db);
+  expect(await tokens._isAvailable({ context: "SESSION_TOKENS", code: token })).toEqual({ available: false });
 
   expect(await call("/guests/me", { token })).toEqual({
     status: 200,
@@ -46,7 +47,7 @@ test("a guest starts a session, is recognized by token, and leaves", async () =>
   expect((await call("/guests/leave", { token })).body).toEqual({ session });
   expect((await call("/guests/me", { token })).status).toBe(401);
   // FreeTokenOnSessionEnd gave the token back to CodeGenerating.
-  expect(await tokenCodes.countDocuments({ context: "SESSION_TOKENS", code: token })).toBe(0);
+  expect(await tokens._isAvailable({ context: "SESSION_TOKENS", code: token })).toEqual({ available: true });
 });
 
 test("an empty name is a bad request, and a missing name is invalid input", async () => {

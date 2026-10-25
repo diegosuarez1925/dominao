@@ -145,3 +145,56 @@ test("the rule sets are listed, and a table's rules decide its game's target", a
   expect(game).toMatchObject({ rules: "SHORT", target: 100 });
   expect(game.rulesDescription).toBe(rulesets[2].description);
 });
+
+// Who may do what
+
+test("a guest who is not at the table cannot play in its game, nor see it", async () => {
+  const { guests } = await fullTable();
+  await call("/games/start", { token: guests[0].token });
+  const state = await view(guests[0].token);
+  const turnToken = guests.find((guest) => guest.session === state.turnPlayer)!.token;
+  const tile = (await view(turnToken)).hand[0].tile;
+
+  const outsider = (await call("/guests/start", { displayName: "Tío" })).body;
+  // The play always names the guest who asked, and it is never an outsider's turn.
+  expect(await call("/games/play", { token: outsider.token, game: state.game, tile, side: "LEFT" })).toEqual({
+    status: 409,
+    body: { error: "CONFLICT" },
+  });
+  // The outsider sees no game, so no hand and no board.
+  expect((await call("/games/view", { token: outsider.token })).body.view.games).toEqual([]);
+  // Nothing moved.
+  expect((await view(guests[0].token)).log).toEqual(state.log);
+});
+
+test("players at another table see their own game only", async () => {
+  const first = await fullTable();
+  await call("/games/start", { token: first.guests[0].token });
+  const firstGame = (await view(first.guests[0].token)).game;
+
+  const others = [];
+  for (const displayName of ["Tío", "Tía", "Primo", "Prima"]) others.push((await call("/guests/start", { displayName })).body);
+  const { code } = (await call("/tables/open", { token: others[0].token, rules: "DEFAULT" })).body;
+  for (const guest of others.slice(1)) await call("/tables/join", { token: guest.token, code });
+  expect((await call("/games/view", { token: others[0].token })).body.view.games).toEqual([]);
+  await call("/games/start", { token: others[0].token });
+  const secondGame = await view(others[1].token);
+  expect(secondGame.game).not.toBe(firstGame);
+  expect(secondGame.players.map((p: { displayName: string }) => p.displayName)).toEqual(["Tío", "Tía", "Primo", "Prima"]);
+});
+
+test("a tile that does not fit, or is not in the hand, is refused through the API", async () => {
+  const { guests } = await fullTable();
+  await call("/games/start", { token: guests[0].token });
+  const state = await view(guests[0].token);
+  const token = guests.find((guest) => guest.session === state.turnPlayer)!.token;
+  const mine = await view(token);
+  const ends = [mine.board[0].left, mine.board.at(-1).right];
+  const misfit = mine.hand.find(({ tile }: { tile: string }) => !tile.split("-").map(Number).some((n) => ends.includes(n)));
+  if (misfit) {
+    expect((await call("/games/play", { token, game: state.game, tile: misfit.tile, side: "LEFT" })).status).toBe(400);
+  }
+  // The double six is on the board, so it is in nobody's hand.
+  expect((await call("/games/play", { token, game: state.game, tile: "6-6", side: "LEFT" })).status).toBe(400);
+  expect((await view(token)).hand).toEqual(mine.hand);
+});

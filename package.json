@@ -35,6 +35,7 @@
     "db:logs": "podman compose logs mongo",
     "db:reset": "podman compose down -v",
     "test": "bun test",
+    "test:save": "bun test 2>&1 | tee tests/output.txt",
     "test:memory": "TEST_MONGO=memory bun test"
   }
 }
