@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AppHeader from "./components/AppHeader.vue";
+import ConfirmDialog from "./components/ConfirmDialog.vue";
 import GameScreen from "./components/GameScreen.vue";
 import HomeScreen from "./components/HomeScreen.vue";
 import MatchmakingLobby from "./components/MatchmakingLobby.vue";
 import NameForm from "./components/NameForm.vue";
 import TableLobby from "./components/TableLobby.vue";
-import { state } from "./session.ts";
+import { say, state } from "./session.ts";
 
 /**
  * Which screen to show. A game takes over from its table's lobby while it is played,
@@ -27,11 +28,18 @@ const screen = computed(() => {
   <AppHeader />
   <main class="page" :class="{ 'page--wide': screen === 'game' }">
     <Transition name="pop">
-      <p v-if="state.message" class="notice" role="status">{{ state.message }}</p>
+      <div v-if="state.message" class="notice" :class="{ 'notice--offline': !state.online }" role="alert">
+        <span>{{ state.message }}</span>
+        <button class="notice-close" aria-label="Dismiss message" @click="say('')">×</button>
+      </div>
     </Transition>
     <!-- Screens fade and slide into each other; out-in so only one shows at a time. -->
     <Transition name="screen" mode="out-in">
-      <NameForm v-if="screen === 'name'" />
+      <section v-if="screen === 'loading'" class="lobby starting">
+        <span class="spinner" aria-hidden="true" />
+        <p class="lobby-hint">Loading…</p>
+      </section>
+      <NameForm v-else-if="screen === 'name'" />
       <HomeScreen v-else-if="screen === 'home'" />
       <TableLobby v-else-if="screen === 'table' && state.table" :table="state.table" />
       <MatchmakingLobby v-else-if="screen === 'queue' && state.queue" :queue="state.queue" />
@@ -42,6 +50,7 @@ const screen = computed(() => {
       <GameScreen v-else-if="screen === 'game' && state.game" :game="state.game" />
     </Transition>
   </main>
+  <ConfirmDialog />
 </template>
 
 <style scoped>

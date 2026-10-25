@@ -3,7 +3,7 @@
 // be played; a tile that fits both ends asks which one.
 import { computed, ref, watch } from "vue";
 import type { Game, Side } from "../api.ts";
-import { play } from "../session.ts";
+import { play, state } from "../session.ts";
 import DominoTile from "./DominoTile.vue";
 
 const props = defineProps<{ hand: Game["hand"]; board: Game["board"]; myTurn: boolean }>();
@@ -50,6 +50,7 @@ function send(tile: string, side: Side) {
         <span>Play on which end?</span>
         <button class="btn btn--small" @click="send(pending, 'LEFT')">Left ({{ ends.left }})</button>
         <button class="btn btn--small" @click="send(pending, 'RIGHT')">Right ({{ ends.right }})</button>
+        <button class="btn btn--ghost btn--small" @click="pending = null">Cancel</button>
       </div>
     </Transition>
     <TransitionGroup tag="div" name="tile" class="hand" :class="{ 'my-turn': myTurn }">
@@ -58,7 +59,7 @@ function send(tile: string, side: Side) {
         :key="t.tile"
         class="hand-tile"
         :class="{ chosen: pending === t.tile, playable: myTurn && t.playable }"
-        :disabled="!myTurn || !t.playable"
+        :disabled="!myTurn || !t.playable || state.busy"
         :aria-label="`Play ${t.a}|${t.b}`"
         @click="choose(t)"
       >

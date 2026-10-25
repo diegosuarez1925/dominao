@@ -5,7 +5,8 @@
 // down. The score table folds; the move log is a side bar.
 import { computed, ref, watch } from "vue";
 import type { Game } from "../api.ts";
-import { dismissGame, startGame, state } from "../session.ts";
+import { confirmAction } from "../dialog.ts";
+import { dismissGame, leaveTable, startGame, state } from "../session.ts";
 import GameBoard from "./GameBoard.vue";
 import MatchCelebration from "./MatchCelebration.vue";
 import MoveLog from "./MoveLog.vue";
@@ -105,6 +106,17 @@ const ending = computed(() => {
   return { title: won ? "¡Ganamos!" : "They win this one", text: lastResult.value };
 });
 const isHost = computed(() => state.table?.host === state.me?.session);
+const turnName = computed(() => (active.value ? name(props.game.turnPlayer) : ""));
+
+/** Leaving stops the game for all four, so it is asked first. */
+async function leaveGame() {
+  const yes = await confirmAction({
+    title: "Leave this game?",
+    text: "You'll leave the table, and the game stops for all four players. The score isn't kept.",
+    confirm: "Leave game",
+  });
+  if (yes) await leaveTable();
+}
 const tableFull = computed(() => state.table?.seats.length === 4);
 
 // Panels stay as the guest left them, on this device.
@@ -150,7 +162,8 @@ const logOpen = remembered("dominao.logOpen", false);
           <h3 class="panel-title">{{ ending.title }}</h3>
           <p class="panel-text">{{ ending.text }}</p>
           <div class="row ending-actions">
-            <button v-if="isHost && tableFull" class="btn" @click="startGame">Play again</button>
+            <button v-if="isHost && tableFull" class="btn" :disabled="state.busy" @click="startGame">Play again</button>
+            <p v-else-if="tableFull" class="panel-text">The host can start another game.</p>
             <button class="btn btn--secondary" @click="dismissGame(game.game)">Back to lobby</button>
           </div>
         </div>
@@ -160,7 +173,7 @@ const logOpen = remembered("dominao.logOpen", false);
     <div class="area-me">
       <PlayerBadge
         :name="me?.displayName ?? state.me?.displayName"
-        :note="myTurn ? 'your turn: pick a tile' : 'you'"
+        :note="myTurn ? 'your turn: pick a tile' : active ? `waiting for ${turnName}` : 'you'"
         :active="myTurn"
         :passed="passing.has(state.me?.session ?? '')"
       />
@@ -168,6 +181,10 @@ const logOpen = remembered("dominao.logOpen", false);
     </div>
 
     <MoveLog v-model:open="logOpen" :log="game.log" />
+
+    <div v-if="active" class="area-leave">
+      <button class="btn btn--ghost btn--small" :disabled="state.busy" @click="leaveGame">Leave game</button>
+    </div>
 
     <Transition name="pop">
       <MatchCelebration
@@ -189,7 +206,7 @@ const logOpen = remembered("dominao.logOpen", false);
   grid-template:
     ". top ." auto
     "left board right" minmax(14rem, 1fr)
-    "score me ." auto / minmax(9rem, 1fr) minmax(0, 3.2fr) minmax(9rem, 1fr);
+    "score me leave" auto / minmax(9rem, 1fr) minmax(0, 3.2fr) minmax(9rem, 1fr);
   gap: var(--space-4);
   align-items: center;
 }
@@ -223,6 +240,12 @@ const logOpen = remembered("dominao.logOpen", false);
   align-self: stretch;
   min-height: 14rem;
   padding: var(--space-4);
+}
+
+.area-leave {
+  grid-area: leave;
+  align-self: end;
+  justify-self: end;
 }
 
 .area-me {
@@ -259,7 +282,8 @@ const logOpen = remembered("dominao.logOpen", false);
       "score score score" auto
       "top top top" auto
       "left board right" minmax(12rem, 1fr)
-      "me me me" auto / auto minmax(0, 1fr) auto;
+      "me me me" auto
+      "leave leave leave" auto / auto minmax(0, 1fr) auto;
     gap: var(--space-2);
   }
 
@@ -272,6 +296,10 @@ const logOpen = remembered("dominao.logOpen", false);
   .area-board {
     padding: var(--space-2);
   }
+
+  .area-leave {
+    justify-self: center;
+  }
 }
 
 /* On phones the board gets the full width: the other three sit in a row above it, in
@@ -282,7 +310,8 @@ const logOpen = remembered("dominao.logOpen", false);
       "score score score" auto
       "left top right" auto
       "board board board" minmax(10rem, auto)
-      "me me me" auto / 1fr 1fr 1fr;
+      "me me me" auto
+      "leave leave leave" auto / 1fr 1fr 1fr;
   }
 
   .area-left,

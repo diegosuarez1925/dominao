@@ -1,12 +1,16 @@
 // What this tab knows about its guest, their table and their game, and every action the
 // page can take. Components read the state and call the actions; only this file talks to
-// the backend.
+// the backend, and only this file turns the backend's answers into words for the guest.
 import { reactive } from "vue";
 import { client, type Game, type QueueLobby, type RuleSet, type Side, type Table } from "./api.ts";
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
 const REFRESH_MS = 2000;
+
+/** The characters table codes are made of (no 0/O or 1/I, which are easy to confuse). */
+export const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
+export const NAME_MAX = 20;
 
 export const state = reactive({
   /** True until the first check of a saved token is done, so nothing flashes. */
@@ -25,6 +29,10 @@ export const state = reactive({
   rulesets: [] as RuleSet[],
   /** A finished game the guest has closed, so the table's lobby shows instead. */
   dismissedGame: "",
+  /** True while an action the guest asked for is on its way, so buttons can wait. */
+  busy: false,
+  /** False when the server cannot be reached; the page keeps trying. */
+  online: true,
   /** A message for the guest, such as why a move was refused. */
   message: "",
 });
@@ -35,7 +43,7 @@ let lastGame = "";
 let startingUntil = 0;
 const STARTING_WAIT_MS = 8000;
 
-function say(message: string) {
+export function say(message: string) {
   state.message = message;
 }
 
@@ -49,27 +57,77 @@ export function rulesDescription(rules: string) {
   return state.rulesets.find((row) => row.rules === rules)?.description ?? "";
 }
 
+type Success<R> = Exclude<R, { error: unknown }>;
+/** Answers the client gives when the request never got a proper answer from the server. */
+const UNREACHABLE = new Set(["NETWORK_ERROR", "BAD_STATUS", "BAD_JSON"]);
+
+/**
+ * Sends one request. Answers the result, or undefined after telling the guest what
+ * went wrong in words that say what to do next: `reasons` maps the server's error
+ * categories to those words. An expired session sends the guest back to pick a name.
+ */
+async function send<R extends object>(request: () => Promise<R>, reasons: Record<string, string> = {}) {
+  let result: R;
+  try {
+    result = await request();
+  } catch {
+    result = { error: "NETWORK_ERROR" } as R;
+  }
+  if (!("error" in result)) {
+    state.online = true;
+    return result as Success<R>;
+  }
+  const error = String(result.error);
+  if (UNREACHABLE.has(error)) {
+    state.online = false;
+    say("We can't reach the server right now. Check your connection; the page keeps trying.");
+    return undefined;
+  }
+  state.online = true;
+  if (error === "UNAUTHORIZED") {
+    forget("Your guest session ended. Pick a name to keep playing.");
+    return undefined;
+  }
+  say(reasons[error] ?? "Something went wrong on our side. Please try again.");
+  return undefined;
+}
+
+/** Runs an action the guest asked for, one at a time, then reloads what changed. */
+async function act(action: () => Promise<unknown>) {
+  if (state.busy || state.me === null) return;
+  state.busy = true;
+  try {
+    await action();
+    await refresh();
+  } finally {
+    state.busy = false;
+  }
+}
+
+function forget(message: string) {
+  sessionStorage.removeItem(TOKEN_KEY);
+  state.me = null;
+  state.dismissedGame = "";
+  say(message);
+  void refresh();
+}
+
 export async function resume() {
   const token = sessionStorage.getItem(TOKEN_KEY);
   state.me = null;
   if (state.rulesets.length === 0) {
-    const listed = await client.games.rulesets({});
-    if (!("error" in listed)) state.rulesets = listed.view.rulesets;
+    const listed = await send(() => client.games.rulesets({}));
+    if (listed !== undefined) state.rulesets = listed.view.rulesets;
   }
   if (token !== null) {
-    const result = await client.guests.me({ token });
-    if ("error" in result) {
-      sessionStorage.removeItem(TOKEN_KEY);
-      say("Your guest session expired. Pick a name to play again.");
-    } else {
-      state.me = { session: result.session, token, displayName: result.displayName };
-    }
+    const result = await send(() => client.guests.me({ token }));
+    if (result !== undefined) state.me = { session: result.session, token, displayName: result.displayName };
   }
   state.loading = false;
   await refresh();
 }
 
-/** Reloads the table and the game; other players act in their own tabs. */
+/** Reloads the table, the queue and the game; other players act in their own tabs. */
 export async function refresh() {
   const me = state.me;
   if (me === null) {
@@ -79,118 +137,169 @@ export async function refresh() {
     state.starting = false;
     return;
   }
-  const lobby = await client.tables.lobby({ token: me.token });
-  if (!("error" in lobby)) state.table = lobby.lobby.tables[0] ?? null;
-  const queue = await client.matchmaking.view({ token: me.token });
-  if (!("error" in queue)) {
-    const next = queue.queue.lobbies[0] ?? null;
-    // A full lobby that vanished was launched; its table is on the way.
-    if (state.queue?.full && next === null) startingUntil = Date.now() + STARTING_WAIT_MS;
-    state.queue = next;
-  }
+  const lobby = await send(() => client.tables.lobby({ token: me.token }));
+  if (lobby === undefined) return;
+  state.table = lobby.lobby.tables[0] ?? null;
+  const queue = await send(() => client.matchmaking.view({ token: me.token }));
+  if (queue === undefined) return;
+  const next = queue.queue.lobbies[0] ?? null;
+  // A full lobby that vanished was launched; its table is on the way.
+  if (state.queue?.full && next === null) startingUntil = Date.now() + STARTING_WAIT_MS;
+  state.queue = next;
   state.starting = state.table === null && state.queue === null && Date.now() < startingUntil;
-  const view = await client.games.view({ token: me.token });
-  if (!("error" in view)) {
-    const game = view.view.games[0] ?? null;
-    const text = JSON.stringify(game);
-    if (text !== lastGame) {
-      lastGame = text;
-      state.game = game;
-    }
+  const view = await send(() => client.games.view({ token: me.token }));
+  if (view === undefined) return;
+  const game = view.view.games[0] ?? null;
+  const text = JSON.stringify(game);
+  if (text !== lastGame) {
+    lastGame = text;
+    state.game = game;
+  }
+  // Back online: a "can't reach the server" message no longer applies.
+  if (!state.online || state.message.startsWith("We can't reach")) {
+    state.online = true;
+    if (state.message.startsWith("We can't reach")) say("");
   }
 }
 
 export async function startSession(displayName: string) {
-  const result = await client.guests.start({ displayName });
-  if ("error" in result) return say("A name must be 1 to 20 characters long.");
+  const name = displayName.trim();
+  if (name.length === 0 || name.length > NAME_MAX) return say(`Pick a name of 1 to ${NAME_MAX} characters.`);
+  const result = await send(() => client.guests.start({ displayName: name }), {
+    INVALID_REQUEST: `Pick a name of 1 to ${NAME_MAX} characters.`,
+  });
+  if (result === undefined) return;
   sessionStorage.setItem(TOKEN_KEY, result.token);
   say("");
   await resume();
 }
 
 export async function endSession() {
-  // Ending the session also gets the guest up from their table, on the server.
-  if (state.me !== null) await client.guests.leave({ token: state.me.token });
+  // Ending the session also gets the guest up from their table and out of the queue,
+  // on the server.
+  const me = state.me;
+  if (me !== null) await send(() => client.guests.leave({ token: me.token }));
   sessionStorage.removeItem(TOKEN_KEY);
+  state.dismissedGame = "";
   say("");
   await resume();
 }
 
 export async function openTable(rules: string) {
-  if (state.me === null) return;
-  const result = await client.tables.open({ token: state.me.token, rules });
-  say("error" in result ? `Could not open a table: ${result.error}` : "");
-  await refresh();
+  await act(async () => {
+    const result = await send(() => client.tables.open({ token: state.me!.token, rules }), {
+      CONFLICT: "You're waiting for strangers. Leave the queue before opening a table.",
+      INVALID_REQUEST: "Those rules aren't available. Pick another set of rules.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 export async function joinTable(code: string) {
-  if (state.me === null) return;
-  const result = await client.tables.join({ token: state.me.token, code: code.trim().toUpperCase() });
-  const reasons: Record<string, string> = { NOT_FOUND: "No table has that code.", CONFLICT: "That table is full." };
-  say("error" in result ? (reasons[result.error] ?? `Could not join: ${result.error}`) : "");
-  await refresh();
+  const clean = code.trim().toUpperCase();
+  if (!CODE_PATTERN.test(clean)) {
+    return say("A table code is 6 letters and numbers, like K7QF2M. Check it and try again.");
+  }
+  await act(async () => {
+    const result = await send(() => client.tables.join({ token: state.me!.token, code: clean }), {
+      NOT_FOUND: `No table has the code ${clean}. Check it with whoever shared it, or open your own table.`,
+      CONFLICT: "That table is full (or you're still waiting for strangers). Try another table, or open your own.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 export async function leaveTable() {
-  if (state.me === null || state.table === null) return;
-  await client.tables.leave({ token: state.me.token, table: state.table.table });
-  say("");
-  await refresh();
+  const table = state.table;
+  if (table === null) return;
+  await act(async () => {
+    const result = await send(() => client.tables.leave({ token: state.me!.token, table: table.table }), {
+      NOT_FOUND: "You had already left that table.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 export async function closeTable() {
-  if (state.me === null || state.table === null) return;
-  await client.tables.close({ token: state.me.token, table: state.table.table });
-  say("");
-  await refresh();
+  const table = state.table;
+  if (table === null) return;
+  await act(async () => {
+    const result = await send(() => client.tables.close({ token: state.me!.token, table: table.table }), {
+      FORBIDDEN: "Only the host can close the table. You can leave it instead.",
+      NOT_FOUND: "That table was already closed.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 /** Waits for three strangers who picked the same rules. */
 export async function findGame(rules: string) {
-  if (state.me === null) return;
-  const result = await client.matchmaking.enqueue({ token: state.me.token, rules });
-  const reasons: Record<string, string> = { CONFLICT: "Leave your table before looking for a game." };
-  say("error" in result ? (reasons[result.error] ?? `Could not look for a game: ${result.error}`) : "");
-  await refresh();
+  await act(async () => {
+    const result = await send(() => client.matchmaking.enqueue({ token: state.me!.token, rules }), {
+      CONFLICT: "You're already at a table or in the queue. Leave it before looking for a new game.",
+      INVALID_REQUEST: "Those rules aren't available. Pick another set of rules.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 export async function leaveQueue() {
-  if (state.me === null) return;
-  await client.matchmaking.leave({ token: state.me.token });
-  say("");
-  await refresh();
+  await act(async () => {
+    const result = await send(() => client.matchmaking.leave({ token: state.me!.token }), {
+      NOT_FOUND: "You had already left the queue.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 /**
  * Asks to start the game once the countdown shows zero. Every waiting tab asks; the
- * server refuses an early ask and lets only the first one through, so errors here
+ * server refuses an early ask and lets only the first one through, so refusals here
  * are expected and not shown.
  */
 export async function launchQueue() {
-  if (state.me === null || state.queue === null) return;
-  const result = await client.matchmaking.launch({ token: state.me.token });
-  if (!("error" in result)) startingUntil = Date.now() + STARTING_WAIT_MS;
+  const me = state.me;
+  if (me === null || state.queue === null) return;
+  try {
+    const result = await client.matchmaking.launch({ token: me.token });
+    if (!("error" in result)) startingUntil = Date.now() + STARTING_WAIT_MS;
+  } catch {
+    // The refresh below says whether the server can be reached.
+  }
   await refresh();
 }
 
 export async function startGame() {
-  if (state.me === null) return;
-  const result = await client.games.start({ token: state.me.token });
-  say("error" in result ? `Could not start the game (${result.error}).` : "");
-  await refresh();
+  await act(async () => {
+    const result = await send(() => client.games.start({ token: state.me!.token }), {
+      CONFLICT: "The game can start once all four seats are taken.",
+      FORBIDDEN: "Only the host can start the game.",
+      NOT_FOUND: "You're no longer at this table.",
+    });
+    if (result !== undefined) {
+      state.dismissedGame = "";
+      say("");
+    }
+  });
+}
+
+export async function play(tile: string, side: Side) {
+  const game = state.game;
+  if (game === null) return;
+  await act(async () => {
+    const result = await send(() => client.games.play({ token: state.me!.token, game: game.game, tile, side }), {
+      CONFLICT: "It's no longer your turn, or the game is over.",
+      INVALID_REQUEST: "That tile doesn't fit on that end. Pick a highlighted tile.",
+      NOT_FOUND: "That game is no longer being played.",
+    });
+    if (result !== undefined) say("");
+  });
 }
 
 /** Leaves a finished or stopped game's screen and goes back to the table's lobby. */
 export function dismissGame(game: string) {
   state.dismissedGame = game;
   say("");
-}
-
-export async function play(tile: string, side: Side) {
-  if (state.me === null || state.game === null) return;
-  const result = await client.games.play({ token: state.me.token, game: state.game.game, tile, side });
-  say("error" in result ? `That move was not allowed (${result.error}).` : "");
-  await refresh();
 }
 
 setInterval(() => {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { startSession } from "../session.ts";
+import { computed, ref } from "vue";
+import { NAME_MAX, startSession, state } from "../session.ts";
 
 const displayName = ref("");
+const length = computed(() => displayName.value.trim().length);
 </script>
 
 <template>
@@ -17,12 +18,14 @@ const displayName = ref("");
           v-model="displayName"
           class="input"
           placeholder="e.g. Abuelo"
-          maxlength="20"
+          :maxlength="NAME_MAX"
           autocomplete="nickname"
+          aria-describedby="display-name-hint"
           required
         />
+        <span id="display-name-hint" class="field-hint">Others at the table see this. Up to {{ NAME_MAX }} characters.</span>
       </div>
-      <button class="btn">Play as guest</button>
+      <button class="btn" :disabled="state.busy || length === 0">Play as guest</button>
     </form>
   </section>
 </template>

@@ -70,7 +70,7 @@ onBeforeUnmount(() => clearInterval(timer));
     </LobbyTable>
     <p class="lobby-hint">Seats and partners are drawn at random when the game starts.</p>
     <div class="lobby-actions">
-      <button class="btn btn--secondary" @click="leaveQueue">Leave queue</button>
+      <button class="btn btn--secondary" :disabled="state.busy" @click="leaveQueue">Leave queue</button>
     </div>
   </section>
 </template>
