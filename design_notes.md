@@ -317,3 +317,63 @@ a join code, which nobody needs.
   skip. Opening the page later does not replay it.
 - **Passes.** A player who is skipped shows a "¡Paso!" bubble and shakes their head;
   several skips play one after another.
+
+### Review against the course rubrics
+
+Asked for: check the whole codebase against the implementation, testing, interaction
+design and visual design rubrics, and fix what falls short.
+
+**Implementation**
+- *Faithfulness.* The concepts are the P1 ones (GuestSessioning, CodeGenerating, Table,
+  Matchmaking) plus DominoPlaying, each matching its spec in `design/concepts`;
+  `bun run check:design` and `bun run check` pass. Drift from P1 is recorded in the
+  sections above (rules on tables and lobbies; lobby-based matchmaking).
+- *Modularity.* No concept imports another. Table knows nothing about games, and
+  DominoPlaying knows nothing about tables: a game's `place` is just an id, and
+  `src/compositions/Games.ts` is the only place that ties them together.
+- *Integration.* Every user action goes through one endpoint, and every cross-concept
+  effect (freeing codes, abandoning games, seating launched lobbies) is a reaction.
+- *Intentional development.* Each step has its own commit and an entry in this log.
+
+**Testing** (what changed)
+- The game-rule tests used to start a game and then overwrite its hands, board and
+  scores in the database. That tests around the concept rather than through it. They
+  now drive DominoPlaying only through `start` and `play`, with a seeded shuffle
+  passed to the concept (`tests/support/dominoes.ts`): the same seed always deals the
+  same hands, and a simple player plays forward until the case under test (a tranque,
+  a capicú, a chuchazo, a tie...) happens. Each test then checks the result against
+  the hands it read through the concept's queries, so the scores are recomputed from
+  the rules, not copied from the code.
+- Composition tests read CodeGenerating's state through its `_isAvailable` query, not
+  its collection.
+- New tests for who may do what: an outsider playing in someone's game (refused,
+  since it is never their turn, and the game stays as it was), another table's game
+  staying hidden, joining while already seated, leaving a table you are not at,
+  looking for strangers while at a table, and illegal tiles through the API.
+- `bun run test:save` saves the run to `tests/output.txt`.
+
+**Interaction design** (what changed)
+- *Forgiving.* Leaving a game, closing a table, and signing out while seated or
+  queued now ask first (`web/dialog.ts`, `ConfirmDialog.vue`), saying what will happen
+  to the other players. Picking a side for a tile can be cancelled. Buttons are
+  disabled while a request is on its way, so double clicks don't send twice.
+- *Informative.* Every refusal has its own sentence instead of an error code
+  ("That code doesn't match any open table", "That table is full"). Losing the
+  connection says so and clears itself when the server answers again; an ended
+  guest session sends the guest back to the name form with a note. Messages can be
+  dismissed.
+- *Directed.* The lobby says what it is waiting for ("2 more players needed",
+  "Waiting for Abuelo to start"), the player's badge says whose turn it is, and the
+  ending tells non-hosts that the host can start another game.
+- *Understandable.* The name and join-code fields explain their format before the
+  guest gets it wrong, and the join button stays disabled until the code is complete.
+  The header's "Leave" is now "Sign out", since "Leave" also meant leaving a table.
+- A "Leave game" button on the game screen: before, the only way out of a game was
+  signing out.
+
+**Visual design** was checked at 1366, 1024, 768 and 390 px wide. One palette (muted
+reds, light blue, white), one display face for titles and one text face, shared
+components in `web/styles.css`, and no horizontal scrolling on phones.
+
+**Known gaps.** A full matchmaking lobby whose four players all close the page during
+the countdown waits until one returns. The score card shows only the last match.
