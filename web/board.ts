@@ -10,8 +10,9 @@ export type Placed = { tile: string; x: number; y: number; vertical: boolean; fi
 /**
  * Lays the board out as one continuous snake. The first tile sits in the middle; the right
  * arm grows rightward and, at the edge, turns down and comes back the other way, while the
- * left arm grows leftward and turns up. Each tile shows its numbers in the order they are
- * reached along the snake, so touching halves always match.
+ * left arm grows leftward and turns up. A turn always takes two standing tiles, so each run
+ * sits a clear gap away from the one before it. Each tile shows its numbers in the order
+ * they are reached along the snake, so touching halves always match.
  */
 export function layOut(board: BoardTile[]): Placed[] {
   const placed: Placed[] = [];
@@ -27,23 +28,31 @@ export function layOut(board: BoardTile[]): Placed[] {
   for (const arm of arms) {
     let { x, along } = arm;
     let row = 0;
+    /** The standing tiles still to place in the turn under way: 2, 1, or 0 when running flat. */
+    let turning = 0;
     for (const t of arm.tiles) {
       // The near number touches the tile before; on the left arm that is the tile's right.
       const [near, far] = arm.turn === 1 ? [t.left, t.right] : [t.right, t.left];
       // Keep one column free at each edge so there is always room to turn.
       const fits = along === 1 ? x + 2 <= BOARD_UNITS - 1 : x - 2 >= 1;
-      if (fits) {
+      if (turning === 0 && !fits) turning = 2;
+      if (turning === 0) {
         const left = along === 1 ? x : x - 2;
         const [first, second] = along === 1 ? [near, far] : [far, near];
         placed.push({ tile: t.tile, x: left, y: row, vertical: false, first, second });
         x += 2 * along;
-      } else {
-        // Stand the tile up beside the row's last tile, reaching into the next row.
-        const left = along === 1 ? x : x - 1;
-        const top = arm.turn === 1 ? row : row - 1;
-        const [first, second] = arm.turn === 1 ? [near, far] : [far, near];
-        placed.push({ tile: t.tile, x: left, y: top, vertical: true, first, second });
-        row += arm.turn;
+        continue;
+      }
+      // Stand the tile up in the column past the run's last tile. The first one sits beside
+      // that tile; the second hangs below it (or above, on the left arm).
+      const left = along === 1 ? x : x - 1;
+      const top = arm.turn === 1 ? (turning === 2 ? row : row + 2) : turning === 2 ? row - 1 : row - 3;
+      const [first, second] = arm.turn === 1 ? [near, far] : [far, near];
+      placed.push({ tile: t.tile, x: left, y: top, vertical: true, first, second });
+      turning -= 1;
+      if (turning === 0) {
+        // The next run starts beside the far half of the second standing tile, going back.
+        row += 3 * arm.turn;
         along = -along;
       }
     }

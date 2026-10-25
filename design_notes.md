@@ -263,3 +263,34 @@ a join code, which nobody needs.
   picker (`RulesPicker.vue`).
 - Lobbies and the game are not restyled yet; they sit in a plain panel so they stay
   readable on the red background.
+
+### Lobby and game screens
+
+- **Screens slide into each other.** `App.vue` picks one screen (name, home, table
+  lobby, matchmaking lobby, starting, game) and swaps them with a shared `screen`
+  transition (fade and rise, out-in). Smaller shared transitions live in
+  `styles.css` too: `pop` (things appearing), `fold` (panels opening), `tile` (tiles
+  joining or leaving a hand). All motion stops for people who ask for reduced motion.
+- **Lobbies are a square table.** `LobbyTable.vue` draws the table (`.felt`, the
+  same cloth as the game board) with a `PlayerBadge` on each side: the guest at the
+  bottom, then counter-clockwise. A private table shows the join code in the middle;
+  matchmaking shows a spinner, then the countdown. On phones the side seats move
+  above the table, two by two.
+- **The game is laid out around the table.** The guest sits at the bottom with their
+  hand face up and standing; the next player in turn order is on the right, the
+  partner across, the player before on the left, each with their hand face down so
+  the tile count shows. The player whose turn it is gets a glowing light-blue ring.
+  On phones the other three sit in a row above the board (left, across, right) so
+  the board gets the full width.
+- **Board turns take two standing tiles.** `layOut` in `web/board.ts` now places two
+  vertical tiles at every turn, so runs are separated by an empty row
+  (`tests/web/board.test.ts` checks no overlaps and the gap).
+- **Dominoes show pips** instead of digits (`DominoTile.vue`), and can be face down.
+- **Score table and move log fold away.** The score card (us vs them, points to go,
+  rules, match, last result) folds to one line; the move log is a side bar opened by a
+  tab on the right edge. Both remember open or closed per device (localStorage).
+- **A finished or stopped game stays on screen** with its result and a "Back to
+  lobby" button (and "Play again" for the host of a full table); going back is
+  remembered in the page (`dismissedGame`), and a new game shows again on its own.
+- Known gap: the score card shows the last match only; a match-by-match history would
+  need the backend to keep every result.

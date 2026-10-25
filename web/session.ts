@@ -23,6 +23,8 @@ export const state = reactive({
   starting: false,
   /** The rule sets a table or a matchmaking lobby can play by, as the server lists them. */
   rulesets: [] as RuleSet[],
+  /** A finished game the guest has closed, so the table's lobby shows instead. */
+  dismissedGame: "",
   /** A message for the guest, such as why a move was refused. */
   message: "",
 });
@@ -176,6 +178,12 @@ export async function startGame() {
   const result = await client.games.start({ token: state.me.token });
   say("error" in result ? `Could not start the game (${result.error}).` : "");
   await refresh();
+}
+
+/** Leaves a finished or stopped game's screen and goes back to the table's lobby. */
+export function dismissGame(game: string) {
+  state.dismissedGame = game;
+  say("");
 }
 
 export async function play(tile: string, side: Side) {

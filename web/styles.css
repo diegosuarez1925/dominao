@@ -3,7 +3,9 @@
  *   1. Design tokens: colors, type, spacing, corners, shadows. Change these to restyle the app.
  *   2. Base: page, text, the moving domino background.
  *   3. Layout: the header, the page column, grids.
- *   4. Components: .logo, .btn, .input, .select, .field, .panel, .media, .chip, .notice.
+ *   4. Components: .logo, .btn, .input, .select, .field, .panel, .media, .chip, .notice,
+ *      .felt, screen titles, lobbies.
+ *   5. Motion: the shared transitions (screen, pop, fold, tile) and the spinner.
  * A component's own one-off styles stay in its .vue file.
  */
 
@@ -57,6 +59,12 @@
   --shadow-md: 0 6px 20px rgb(40 10 10 / 0.25);
 
   --page-width: 64rem;
+  --page-width-wide: 80rem;
+
+  /* The playing table: a deep red cloth with a cream rim. */
+  --color-felt: #6e1f22;
+  --color-felt-rim: rgb(251 247 242 / 0.85);
+  --color-tile: #fffdf7;
   --gutter: clamp(1rem, 4vw, 2rem);
 }
 
@@ -152,6 +160,12 @@ li {
   max-width: var(--page-width);
   margin: 0 auto;
   padding: 0 var(--gutter) var(--space-7);
+  transition: max-width 0.35s ease;
+}
+
+/* The game needs more room for the players around the table. */
+.page--wide {
+  max-width: var(--page-width-wide);
 }
 
 /* Columns that fall back to one column on narrow screens. */
@@ -441,4 +455,167 @@ li {
   border-radius: var(--radius-sm);
   color: var(--color-text);
   background: var(--color-accent-soft);
+}
+
+/* The playing surface, used by the lobby's table and the game board. */
+.felt {
+  border: 6px solid var(--color-felt-rim);
+  border-radius: var(--radius-lg);
+  color: var(--white);
+  background:
+    radial-gradient(ellipse at center, rgb(255 255 255 / 0.08), transparent 70%),
+    var(--color-felt);
+  box-shadow:
+    inset 0 0 30px rgb(0 0 0 / 0.35),
+    var(--shadow-md);
+}
+
+/* Screen titles sit on the red background, so they are white. */
+.screen-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--white);
+}
+
+.screen-subtitle {
+  margin: 0;
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* A waiting room: title, the table with its seats, a hint and the buttons. */
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.lobby-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.lobby-hint {
+  margin: 0;
+  text-align: center;
+  color: rgb(255 255 255 / 0.85);
+}
+
+.lobby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.table-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* 5. Motion */
+
+/* Whole screens: the old one fades up and away, the new one rises into place. */
+.screen-enter-active,
+.screen-leave-active {
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.screen-enter-from {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.screen-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Small things appearing: a quick fade and grow. */
+.pop-enter-active,
+.pop-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.pop-enter-from,
+.pop-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* Panels folding open and shut. */
+.fold-enter-active,
+.fold-leave-active {
+  transition:
+    opacity 0.2s ease,
+    max-height 0.25s ease;
+  max-height: 20rem;
+  overflow: hidden;
+}
+
+.fold-enter-from,
+.fold-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+/* Tiles joining or leaving a hand. */
+.tile-enter-active,
+.tile-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.tile-enter-from,
+.tile-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.8);
+}
+
+.tile-leave-active {
+  position: absolute;
+}
+
+.tile-move {
+  transition: transform 0.25s ease;
+}
+
+.spinner {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 4px solid rgb(255 255 255 / 0.25);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .spinner {
+    animation: spin 4s linear infinite !important;
+  }
 }
