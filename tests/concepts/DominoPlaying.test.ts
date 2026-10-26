@@ -90,7 +90,7 @@ function expectedResult({ before, player, tile, handsAfter }: Ending, rules: str
     team = teamOf(player);
     points = allPips(handsAfter);
     if (tile === "0-0") special = "CHUCHAZO";
-    else if (!isDouble(tile) && before.ends && fits(tile, before.ends.left) && fits(tile, before.ends.right)) {
+    else if (!isDouble(tile) && before.ends && before.ends.left !== before.ends.right && fits(tile, before.ends.left) && fits(tile, before.ends.right)) {
       special = "CAPICU";
     }
   } else {
@@ -396,8 +396,11 @@ test("in a long game, partners tied for fewest pips win the tranque, and the ear
 
 // Capicú and Chuchazo
 
-/** A domino whose last tile is not a double and fit both ends, as they stood before it. */
-const capicu = (e: Ending, sameEnds: boolean) =>
+/**
+ * A domino whose last tile is not a double and fit both ends as they stood before it;
+ * with `sameEnds`, both ends showed the same number (3-5 on ends 3 and 3).
+ */
+const fitsBoth = (e: Ending, sameEnds: boolean) =>
   e.result.ending === "DOMINO" &&
   !isDouble(e.tile) &&
   e.before.ends !== undefined &&
@@ -406,7 +409,7 @@ const capicu = (e: Ending, sameEnds: boolean) =>
   (e.before.ends.left === e.before.ends.right) === sameEnds;
 
 test("a capicú: the last tile could go on either end; long games pay 100 for it", async () => {
-  const { ending } = await endingWhere("LONG", 1, (e) => capicu(e, false));
+  const { ending } = await endingWhere("LONG", 1, (e) => fitsBoth(e, false));
   expect(ending.result).toMatchObject({
     special: "CAPICU",
     bonus: 100,
@@ -415,13 +418,13 @@ test("a capicú: the last tile could go on either end; long games pay 100 for it
 });
 
 test("a capicú is recorded under other rules too, but pays nothing extra", async () => {
-  const { ending } = await endingWhere("DEFAULT", 1, (e) => capicu(e, false));
+  const { ending } = await endingWhere("DEFAULT", 1, (e) => fitsBoth(e, false));
   expect(ending.result).toMatchObject({ special: "CAPICU", bonus: 0, points: allPips(ending.handsAfter) });
 });
 
-test("a capicú also counts when both ends show the same number", async () => {
-  const { ending } = await endingWhere("DEFAULT", 9, (e) => capicu(e, true));
-  expect(ending.result).toMatchObject({ special: "CAPICU" });
+test("ends showing the same number make no capicú: 3-5 on ends 3 and 3 is a plain domino", async () => {
+  const { ending } = await endingWhere("DEFAULT", 9, (e) => fitsBoth(e, true));
+  expect(ending.result).toMatchObject({ special: "NONE", bonus: 0, points: allPips(ending.handsAfter) + ending.result.prize });
 });
 
 test("a last double is never a capicú, even when it fits both ends", async () => {
@@ -437,7 +440,7 @@ test("a last tile that fits one end only is a plain domino", async () => {
   const { ending } = await endingWhere(
     "LONG",
     1,
-    (e) => e.result.ending === "DOMINO" && !isDouble(e.tile) && !capicu(e, false) && !capicu(e, true),
+    (e) => e.result.ending === "DOMINO" && !isDouble(e.tile) && !fitsBoth(e, false) && !fitsBoth(e, true),
   );
   expect(ending.result).toMatchObject({ special: "NONE", bonus: 0 });
 });

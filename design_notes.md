@@ -298,13 +298,12 @@ a join code, which nobody needs.
 ### Capicú, Chuchazo, crossways doubles and match animations
 
 - **Capicú and Chuchazo live in DominoPlaying.** A domino whose last tile is 0-0 is a
-  `CHUCHAZO`; one whose last tile is not a double and fit both ends of the board
-  before it was played is a `CAPICU`. Every rule set records them in the match result
+  `CHUCHAZO`; one whose last tile is not a double and whose two numbers are the
+  board's two ends before it was played (one each) is a `CAPICU`. Every rule set records them in the match result
   (`special`, `bonus`); only LONG pays (`bonuses: { CAPICU: 100, CHUCHAZO: 100 }` in
   its `RULESETS` entry), on top of the pips and any prize.
-  - Choice to confirm: a last tile that fits when both ends show the same number
-    (3-5 on ends 3 and 3) counts as a Capicú, since it "could be played at either
-    end". If that should not count, it is one condition in `specialOf`.
+  - Decided: ends showing the same number do not make a Capicú. 3-5 is a Capicú
+    only on ends 3 and 5, not on 3 and 3 (asked and confirmed).
 - **Doubles lie across the line.** `layOut` stands a double across a flat run (and
   lays it across a drop), centred on the line. At a corner a double keeps the snake
   going from one of its ends, never its long side; `tests/web/board.test.ts` checks

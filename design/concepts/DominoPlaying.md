@@ -48,7 +48,8 @@ Move is PLAYED or SKIPPED
 
 Special is CAPICU or CHUCHAZO or NONE
   A celebrated way to win a match by domino. CAPICU: the last tile, not a double,
-  could have been played on either end of the board. CHUCHAZO: the last tile is the
+  shows the board's two ends, one number each (3-5 on ends 3 and 5, not on 3 and 3),
+  so it could have been played on either end. CHUCHAZO: the last tile is the
   double blank (0-0). NONE: any other ending.
 
 RuleSet is DEFAULT or LONG or SHORT
@@ -151,7 +152,7 @@ play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)
     otherwise, if no player can play, the match ends in a TRANQUE and its winning team scores the pips in all four hands; by team rules, the team whose two hands hold fewer pips wins, and its player earliest in the match's turn order starts the next match; by player rules, the player holding the fewest pips wins for their team and starts the next match (when several hold that fewest, they win only if they are all partners, and the earliest of them in turn order starts); on a tie nobody scores and the same player starts again
     otherwise, pass the turn to the next player who can play, skipping those who cannot
     when a match is won, the winning team also gets the rules' prize for that match, if any; a tie wins no prize
-    when a match ends in a DOMINO whose last tile is 0-0, it is a CHUCHAZO; when that last tile is not a double and either of its numbers matched each end of the board before it was played, it is a CAPICU; the winning team also gets the rules' bonus for it
+    when a match ends in a DOMINO whose last tile is 0-0, it is a CHUCHAZO; when that last tile is not a double and its two numbers are the board's two ends before it was played, one each, it is a CAPICU; the winning team also gets the rules' bonus for it
     when a match ends, record its result; if the scoring team reached the target the game becomes FINISHED, and otherwise a new match is dealt and its starter plays first with any tile
     returns game
 

@@ -173,8 +173,9 @@ function specialOf([a, b]: Pips, board: Pips[]): Special {
   if (a === 0 && b === 0) return "CHUCHAZO";
   const end = ends(board);
   if (end === undefined || a === b) return "NONE";
-  const fits = (n: number) => a === n || b === n;
-  return fits(end.left) && fits(end.right) ? "CAPICU" : "NONE";
+  // One number of the tile matches each end: 3-5 on ends 3 and 5 (not on 3 and 3).
+  const matched = (end.left === a && end.right === b) || (end.left === b && end.right === a);
+  return matched ? "CAPICU" : "NONE";
 }
 
 function rulesOf(game: Game): RuleSet {
