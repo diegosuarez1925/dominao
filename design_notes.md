@@ -381,3 +381,27 @@ components in `web/styles.css`, and no horizontal scrolling on phones.
 
 **Known gaps.** A full matchmaking lobby whose four players all close the page during
 the countdown waits until one returns. The score card shows only the last match.
+
+## P4 progress log
+
+### Access control review
+
+Asked for: review who may do what across the app, and test it.
+
+- Every endpoint that acts for a guest takes only their token, and every reaction
+  names the guest from that token (`GuestSessioning.resume`), never from the request.
+  Session ids are shown in views (to tell seats apart) but are never accepted as tokens.
+- What each guest may do: anyone seated may view their own table and game (only their
+  own hand); only the host may start or close a table; only the player whose turn it is
+  may play; only someone waiting in a lobby may launch it.
+- New tests (`tests/compositions/AccessControl.test.ts`) check, for all 14 guest
+  endpoints, that an invented token, a signed-out token and another guest's session id
+  are all refused (401) without changing anything; that naming another guest in the
+  request (`session`, `host`, `player`) does nothing; that no response ever carries
+  another guest's token; that a seated guest cannot open a second table; that a
+  game cannot be restarted while it runs, nor played after it stops; and that a
+  matched stranger can only act as themself.
+- Found: a guest whose session expires (12 hours idle) keeps their seat, since
+  expiring deletes the session without ending it, so the reactions that free seats and
+  queue places never run. Their table shows a seat with no name, and if they were the
+  host nobody can start or close it. P1's `system_expire` action fixes this.
