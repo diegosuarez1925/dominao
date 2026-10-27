@@ -80,10 +80,14 @@ Defined in [GuestSessioning](../design/concepts/GuestSessioning.md), line 1.
   - Refuses `UNKNOWN_SESSION`: This guest session is not active.
 - `end(token: String) : returns (session: Session)`
   - Refuses `UNKNOWN_SESSION`: This guest session is not active.
+- `expire(session: Session) : returns (session: Session, token: String)`
+  - Refuses `UNKNOWN_SESSION`: This guest session is not active.
+  - Refuses `NOT_IDLE`: That guest session is still in use.
 
 #### Queries
 
 - `_getName(session: Session) : optional (displayName: String)`
+- `_idle() : many (session: Session)`
 
 #### Instances
 
@@ -499,6 +503,32 @@ then
   RequestBoundary.respond (requestId, view: former "the game seen by (session)" with (session))
 ```
 
+### Guests.Expire
+
+Authored path: `Guests.Expire`.
+- Covered by [Guests](../design/compositions/Guests.md), line 28.
+- Covered by [Guests](../design/compositions/Guests.md), line 34.
+
+```reaction
+when RequestBoundary.request (path: "/guests/expire", requestId, session)
+then
+  GuestSessioning.expire (session)
+```
+
+### Guests.Expire#2
+
+Authored path: `Guests.Expire`.
+- Covered by [Guests](../design/compositions/Guests.md), line 28.
+- Covered by [Guests](../design/compositions/Guests.md), line 34.
+
+```reaction
+when GuestSessioning.expire (session, token), asked by Guests.Expire
+where
+  earlier, RequestBoundary.request (path: "/guests/expire", requestId, session)
+then
+  RequestBoundary.respond (requestId, session)
+```
+
 ### Guests.FreeTokenOnSessionEnd
 
 Authored path: `Guests.FreeTokenOnSessionEnd`.
@@ -506,6 +536,17 @@ Authored path: `Guests.FreeTokenOnSessionEnd`.
 
 ```reaction
 when GuestSessioning.end (token, session)
+then
+  CodeGenerating.remove (code: token, context: "SESSION_TOKENS")
+```
+
+### Guests.FreeTokenOnSessionExpire
+
+Authored path: `Guests.FreeTokenOnSessionExpire`.
+- Covered by [Guests](../design/compositions/Guests.md), line 30.
+
+```reaction
+when GuestSessioning.expire (token)
 then
   CodeGenerating.remove (code: token, context: "SESSION_TOKENS")
 ```
@@ -678,8 +719,8 @@ then
 ### Matchmaking.Launch
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 38.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 43.
 
 ```reaction
 when RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
@@ -690,8 +731,8 @@ then
 ### Matchmaking.Launch:not-queued#2
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 38.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 43.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
@@ -705,8 +746,8 @@ then
 ### Matchmaking.Launch:queued#2
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 38.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 43.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
@@ -719,8 +760,8 @@ then
 ### Matchmaking.Launch:queued#3
 
 Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 37.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 42.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 38.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 43.
 
 ```reaction
 when Matchmaking.launch (lobby, first, fourth, second, third), asked by Matchmaking.Launch:queued#2
@@ -734,7 +775,7 @@ then
 
 Authored path: `Matchmaking.LeaveQueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 34.
 
 ```reaction
 when RequestBoundary.request (path: "/matchmaking/leave", requestId, token)
@@ -746,7 +787,7 @@ then
 
 Authored path: `Matchmaking.LeaveQueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 34.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.LeaveQueue
@@ -758,7 +799,7 @@ then
 
 Authored path: `Matchmaking.LeaveQueue`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 28.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 33.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 34.
 
 ```reaction
 when Matchmaking.cancel (player: session, lobby), asked by Matchmaking.LeaveQueue#2
@@ -781,10 +822,23 @@ then
   Matchmaking.cancel (player: session)
 ```
 
+### Matchmaking.LeaveQueueOnSessionExpire
+
+Authored path: `Matchmaking.LeaveQueueOnSessionExpire`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 31.
+
+```reaction
+when GuestSessioning.expire (session)
+where
+  Matchmaking._lobbyOf (player: session)
+then
+  Matchmaking.cancel (player: session)
+```
+
 ### Matchmaking.SeatLaunchedLobby
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when Matchmaking.launch (first, fourth, rules, second, third)
@@ -795,7 +849,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#2
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Matchmaking.SeatLaunchedLobby
@@ -808,7 +862,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#3
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when Table.open (code, host: first, rules, table), asked by Matchmaking.SeatLaunchedLobby#2
@@ -821,7 +875,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#4
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
@@ -834,7 +888,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#5
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
@@ -847,7 +901,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#6
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 45.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
 when Table.join (player: fourth, table), asked by Matchmaking.SeatLaunchedLobby#5
@@ -888,8 +942,8 @@ then
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 38.
-- Covered by [Tables](../design/compositions/Tables.md), line 45.
+- Covered by [Tables](../design/compositions/Tables.md), line 39.
+- Covered by [Tables](../design/compositions/Tables.md), line 46.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -900,8 +954,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 38.
-- Covered by [Tables](../design/compositions/Tables.md), line 45.
+- Covered by [Tables](../design/compositions/Tables.md), line 39.
+- Covered by [Tables](../design/compositions/Tables.md), line 46.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -915,8 +969,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 38.
-- Covered by [Tables](../design/compositions/Tables.md), line 45.
+- Covered by [Tables](../design/compositions/Tables.md), line 39.
+- Covered by [Tables](../design/compositions/Tables.md), line 46.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -929,8 +983,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 38.
-- Covered by [Tables](../design/compositions/Tables.md), line 45.
+- Covered by [Tables](../design/compositions/Tables.md), line 39.
+- Covered by [Tables](../design/compositions/Tables.md), line 46.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -944,7 +998,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 37.
+- Covered by [Tables](../design/compositions/Tables.md), line 38.
 
 ```reaction
 when Table.leave (table)
@@ -957,7 +1011,7 @@ then
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 40.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
 
 ```reaction
 when Table.close (code)
@@ -1042,7 +1096,7 @@ then
 
 Authored path: `Tables.Leave`.
 - Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -1054,7 +1108,7 @@ then
 
 Authored path: `Tables.Leave`.
 - Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Leave
@@ -1068,7 +1122,7 @@ then
 
 Authored path: `Tables.Leave`.
 - Covered by [Tables](../design/compositions/Tables.md), line 35.
-- Covered by [Tables](../design/compositions/Tables.md), line 44.
+- Covered by [Tables](../design/compositions/Tables.md), line 45.
 
 ```reaction
 when Table.leave (player: session, table), asked by Tables.Leave#2
@@ -1085,6 +1139,19 @@ Authored path: `Tables.LeaveTableOnSessionEnd`.
 
 ```reaction
 when GuestSessioning.end (session)
+where
+  Table._tableOf (player: session) has (table)
+then
+  Table.leave (player: session, table)
+```
+
+### Tables.LeaveTableOnSessionExpire
+
+Authored path: `Tables.LeaveTableOnSessionExpire`.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
+
+```reaction
+when GuestSessioning.expire (session)
 where
   Table._tableOf (player: session) has (table)
 then
@@ -1215,6 +1282,7 @@ not listed here have no explicit input contract.
 - `/games/play` — requires `token`, `game`, `tile`, `side`
 - `/games/start` — requires `token`
 - `/games/view` — requires `token`
+- `/guests/expire` — requires `session`
 - `/guests/leave` — requires `token`
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`

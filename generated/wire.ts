@@ -102,6 +102,15 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/guests/expire": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>>;
+    };
+    output: {
+      "session": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>>, ["session"]>]>>;
+    };
+    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IDLE" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+  };
   "/guests/leave": {
     input: {
       "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>[0], ["token"]>>;
@@ -334,6 +343,15 @@ export type DominaoWireHttp = {
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/guests/expire": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>>;
+    };
+    output: {
+      "session": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>>, ["session"]>]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/guests/leave": {
     input: {

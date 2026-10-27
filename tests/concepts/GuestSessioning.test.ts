@@ -3,6 +3,7 @@ import {
   GuestSessioningConcept,
   INACTIVITY_LIMIT_MS,
   InvalidName,
+  NotIdle,
   TokenInUse,
   UnknownSession,
 } from "../../src/concepts/GuestSessioning.ts";
@@ -33,13 +34,31 @@ afterAll(async () => {
   await testDb.close();
 });
 
-test("principle: a guest resumes with their token, until they stay away too long", async () => {
+test("principle: a guest resumes with their token, until they stay away too long and expire", async () => {
   const { session, token } = await start("Abuelo");
   expect(await guests.resume({ token })).toEqual({ session, displayName: "Abuelo" });
 
   now = new Date(now.getTime() + INACTIVITY_LIMIT_MS + 1);
   await expect(guests.resume({ token })).rejects.toThrow(UnknownSession);
+  expect(await guests._idle()).toEqual([{ session }]);
+  expect(await guests.expire({ session })).toEqual({ session, token });
   expect(await guests._getName({ session })).toEqual([]);
+  expect(await guests._idle()).toEqual([]);
+});
+
+test("only an idle session can expire, and only once", async () => {
+  const active = await start("Abuelo");
+  const idle = await start("Papo");
+  now = new Date(now.getTime() + INACTIVITY_LIMIT_MS - 1000);
+  await guests.resume({ token: active.token });
+  now = new Date(now.getTime() + 2000);
+
+  expect(await guests._idle()).toEqual([{ session: idle.session }]);
+  await expect(guests.expire({ session: active.session })).rejects.toThrow(NotIdle);
+  expect(await guests.resume({ token: active.token })).toHaveProperty("session", active.session);
+  await guests.expire({ session: idle.session });
+  await expect(guests.expire({ session: idle.session })).rejects.toThrow(UnknownSession);
+  await expect(guests.expire({ session: "made-up" })).rejects.toThrow(UnknownSession);
 });
 
 test("resuming counts as activity, so an active guest never expires", async () => {

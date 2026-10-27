@@ -401,7 +401,26 @@ Asked for: review who may do what across the app, and test it.
   another guest's token; that a seated guest cannot open a second table; that a
   game cannot be restarted while it runs, nor played after it stops; and that a
   matched stranger can only act as themself.
-- Found: a guest whose session expires (12 hours idle) keeps their seat, since
-  expiring deletes the session without ending it, so the reactions that free seats and
-  queue places never run. Their table shows a seat with no name, and if they were the
-  host nobody can start or close it. P1's `system_expire` action fixes this.
+- Found: a guest whose session expired (12 hours idle) kept their seat, since
+  expiring deleted the session without ending it, so the reactions that free seats and
+  queue places never ran. Their table showed a seat with no name, and if they were the
+  host nobody could start or close it.
+
+### Expiring idle sessions
+
+Asked for: fix the expired-guest bug above, bringing back P1's `system_expire`.
+
+- GuestSessioning has P1's expire action again, as `expire(session)`: it ends a
+  session only if it has been idle longer than the limit (`NOT_IDLE` otherwise), and
+  returns its token. `resume` now only refuses an idle token instead of deleting the
+  session itself, and a new `_idle()` query lists idle sessions.
+- The server runs `src/expiry.ts` every ten minutes: it reads `_idle()` and asks
+  `/guests/expire` for each one, so expiring goes through the engine and reactions
+  fire. Three reactions mirror the ones for `end`: the expired guest gets up from their
+  table (the host passes on, and a running game stops, as when anyone leaves), stops
+  waiting in a lobby, and their token is freed.
+- `/guests/expire` is reachable over HTTP like every endpoint, but it is harmless:
+  it takes no token and refuses any session still in use.
+- Tests: concept tests for expire and `_idle`; `tests/compositions/Expiry.test.ts`
+  checks an idle host's seat, host role and token are freed, an idle player's game
+  stops, an idle guest leaves their lobby, and an active session cannot be expired.

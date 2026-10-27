@@ -1,6 +1,8 @@
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
+import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
+import { EXPIRY_INTERVAL_MS, expireIdleSessions } from "./expiry.ts";
 import { policy } from "./http.ts";
 import { db } from "./db.ts";
 // The Vue page. Bun bundles it (with the Vue plugin from bunfig.toml) when the server
@@ -30,5 +32,11 @@ const server = Bun.serve({
     },
   },
 });
+
+// Idle guests are expired on a timer, which frees their seats and queue places.
+const sessions = new GuestSessioningConcept(db);
+setInterval(() => {
+  expireIdleSessions(gateway, sessions).catch((error) => console.error("Expiring idle sessions failed:", error));
+}, EXPIRY_INTERVAL_MS);
 
 console.log(`Backend ready on ${server.url}`);

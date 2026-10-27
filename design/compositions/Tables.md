@@ -33,7 +33,8 @@ Tables.ShowLobby at /tables/lobby
 ```
 
 A player can [leave a table](reaction:Tables.Leave), and a guest who ends their
-session [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd). When the last one leaves, the
+session [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd), and so does one whose
+session [expires](reaction:Tables.LeaveTableOnSessionExpire). When the last one leaves, the
 app [closes the empty table](reaction:Tables.CloseEmptyTable), because nobody is
 left to do it. The host can also [close a table](reaction:Tables.Close) that still
 has people at it, which unseats everyone; anyone else who tries is answered

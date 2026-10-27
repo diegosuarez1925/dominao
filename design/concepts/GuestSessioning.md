@@ -9,8 +9,8 @@ Let someone play under a recognizable name without creating an account.
 Abuelo opens the app, types the display name "Abuelo", and starts a session with a
 secret token the app supplies. His device keeps that token, so when he reloads the page he resumes the
 same session and is still called "Abuelo". If he stays away longer than the
-inactivity limit, resuming with that token is refused and the name is no longer tied
-to him. Ending the session makes the token unknown right away.
+inactivity limit, resuming with that token is refused, and the app expires the session,
+so the name is no longer tied to him. Ending the session makes the token unknown right away.
 
 ## Types
 
@@ -45,7 +45,6 @@ start(displayName: String, token: String) : returns (session: Session)
 resume(token: String) : returns (session: Session, displayName: String)
   where no session has this token, or its lastSeen is more than the inactivity limit ago
   then
-    delete the session with this token if it has expired
     refuses UNKNOWN_SESSION "This guest session is not active."
   where a session with this token was seen within the inactivity limit
   then
@@ -60,6 +59,18 @@ end(token: String) : returns (session: Session)
   then
     delete that session
     returns session
+
+expire(session: Session) : returns (session: Session, token: String)
+  where session does not exist
+  then
+    refuses UNKNOWN_SESSION "This guest session is not active."
+  where session exists and its lastSeen is within the inactivity limit
+  then
+    refuses NOT_IDLE "That guest session is still in use."
+  where session exists and its lastSeen is more than the inactivity limit ago
+  then
+    delete session
+    returns session, token
 ```
 
 ## Queries
@@ -67,4 +78,7 @@ end(token: String) : returns (session: Session)
 ```queries
 _getName(session: Session) : optional (displayName: String)
   Answers the session's display name, and no row when the session does not exist.
+
+_idle() : many (session: Session)
+  Answers every session whose lastSeen is more than the inactivity limit ago.
 ```

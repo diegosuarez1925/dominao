@@ -42,6 +42,20 @@ const Leave = endpoint(
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
+/**
+ * Ends a session nobody has used for longer than the inactivity limit. The server
+ * asks this for every idle session on a timer (src/expiry.ts); a session still in use
+ * is answered NOT_IDLE, so nobody can end another guest's session through it.
+ */
+const Expire = endpoint(
+  "/guests/expire",
+  ({ session, token }) =>
+    receive({ session })
+      .then(GuestSessioning.expire({ session }).responds({ session, token }))
+      .then(respond({ session })),
+  { input: { required: ["session"] }, validators: { input: strings("session") } },
+);
+
 // Whenever a session ends, its token goes back to CodeGenerating.
 const FreeTokenOnSessionEnd = reaction(({ token, session }) =>
   when(GuestSessioning.end({ token }).responds({ session })).then(
@@ -49,4 +63,11 @@ const FreeTokenOnSessionEnd = reaction(({ token, session }) =>
   ),
 );
 
-export const composition = { Start, Me, Leave, FreeTokenOnSessionEnd };
+// So does the token of a session that expired.
+const FreeTokenOnSessionExpire = reaction(({ token }) =>
+  when(GuestSessioning.expire({}).responds({ token })).then(
+    CodeGenerating.remove({ context: SESSION_TOKENS, code: token }),
+  ),
+);
+
+export const composition = { Start, Me, Leave, Expire, FreeTokenOnSessionEnd, FreeTokenOnSessionExpire };

@@ -12,15 +12,18 @@ import { TableConcept } from "./concepts/Table.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { db } from "./db.ts";
 
-// Tests pass their own database (and may shorten the matchmaking countdown); the app
-// uses the one in .env.
-export function assembleApplication(database: Db = db, options: { matchmakingCountdownMs?: number } = {}) {
+// Tests pass their own database (and may shorten the matchmaking countdown, or set the
+// clock guest sessions age by); the app uses the one in .env.
+export function assembleApplication(
+  database: Db = db,
+  options: { matchmakingCountdownMs?: number; sessionClock?: () => Date } = {},
+) {
   return assemble({
     conceptSet: applicationConceptSet,
     instances: {
       CodeGenerating: new CodeGeneratingConcept(database),
       DominoPlaying: new DominoPlayingConcept(database),
-      GuestSessioning: new GuestSessioningConcept(database),
+      GuestSessioning: new GuestSessioningConcept(database, options.sessionClock),
       Matchmaking: new MatchmakingConcept(database, undefined, undefined, options.matchmakingCountdownMs),
       Table: new TableConcept(database),
     },

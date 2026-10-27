@@ -19,6 +19,7 @@ import {
 import {
   GuestSessioningConcept,
   InvalidName,
+  NotIdle,
   TokenInUse,
   UnknownSession,
 } from "./concepts/GuestSessioning.ts";
@@ -63,7 +64,7 @@ const dominoPlaying = registerConcept({
 const guestSessioning = registerConcept({
   class: GuestSessioningConcept,
   spec: guestSessioningSpec,
-  refusals: { INVALID_NAME: InvalidName, TOKEN_IN_USE: TokenInUse, UNKNOWN_SESSION: UnknownSession },
+  refusals: { INVALID_NAME: InvalidName, TOKEN_IN_USE: TokenInUse, UNKNOWN_SESSION: UnknownSession, NOT_IDLE: NotIdle },
 });
 
 const matchmaking = registerConcept({

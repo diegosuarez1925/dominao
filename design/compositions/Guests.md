@@ -22,3 +22,14 @@ Guests.Leave at /guests/leave
 
 However a session ends, [its token is freed](reaction:Guests.FreeTokenOnSessionEnd)
 in the session-token context, so CodeGenerating only holds tokens that are in use.
+
+A guest who stays away longer than the inactivity limit cannot resume, but their
+session still holds a seat or a place in a lobby until it ends. So the server, every
+ten minutes, asks to [expire](reaction:Guests.Expire) each idle session. Expiring a
+session that is still in use is answered `NOT_IDLE`, so nobody can end someone else's
+session this way. An expired session's [token is freed](reaction:Guests.FreeTokenOnSessionExpire)
+as well.
+
+```endpoints
+Guests.Expire at /guests/expire
+```

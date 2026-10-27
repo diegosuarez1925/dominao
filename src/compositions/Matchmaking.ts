@@ -120,6 +120,13 @@ const LeaveQueueOnSessionEnd = reaction(({ session }) =>
     .then(Matchmaking.cancel({ player: session })),
 );
 
+// Nor does a guest whose session expired.
+const LeaveQueueOnSessionExpire = reaction(({ session }) =>
+  when(GuestSessioning.expire({}).responds({ session }))
+    .where(Matchmaking._lobbyOf({ player: session }))
+    .then(Matchmaking.cancel({ player: session })),
+);
+
 export const composition = {
   QueueLobby,
   ShowQueue,
@@ -128,4 +135,5 @@ export const composition = {
   Launch,
   SeatLaunchedLobby,
   LeaveQueueOnSessionEnd,
+  LeaveQueueOnSessionExpire,
 };

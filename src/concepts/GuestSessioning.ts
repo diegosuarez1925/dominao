@@ -3,6 +3,7 @@ import { MongoServerError, type Collection, type Db } from "mongodb";
 export class InvalidName extends Error {}
 export class TokenInUse extends Error {}
 export class UnknownSession extends Error {}
+export class NotIdle extends Error {}
 
 interface Session {
   _id: string;
@@ -46,13 +47,12 @@ export class GuestSessioningConcept {
 
   async resume({ token }: { token: string }) {
     const now = this.clock();
-    const found = await this.sessions.findOne({ token });
+    // An idle session stays until expire ends it, so the app can clean up after it.
+    const found = await this.sessions.findOneAndUpdate(
+      { token, lastSeen: { $gte: this.#idleSince(now) } },
+      { $set: { lastSeen: now } },
+    );
     if (found === null) throw new UnknownSession("This guest session is not active.");
-    if (found.lastSeen.getTime() + INACTIVITY_LIMIT_MS < now.getTime()) {
-      await this.sessions.deleteOne({ _id: found._id });
-      throw new UnknownSession("This guest session is not active.");
-    }
-    await this.sessions.updateOne({ _id: found._id }, { $set: { lastSeen: now } });
     return { session: found._id, displayName: found.displayName };
   }
 
@@ -62,9 +62,26 @@ export class GuestSessioningConcept {
     return { session: found._id };
   }
 
+  /** Ends a session nobody has used for longer than the inactivity limit. */
+  async expire({ session }: { session: string }) {
+    const found = await this.sessions.findOneAndDelete({ _id: session, lastSeen: { $lt: this.#idleSince(this.clock()) } });
+    if (found !== null) return { session, token: found.token };
+    if (await this.sessions.findOne({ _id: session })) throw new NotIdle("That guest session is still in use.");
+    throw new UnknownSession("This guest session is not active.");
+  }
+
+  async _idle() {
+    const found = await this.sessions.find({ lastSeen: { $lt: this.#idleSince(this.clock()) } }).toArray();
+    return found.map(({ _id }) => ({ session: _id }));
+  }
+
   async _getName({ session }: { session: string }) {
     const found = await this.sessions.findOne({ _id: session });
     return found === null ? [] : [{ displayName: found.displayName }];
+  }
+
+  #idleSince(now: Date) {
+    return new Date(now.getTime() - INACTIVITY_LIMIT_MS);
   }
 
   async #ensureIndex() {

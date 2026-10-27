@@ -134,6 +134,13 @@ const LeaveTableOnSessionEnd = reaction(({ session, table }) =>
     .then(Table.leave({ table, player: session })),
 );
 
+// So does a guest whose session expired, so an idle guest never holds a seat.
+const LeaveTableOnSessionExpire = reaction(({ session, table }) =>
+  when(GuestSessioning.expire({}).responds({ session }))
+    .where(Table._tableOf({ player: session }).is({ table }))
+    .then(Table.leave({ table, player: session })),
+);
+
 // A closed table's code goes back to CodeGenerating, so it can be handed out again.
 const FreeTableCode = reaction(({ code }) =>
   when(Table.close({}).responds({ code })).then(CodeGenerating.remove({ context: TABLE_CODES, code })),
@@ -148,5 +155,6 @@ export const composition = {
   Close,
   CloseEmptyTable,
   LeaveTableOnSessionEnd,
+  LeaveTableOnSessionExpire,
   FreeTableCode,
 };
