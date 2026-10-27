@@ -4,12 +4,13 @@ import { endSession, state } from "../session.ts";
 
 /** Signing out also leaves the table or the queue, so say so first when it matters. */
 async function signOut() {
-  const playing = state.game?.status === "ACTIVE" && state.game.game !== state.dismissedGame;
+  const status = state.game?.status;
+  const playing = (status === "ACTIVE" || status === "PAUSED") && state.game?.game !== state.dismissedGame;
   if (playing || state.table || state.queue) {
     const yes = await confirmAction({
       title: "Sign out?",
       text: playing
-        ? "You'll leave your table, and the game will stop for all four players."
+        ? "You'll leave your table. The game pauses for the others until someone takes your seat, or a bot does after 30 seconds."
         : state.table
           ? "You'll leave your table."
           : "You'll stop waiting for a game.",

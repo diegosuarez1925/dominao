@@ -520,3 +520,20 @@ Checked by hand in a browser with four players (private and public).
 by the browser enough to be dropped after 45 s; their seat stays open (or held by a
 bot), so they can take it back. If two tables of strangers need someone, a midway
 guest goes to the first one found.
+
+### How to play
+
+Asked for: a how-to-play panel on the home screen, opened by a button.
+
+- A "How to play" button above the two home panels opens a pop-up
+  (`web/components/HowToPlay.vue`): the table and teams, a turn (with three example
+  tiles meeting at matching numbers), who starts, the ways a match is won (domino,
+  tranque, capicú, chuchazo), the rule sets as the server lists them (so a new rule
+  set shows up here too), and how playing here works: private tables, strangers,
+  what happens when someone leaves, and "Join games in progress".
+- It closes with "Got it", the ×, Escape, or a click outside, and the rules scroll
+  inside it so the button stays in reach on phones. Checked at 1200 and 390 px wide.
+- Also fixed: signing out mid-game still warned that the game "will stop for all four
+  players". It now says the game pauses until someone (or, after 30 seconds, a bot)
+  takes the seat, and it also warns during a paused game.
+- Frontend only: no concept, reaction or API changes.

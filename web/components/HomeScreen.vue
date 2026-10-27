@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { CODE_PATTERN, findGame, joinTable, openTable, state } from "../session.ts";
+import HowToPlay from "./HowToPlay.vue";
 import RulesPicker from "./RulesPicker.vue";
 
 // Each panel keeps its own choice of rules; a table joined by code keeps its own.
 const strangerRules = ref("DEFAULT");
 const tableRules = ref("DEFAULT");
 const code = ref("");
+const howOpen = ref(false);
 // Whether the guest is happy to be dropped into a game of strangers already going on,
 // remembered on this device.
 const MIDWAY_KEY = "dominao.midway";
@@ -29,6 +31,11 @@ const codeHint = computed(() =>
 </script>
 
 <template>
+  <div class="how-row">
+    <p class="how-hint">New to Puerto Rican dominoes, or to DOMINAO?</p>
+    <button class="btn btn--secondary btn--small" @click="howOpen = true">How to play</button>
+  </div>
+  <HowToPlay v-model:open="howOpen" />
   <div class="grid-2">
     <section class="panel">
       <h2 class="panel-title">Play with strangers</h2>
@@ -77,6 +84,21 @@ const codeHint = computed(() =>
 </template>
 
 <style scoped>
+/* The way into the rules, above the two panels. */
+.how-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  color: var(--white);
+}
+
+.how-hint {
+  margin: 0;
+}
+
 /* Keeps the strangers panel's button level with the bottom of a taller neighbour. */
 .push-down {
   margin-top: auto;
