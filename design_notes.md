@@ -424,3 +424,12 @@ Asked for: fix the expired-guest bug above, bringing back P1's `system_expire`.
 - Tests: concept tests for expire and `_idle`; `tests/compositions/Expiry.test.ts`
   checks an idle host's seat, host role and token are freed, an idle player's game
   stops, an idle guest leaves their lobby, and an active session cannot be expired.
+
+### Validating the deployed app
+
+- `bun run check:deploy` (`scripts/validate-deploy.ts`) checks the live app from the
+  outside, through HTTP only: bad tokens, who may start, close, see and play, illegal
+  moves and bad input. With `--keep` it leaves a game running, and after a redeploy
+  `--after-redeploy` checks the same guests, table and game are still there.
+- Run on 2026-10-27 against https://dominao.mit-sdg.dev: all 43 checks passed,
+  including persistence across a redeploy. Output: `tests/deploy-output.txt`.

@@ -1,0 +1,69 @@
+Checking https://dominao.mit-sdg.dev at 2026-10-27T10:25:29.820Z
+
+Health
+PASS  /health answers 200
+
+Bad input is refused with a clear status
+PASS  starting a session with no name is 400
+PASS  starting a session with a blank name is 400
+PASS  a name that is not a string is 400
+PASS  a body that is not JSON is refused
+PASS  an unknown rule set is 400
+PASS  five guests started sessions
+
+Tokens
+PASS  /guests/me refuses an invented token, a signed-out token and a session id (401)
+PASS  /tables/lobby refuses an invented token, a signed-out token and a session id (401)
+PASS  /tables/open refuses an invented token, a signed-out token and a session id (401)
+PASS  /games/view refuses an invented token, a signed-out token and a session id (401)
+PASS  /games/start refuses an invented token, a signed-out token and a session id (401)
+PASS  /matchmaking/enqueue refuses an invented token, a signed-out token and a session id (401)
+
+Private table
+PASS  the host opens a table and gets a 6-character code
+PASS  a code that matches no table is 404
+PASS  starting before the table is full is 409
+PASS  three friends join by code
+PASS  a fifth guest cannot join a full table (409)
+PASS  a seated guest cannot open a second table (409)
+
+Who may start, close and see the game
+PASS  a guest who is not host cannot start (403)
+PASS  naming the host in the request changes nothing (403)
+PASS  the host starts the game
+PASS  starting again while it runs is 409
+PASS  a guest who is not host cannot close the table (403)
+PASS  an outsider cannot close the table (403)
+PASS  an outsider sees no game
+PASS  an outsider sees no table
+PASS  each player sees only their own hand (27 different tiles in all)
+PASS  no game view carries anyone's token
+
+Playing
+PASS  playing out of turn is 409
+PASS  an outsider cannot play in the game (409)
+PASS  playing a tile that is not in your hand is 400
+PASS  a side other than LEFT or RIGHT is 400
+PASS  nothing moved after those refusals
+PASS  the player whose turn it is plays 1-6
+PASS  everyone sees the move
+
+Sessions
+PASS  an active session cannot be expired by anyone (409)
+
+Left the game running and saved its guests to scripts/.deploy-check.json.
+Redeploy, then run with --after-redeploy to check it is still there.
+
+All checks passed.
+
+Checking https://dominao.mit-sdg.dev at 2026-10-27T10:52:22.937Z
+
+Persistence (data saved by --keep before the redeploy)
+PASS  Check Abuelo is still signed in with the same token
+PASS  Check Papo is still signed in with the same token
+PASS  Check Nando is still signed in with the same token
+PASS  Check Cheo is still signed in with the same token
+PASS  the table is still there with all four seats
+PASS  the game is still there, unchanged
+
+All checks passed.
