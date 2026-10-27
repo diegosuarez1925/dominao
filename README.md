@@ -2,7 +2,35 @@
 
 DOMINAO is an app for playing Puerto Rican dominoes online, with private tables for friends, public matchmaking for quick games, and guest sessions so nobody needs an account.
 
-This README is the entry point. The first part says how to run and test the app (P3); the second part is the P1 design, with each section linking to the Markdown file that holds it.
+This README is the entry point. The first part is the P3 submission: the live app, the journey and its recording, the visual design study, and how to run and test the code. The second part is the P1 design, with each section linking to the Markdown file that holds it.
+
+## P3 submission
+
+| | |
+|---|---|
+| Deployed app | DEPLOY_LINK_HERE |
+| Journey recording (YouTube) | YOUTUBE_LINK_HERE |
+| Updated user journey | [below](#updated-user-journey) |
+| Visual design study | [below](#visual-design-study) |
+| Code | [src](src) (concepts, syncs, server) and [web](web) (Vue frontend) |
+| Specs | [design](design) |
+| Tests and their saved output | [tests](tests), [tests/output.txt](tests/output.txt) |
+
+## Updated user journey
+
+My grandpa, while on a bus taking him to the town plaza, is feeling a little bored and wants to play dominoes to kill the boredom. So he hops on DOMINAO and logs in as a guest, skipping sign-up and email confirmations. Because he has around 10 minutes until he gets to the plaza, he decides to play a quick match instead of the usual game to 200 points, so he chooses the ruleset he would like for the game and hops in a public lobby. After a few seconds, people queue in and a game starts, and he plays on until the game is over, just before arriving at the plaza. After his visit to a store, his brother calls him and tells him they need a fourth player for a match to 500 points, and sends him a code to join, which my grandfather uses to join the private table and play with his friends and family remotely.
+
+The [recording](YOUTUBE_LINK_HERE) follows this journey in the deployed app. The original P1 journey is in [P1 TASKS/user_journey.md](P1%20TASKS/user_journey.md).
+
+## Visual design study
+
+**Typography.** Bungee, a loud signage font, for the big moments (logo, titles, the ¡Capicú! banner), inspired by hand-painted Puerto Rican street signs. Nunito, a rounded sans-serif, for everything you read, in the style of friendly game apps.
+
+![Typography slide](visual-study/typography.png)
+
+**Color.** Light blues, beiges and reds sampled from the Lares flag, the Puerto Rican flag and Old San Juan streets, each matched to the app color it became.
+
+![Color slide](visual-study/color.png)
 
 ## Running the app
 
@@ -14,8 +42,6 @@ MONGODB_URL=mongodb://127.0.0.1:27017/dominao bun run start   # the whole app on
 ```
 
 `bun run dev` does the same with a local Mongo in a container (Podman) and reloads on changes. `bun run preview` runs it exactly as the class platform does.
-
-**Deployed app:** DEPLOY_LINK_HERE
 
 ## Testing
 
@@ -90,6 +116,6 @@ A short pitch for DOMINAO and its three core features: Private Tables, Public Ma
 
 ## 5. User journey
 
-📄 [user_journey.md](P1%20TASKS/user_journey.md)
+📄 [user_journey.md](P1%20TASKS/user_journey.md) (the P3 version is [above](#updated-user-journey))
 
 The story of a grandfather in chemotherapy who plays quick public games, then opens a private table with his brothers using a join code.
