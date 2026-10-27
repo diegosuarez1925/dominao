@@ -118,7 +118,7 @@ for (const [path, body] of [
   ["/tables/open", { rules: "DEFAULT" }],
   ["/games/view", {}],
   ["/games/start", {}],
-  ["/matchmaking/enqueue", { rules: "DEFAULT" }],
+  ["/matchmaking/enqueue", { rules: "DEFAULT", midway: false }],
 ] as const) {
   const statuses = [];
   for (const token of ["made-up", signedOut.token, host.session]) statuses.push((await call(path, { ...body, token })).status);

@@ -9,17 +9,20 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
-import { strings } from "./validators.ts";
+import { flags, strings } from "./validators.ts";
 
 const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
 
-/** The lobby the guest waits in, if any: its rules, countdown, and who waits there by name. */
+/**
+ * The lobby the guest waits in, if any: its rules, countdown, and who waits there by
+ * name, with whether each would also take a seat in a game already being played.
+ */
 const QueueLobby = former(
   "the matchmaking lobby of (session)",
-  ({ session }, { lobby, rules, full, secondsLeft, player, displayName }) =>
+  ({ session }, { lobby, rules, full, secondsLeft, player, midway, displayName }) =>
     form({
       lobbies: each(Matchmaking._lobbyOf({ player: session }).is({ lobby }))
         .where(Matchmaking._status({ lobby }).is({ rules, full, secondsLeft }))
@@ -28,9 +31,9 @@ const QueueLobby = former(
           rules,
           full,
           secondsLeft,
-          players: each(Matchmaking._entries({ lobby }).is({ player }))
+          players: each(Matchmaking._entries({ lobby }).is({ player, midway }))
             .where(GuestSessioning._getName({ session: player }).is({ displayName }))
-            .form({ player, displayName }),
+            .form({ player, displayName, midway }),
         }),
     }),
 );
@@ -47,16 +50,17 @@ const ShowQueue = endpoint(
 /**
  * A guest asks for a game under rules of their choice and only meets strangers who
  * chose the same; rules the game does not know are answered UNKNOWN_RULES. A guest
- * already sitting at a table must leave it first.
+ * already sitting at a table must leave it first. `midway` says whether they would
+ * also take an empty seat in a game of strangers already being played.
  */
 const Enqueue = endpoint(
   "/matchmaking/enqueue",
-  ({ token, session, displayName, rules, lobby }) =>
-    receive({ token, rules })
+  ({ token, session, displayName, rules, midway, lobby }) =>
+    receive({ token, rules, midway })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
         where(no(Table._tableOf({ player: session })), DominoPlaying._ruleset({ rules }))
-          .then(Matchmaking.enqueue({ player: session, rules }).responds({ lobby }))
+          .then(Matchmaking.enqueue({ player: session, rules, midway }).responds({ lobby }))
           .then(respond({ lobby }))
           .named("not-seated"),
         where(no(Table._tableOf({ player: session })), no(DominoPlaying._ruleset({ rules })))
@@ -66,7 +70,10 @@ const Enqueue = endpoint(
           .then(respond({ error: "AT_TABLE" }))
           .named("seated"),
       ),
-  { input: { required: ["token", "rules"] }, validators: { input: strings("token", "rules") } },
+  {
+    input: { required: ["token", "rules", "midway"] },
+    validators: { input: flags("midway", strings("token", "rules")) },
+  },
 );
 
 const LeaveQueue = endpoint(
@@ -102,7 +109,8 @@ const Launch = endpoint(
 
 // A launched lobby becomes a table: the first player opens it under a fresh code and
 // the lobby's rules, the others sit down in their shuffled order, and the game starts
-// by those rules with no host needed.
+// by those rules with no host needed. Matchmaking remembers the table, so strangers
+// happy to join midway can be sent to it if a seat empties.
 const SeatLaunchedLobby = reaction(({ first, second, third, fourth, rules, code, table }) =>
   when(Matchmaking.launch({}).responds({ first, second, third, fourth, rules }))
     .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
@@ -110,7 +118,46 @@ const SeatLaunchedLobby = reaction(({ first, second, third, fourth, rules, code,
     .then(Table.join({ table, player: second }))
     .then(Table.join({ table, player: third }))
     .then(Table.join({ table, player: fourth }))
-    .then(DominoPlaying.start({ place: table, first, second, third, fourth, rules })),
+    .then(DominoPlaying.start({ place: table, first, second, third, fourth, rules }))
+    .then(Matchmaking.adopt({ place: table, rules })),
+);
+
+// A guest happy to join midway who asks for a game while a table of strangers with
+// their rules has a seat to fill (empty, or held by a bot) is sent there at once.
+const SendMidwayGuestToOpenSeat = reaction(({ player, rules, place }) =>
+  when(Matchmaking.enqueue({ player, rules, midway: true }).responds({}))
+    .where(
+      Matchmaking._places({ rules }).is({ place }),
+      DominoPlaying._activeAt({ place }),
+      Table._isFull({ table: place }).is({ full: false }),
+    )
+    .then(Table.join({ table: place, player })),
+);
+
+// And when a seat empties at a table of strangers, the guest who has waited longest
+// among those happy to join midway with the same rules is sent to it.
+const FillEmptySeatFromQueue = reaction(({ place, rules, player }) =>
+  when(DominoPlaying.vacate({}).responds({ place }))
+    .where(
+      Matchmaking._placeRules({ place }).is({ rules }),
+      Matchmaking._midwayWaiting({ rules }).is({ player }),
+      Table._isFull({ table: place }).is({ full: false }),
+    )
+    .then(Table.join({ table: place, player })),
+);
+
+// Someone sent to a table stops waiting in their lobby.
+const StopWaitingOnceSeated = reaction(({ player }) =>
+  when(Table.join({ player }))
+    .where(Matchmaking._lobbyOf({ player }))
+    .then(Matchmaking.cancel({ player })),
+);
+
+// A closed table is forgotten, so nobody is sent to it.
+const ForgetClosedTable = reaction(({ table }) =>
+  when(Table.close({ table }))
+    .where(Matchmaking._placeRules({ place: table }))
+    .then(Matchmaking.release({ place: table })),
 );
 
 // A guest who ends their session stops waiting for a game.
@@ -134,6 +181,10 @@ export const composition = {
   LeaveQueue,
   Launch,
   SeatLaunchedLobby,
+  SendMidwayGuestToOpenSeat,
+  FillEmptySeatFromQueue,
+  StopWaitingOnceSeated,
+  ForgetClosedTable,
   LeaveQueueOnSessionEnd,
   LeaveQueueOnSessionExpire,
 };

@@ -9,15 +9,24 @@ const open = defineModel<boolean>("open", { default: false });
 
 /** Every turn so far, newest last, with a heading where each match begins. */
 const lines = computed(() => {
-  const result: { key: string; text: string; kind: "match" | "PLAYED" | "SKIPPED" }[] = [];
+  const result: { key: string; text: string; kind: "match" | Game["log"][number]["move"] }[] = [];
   let match = 0;
   for (const turn of [...props.log].sort((a, b) => a.turn - b.turn)) {
     if (turn.matchNumber !== match) {
       match = turn.matchNumber;
       result.push({ key: `match-${match}`, text: `Match ${match}`, kind: "match" });
     }
+    const who = turn.displayName ?? turn.botName ?? "Someone";
     const text =
-      turn.move === "PLAYED" ? `${turn.displayName} played ${turn.tile.replace("-", "|")}` : `${turn.displayName} passed`;
+      turn.move === "PLAYED"
+        ? `${who} played ${turn.tile.replace("-", "|")}`
+        : turn.move === "SKIPPED"
+          ? `${who} passed`
+          : turn.move === "LEFT"
+            ? `${who} left the table`
+            : turn.botName !== null
+              ? `${who} (bot) took the empty seat`
+              : `${who} sat down in the empty seat`;
     result.push({ key: `turn-${turn.turn}`, text, kind: turn.move });
   }
   return result;
@@ -96,6 +105,13 @@ watch(
 .SKIPPED {
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+/* Someone getting up or sitting down stands out from the plays. */
+.LEFT,
+.SAT {
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 /* The tab on the right edge; it rides on the panel's edge when the panel is open. */

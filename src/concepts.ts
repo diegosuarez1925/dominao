@@ -5,15 +5,21 @@ import matchmakingSpec from "@design/concepts/Matchmaking.md" with { type: "text
 import guestSessioningSpec from "@design/concepts/GuestSessioning.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
+import { BottingConcept } from "./concepts/Botting.ts";
+import botSpec from "@design/concepts/Botting.md" with { type: "text" };
 import {
+  AlreadyPlaying,
   DominoPlayingConcept,
   DuplicatePlayer,
   GameInProgress,
   GameNotActive,
   IllegalPlay,
   NoSuchGame,
+  GamePaused,
+  NotInGame,
   NotInHand,
   NotYourTurn,
+  SeatTaken,
   UnknownRules,
 } from "./concepts/DominoPlaying.ts";
 import {
@@ -26,6 +32,8 @@ import {
 import {
   AlreadyQueued,
   CountdownRunning,
+  NoSuchPlace,
+  PlaceKnown,
   LobbyNotFull,
   MatchmakingConcept,
   NoSuchLobby,
@@ -58,7 +66,17 @@ const dominoPlaying = registerConcept({
     NOT_IN_HAND: NotInHand,
     ILLEGAL_PLAY: IllegalPlay,
     UNKNOWN_RULES: UnknownRules,
+    GAME_PAUSED: GamePaused,
+    NOT_IN_GAME: NotInGame,
+    ALREADY_PLAYING: AlreadyPlaying,
+    SEAT_TAKEN: SeatTaken,
   },
+});
+
+const botting = registerConcept({
+  class: BottingConcept,
+  spec: botSpec,
+  refusals: {},
 });
 
 const guestSessioning = registerConcept({
@@ -76,6 +94,8 @@ const matchmaking = registerConcept({
     NO_SUCH_LOBBY: NoSuchLobby,
     LOBBY_NOT_FULL: LobbyNotFull,
     COUNTDOWN_RUNNING: CountdownRunning,
+    PLACE_KNOWN: PlaceKnown,
+    NO_SUCH_PLACE: NoSuchPlace,
   },
 });
 
@@ -92,6 +112,7 @@ const table = registerConcept({
 });
 
 export const applicationConceptSet = conceptSet({
+  Botting: botting,
   CodeGenerating: codeGenerating,
   DominoPlaying: dominoPlaying,
   GuestSessioning: guestSessioning,

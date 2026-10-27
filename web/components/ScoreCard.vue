@@ -25,7 +25,7 @@ const teams = computed(() => {
   const names = (team: number) =>
     props.game.players
       .filter((p) => p.position % 2 === team)
-      .map((p) => p.displayName)
+      .map((p) => p.displayName ?? p.botName ?? "empty seat")
       .join(" & ");
   const score = (team: number) => (team === 0 ? shownA.value : shownB.value);
   const us = props.myTeam;

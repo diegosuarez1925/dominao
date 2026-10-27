@@ -25,3 +25,17 @@ export function sides(field: string, rest: EndpointValidator): EndpointValidator
       ? rest(value)
       : { ok: false, detail: `${field} must be LEFT or RIGHT` };
 }
+
+/** Like another validator, but also requires the listed fields to be whole numbers from 0 to 3 (a seat). */
+export function seats(fields: string[], rest: EndpointValidator): EndpointValidator {
+  return (value) =>
+    record(value) && fields.every((field) => Number.isInteger(value[field]) && (value[field] as number) >= 0 && (value[field] as number) <= 3)
+      ? rest(value)
+      : { ok: false, detail: `${fields.join(", ")} must be seat numbers from 0 to 3` };
+}
+
+/** Like another validator, but also requires the field to be true or false. */
+export function flags(field: string, rest: EndpointValidator): EndpointValidator {
+  return (value) =>
+    record(value) && typeof value[field] === "boolean" ? rest(value) : { ok: false, detail: `${field} must be true or false` };
+}

@@ -50,7 +50,12 @@ async function playing() {
   return { guests, table, code };
 }
 
-const view = async (token: string) => (await call("/games/view", { token })).body.view.games[0];
+/** The game the guest sees, without how long each player has been idle (which changes with every request). */
+const view = async (token: string) => {
+  const game = (await call("/games/view", { token })).body.view.games[0];
+  for (const player of game?.players ?? []) delete player.idleMs;
+  return game;
+};
 
 /** Every endpoint that acts for a guest, with a body that is otherwise well formed. */
 const guestEndpoints = (table: string, game: string, code: string): [string, Record<string, string>][] => [
@@ -65,7 +70,7 @@ const guestEndpoints = (table: string, game: string, code: string): [string, Rec
   ["/games/start", {}],
   ["/games/play", { game, tile: "6-5", side: "LEFT" }],
   ["/matchmaking/view", {}],
-  ["/matchmaking/enqueue", { rules: "DEFAULT" }],
+  ["/matchmaking/enqueue", { rules: "DEFAULT", midway: false }],
   ["/matchmaking/leave", {}],
   ["/matchmaking/launch", {}],
 ];
@@ -116,7 +121,7 @@ test("no response ever carries another guest's token", async () => {
   const { guests, code } = await playing();
   const strangers = [];
   for (const displayName of ["Uno", "Dos", "Tres"]) strangers.push(await guest(displayName));
-  for (const s of strangers) await call("/matchmaking/enqueue", { token: s.token, rules: "DEFAULT" });
+  for (const s of strangers) await call("/matchmaking/enqueue", { token: s.token, rules: "DEFAULT", midway: false });
 
   const everyone = [...guests, ...strangers];
   for (const me of everyone) {
@@ -151,25 +156,28 @@ test("the host cannot start a second game while one is being played", async () =
   expect(await view(guests[0].token)).toEqual(before);
 });
 
-test("a game that was stopped takes no more moves", async () => {
+test("a paused game, and a stopped one, take no more moves", async () => {
   const { guests, table } = await playing();
   const state = await view(guests[0].token);
   const turnPlayer = guests.find((g) => g.session === state.turnPlayer)!;
   const tile = (await view(turnPlayer.token)).hand[0].tile;
-  const leaver = guests.find((g) => g !== turnPlayer)!;
+  const leaver = guests.find((g) => g !== turnPlayer && g !== guests[0])!;
   await call("/tables/leave", { token: leaver.token, table });
 
-  expect(await call("/games/play", { token: turnPlayer.token, game: state.game, tile, side: "LEFT" })).toEqual({
-    status: 409,
-    body: { error: "CONFLICT" },
-  });
-  expect((await view(turnPlayer.token)).status).toBe("ABANDONED");
+  const move = { token: turnPlayer.token, game: state.game, tile, side: "LEFT" };
+  expect(await call("/games/play", move)).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect((await view(turnPlayer.token)).status).toBe("PAUSED");
+  // The one who left cannot play from outside, either.
+  expect((await call("/games/play", { ...move, token: leaver.token })).status).toBe(409);
+
+  await call("/tables/close", { token: guests[0].token, table });
+  expect(await call("/games/play", move)).toEqual({ status: 409, body: { error: "CONFLICT" } });
 });
 
 test("a stranger matched into a game can only act as themself there", async () => {
   const strangers = [];
   for (const displayName of ["Uno", "Dos", "Tres", "Cuatro"]) strangers.push(await guest(displayName));
-  for (const s of strangers) await call("/matchmaking/enqueue", { token: s.token, rules: "DEFAULT" });
+  for (const s of strangers) await call("/matchmaking/enqueue", { token: s.token, rules: "DEFAULT", midway: false });
   // Someone not in the lobby cannot launch it, even naming it.
   const outsider = await guest("Fuera");
   const { lobby } = (await call("/matchmaking/view", { token: strangers[0].token })).body.queue.lobbies[0];

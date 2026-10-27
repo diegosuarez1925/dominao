@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { CODE_PATTERN, findGame, joinTable, openTable, state } from "../session.ts";
 import RulesPicker from "./RulesPicker.vue";
 
@@ -7,6 +7,18 @@ import RulesPicker from "./RulesPicker.vue";
 const strangerRules = ref("DEFAULT");
 const tableRules = ref("DEFAULT");
 const code = ref("");
+// Whether the guest is happy to be dropped into a game of strangers already going on,
+// remembered on this device.
+const MIDWAY_KEY = "dominao.midway";
+const midway = ref(false);
+try {
+  midway.value = localStorage.getItem(MIDWAY_KEY) === "1";
+} catch {}
+watch(midway, (now) => {
+  try {
+    localStorage.setItem(MIDWAY_KEY, now ? "1" : "0");
+  } catch {}
+});
 const cleanCode = computed(() => code.value.trim().toUpperCase());
 /** Shown once the guest has typed a whole code that can't be one. */
 const codeHint = computed(() =>
@@ -24,7 +36,15 @@ const codeHint = computed(() =>
         We'll seat you with three other players who picked the same rules. Partners are drawn at random.
       </p>
       <RulesPicker v-model="strangerRules" />
-      <button class="btn btn--block push-down" :disabled="state.busy" @click="findGame(strangerRules)">Find a game</button>
+      <label class="toggle">
+        <input v-model="midway" type="checkbox" class="toggle-input" />
+        <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb" /></span>
+        <span class="toggle-text">
+          <span class="toggle-label">Join games in progress</span>
+          <span class="field-hint">Take over the seat of someone who left a game with the same rules. You keep their tiles and their team's score.</span>
+        </span>
+      </label>
+      <button class="btn btn--block push-down" :disabled="state.busy" @click="findGame(strangerRules, midway)">Find a game</button>
     </section>
 
     <section class="panel">
@@ -60,5 +80,66 @@ const codeHint = computed(() =>
 /* Keeps the strangers panel's button level with the bottom of a taller neighbour. */
 .push-down {
   margin-top: auto;
+}
+
+/* A switch: the checkbox stays in the page for keyboards and screen readers, drawn as a track. */
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.toggle-track {
+  flex: none;
+  position: relative;
+  width: 2.6rem;
+  height: 1.5rem;
+  margin-top: 0.1rem;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background-color 0.2s;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  transition: translate 0.2s;
+}
+
+.toggle-input:checked + .toggle-track {
+  background: var(--color-primary);
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+  translate: 1.1rem 0;
+}
+
+.toggle-input:focus-visible + .toggle-track {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.toggle-label {
+  font-weight: 700;
 }
 </style>

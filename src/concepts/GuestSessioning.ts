@@ -75,6 +75,12 @@ export class GuestSessioningConcept {
     return found.map(({ _id }) => ({ session: _id }));
   }
 
+  /** How long since the guest's session was last used: how long they have been away. */
+  async _idleFor({ session }: { session: string }) {
+    const found = await this.sessions.findOne({ _id: session });
+    return found === null ? [] : [{ idleMs: this.clock().getTime() - found.lastSeen.getTime() }];
+  }
+
   async _getName({ session }: { session: string }) {
     const found = await this.sessions.findOne({ _id: session });
     return found === null ? [] : [{ displayName: found.displayName }];

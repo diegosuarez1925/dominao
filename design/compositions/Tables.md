@@ -18,6 +18,10 @@ Tables.Open at /tables/open
 
 A friend [joins by code](reaction:Tables.JoinByCode) and takes the lowest free seat.
 A code that belongs to no table is answered as `NO_SUCH_TABLE` before Table is asked.
+If a game is being played at the table and a seat is empty (or held by a bot), the
+friend takes over that seat mid-game, as described for [seats](Seats.md). A table
+where Matchmaking seated strangers is answered `PUBLIC_TABLE`: its seats go only to
+strangers who asked to join games midway, through the queue.
 
 ```endpoints
 Tables.JoinByCode at /tables/join

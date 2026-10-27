@@ -21,6 +21,12 @@ four matches would earn prizes on top of their points, a match won with a Capic√
 a Chuchazo would earn 100 more, and a tranque would go to the team of the single
 player holding the fewest pips.
 
+If Cheo gets up in the middle of a game, his seat is left empty with his tiles in it
+and the game pauses: nobody can play until someone sits in that seat. T√≠o takes it
+over, holding Cheo's tiles, and play goes on from exactly where it stopped. Someone
+who is not there to choose, such as a bot in that seat, can have the game play for
+them: it picks one of their legal moves.
+
 ## Types
 
 ```types
@@ -37,14 +43,16 @@ opaque Tile
 Side is LEFT or RIGHT
   The end of the line a tile is played on.
 
-Status is ACTIVE or FINISHED or ABANDONED
-  Whether a game is being played, was won, or was stopped before anyone won.
+Status is ACTIVE or PAUSED or FINISHED or ABANDONED
+  Whether a game is being played, is waiting for someone to take an empty seat, was
+  won, or was stopped before anyone won.
 
 Ending is DOMINO or TRANQUE
   How a match ended: a player ran out of tiles, or nobody could play.
 
-Move is PLAYED or SKIPPED
-  What happened on a player's turn: they played a tile, or they could not play.
+Move is PLAYED or SKIPPED or LEFT or SAT
+  What happened: a player played a tile, or could not play on their turn, or got
+  up from their seat, or sat down in an empty seat.
 
 Special is CAPICU or CHUCHAZO or NONE
   A celebrated way to win a match by domino. CAPICU: the last tile, not a double,
@@ -77,6 +85,7 @@ a set of Games with
   a turn Number
   a board seq of Tile
   a leftCount Number
+  a changedAt DateTime
 Rule: players are in turn order, and players 0 and 2 form team 0 while players 1 and 3 form team 1
 Rule: the board lists the played tiles from its left end to its right end, each turned so touching numbers match
 Rule: leftCount is how many tiles of the match were played to the left of its first tile
@@ -93,6 +102,14 @@ a seq of Turns with
   a player Player
   a move Move
   an optional tile Tile
+
+a set of Vacancies with
+  a game Game
+  a position Number
+  a player Player
+  a since DateTime
+Rule: a vacancy's position is a seat nobody holds; its player is who left it
+Rule: a game is PAUSED exactly when it has a vacancy and is not over
 
 a set of Results with
   a game Game
@@ -117,10 +134,10 @@ start(place: Place, first: Player, second: Player, third: Player, fourth: Player
   where the four players are not all different
   then
     refuses DUPLICATE_PLAYER "A game needs four different players."
-  where place already has an ACTIVE game
+  where place already has an ACTIVE or PAUSED game
   then
     refuses GAME_IN_PROGRESS "A game is already being played there."
-  where the four players are different and place has no ACTIVE game
+  where the four players are different and place has no ACTIVE or PAUSED game
   then
     add a new ACTIVE game at place with the players in that order, the given rules, the target of those rules, and both team scores at 0
     deal match 1: shuffle the 28 tiles and give each player 7
@@ -132,9 +149,12 @@ play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)
   where game is not in Games
   then
     refuses NO_SUCH_GAME "There is no such game."
-  where game is not ACTIVE
+  where game is FINISHED or ABANDONED
   then
     refuses GAME_NOT_ACTIVE "That game is over."
+  where game is PAUSED
+  then
+    refuses GAME_PAUSED "The game is paused until every seat is taken."
   where it is not player's turn
   then
     refuses NOT_YOUR_TURN "It is not your turn."
@@ -154,16 +174,73 @@ play(game: Game, player: Player, tile: Tile, side: Side) : returns (game: Game)
     when a match is won, the winning team also gets the rules' prize for that match, if any; a tie wins no prize
     when a match ends in a DOMINO whose last tile is 0-0, it is a CHUCHAZO; when that last tile is not a double and its two numbers are the board's two ends before it was played, one each, it is a CAPICU; the winning team also gets the rules' bonus for it
     when a match ends, record its result; if the scoring team reached the target the game becomes FINISHED, and otherwise a new match is dealt and its starter plays first with any tile
+    set changedAt to now
+    returns game
+
+autoplay(game: Game, player: Player) : returns (game: Game)
+  where game is not in Games
+  then
+    refuses NO_SUCH_GAME "There is no such game."
+  where game is FINISHED or ABANDONED
+  then
+    refuses GAME_NOT_ACTIVE "That game is over."
+  where game is PAUSED
+  then
+    refuses GAME_PAUSED "The game is paused until every seat is taken."
+  where it is not player's turn
+  then
+    refuses NOT_YOUR_TURN "It is not your turn."
+  where game is ACTIVE and it is player's turn
+  then
+    pick one of the moves player could make (each tile in their hand on each end it fits, or any tile on an empty board), the way the game's move chooser decides
+    play that tile on that side exactly as play does
+    returns game
+
+vacate(game: Game, player: Player) : returns (game: Game, place: Place, position: Number)
+  where game is not in Games
+  then
+    refuses NO_SUCH_GAME "There is no such game."
+  where game is FINISHED or ABANDONED
+  then
+    refuses GAME_NOT_ACTIVE "That game is over."
+  where player does not hold a seat in game
+  then
+    refuses NOT_IN_GAME "That player is not playing in that game."
+  where game is ACTIVE or PAUSED and player holds a seat in it
+  then
+    leave player's seat empty, keeping its hand, and add a vacancy for that position left by player since now
+    record that player LEFT
+    set game's status to PAUSED, and changedAt to now
+    returns game, place, position
+
+seat(game: Game, position: Number, player: Player) : returns (game: Game)
+  where game is not in Games
+  then
+    refuses NO_SUCH_GAME "There is no such game."
+  where game is FINISHED or ABANDONED
+  then
+    refuses GAME_NOT_ACTIVE "That game is over."
+  where player already holds a seat in game
+  then
+    refuses ALREADY_PLAYING "That player is already playing in that game."
+  where position is not a vacancy of game
+  then
+    refuses SEAT_TAKEN "That seat is not empty."
+  where position is a vacancy of game and player holds no seat in it
+  then
+    give player the seat at position, with the hand left there, and remove the vacancy
+    record that player SAT
+    if game has no vacancies left, set its status to ACTIVE; set changedAt to now
     returns game
 
 abandon(game: Game) : returns (game: Game)
   where game is not in Games
   then
     refuses NO_SUCH_GAME "There is no such game."
-  where game is not ACTIVE
+  where game is FINISHED or ABANDONED
   then
     refuses GAME_NOT_ACTIVE "That game is over."
-  where game is ACTIVE
+  where game is ACTIVE or PAUSED
   then
     set game's status to ABANDONED
     returns game
@@ -173,7 +250,23 @@ abandon(game: Game) : returns (game: Game)
 
 ```queries
 _activeAt(place: Place) : optional (game: Game)
-  Answers the place's ACTIVE game, and no row when nobody is playing there.
+  Answers the place's game that is not over (ACTIVE or PAUSED), and no row when
+  nobody is playing there.
+
+_gameOf(player: Player) : optional (game: Game)
+  Answers the game, ACTIVE or PAUSED, in which the player holds a seat, and no row
+  when they hold none.
+
+_running() : many (game: Game)
+  Answers every game that is ACTIVE or PAUSED.
+
+_turn(game: Game) : optional (player: Player, waitingMs: Number)
+  Answers whose turn it is in an ACTIVE game and how many milliseconds have passed
+  since the game last changed; no row when the game is not ACTIVE.
+
+_vacancies(game: Game) : many (position: Number, player: Player, vacantMs: Number)
+  Answers each empty seat of an ACTIVE or PAUSED game, by position, with who left it
+  and how many milliseconds ago; no rows otherwise.
 
 _latestAt(place: Place) : optional (game: Game)
   Answers the most recently started game at the place, whatever its status, and no
@@ -185,8 +278,8 @@ _summary(game: Game) : optional (rules: RuleSet, status: Status, target: Number,
   exist.
 
 _players(game: Game) : many (position: Number, player: Player, tileCount: Number)
-  Answers each player in turn order with how many tiles they hold, and no rows when
-  the game does not exist.
+  Answers each seat in turn order with who holds it (empty when it is a vacancy)
+  and how many tiles are in it, and no rows when the game does not exist.
 
 _hand(game: Game, player: Player) : many (tile: Tile)
   Answers the tiles in the player's hand, ordered by their numbers, and no rows when
@@ -200,8 +293,8 @@ _board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: N
 
 _log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)
   Answers every turn of the game in the order they happened, numbered from 1 across
-  the whole game: who played which tile, or who was skipped (with an empty tile); no
-  rows when the game does not exist. The number keeps two skips by the same player in
+  the whole game: who played which tile, or who was skipped, left or sat down (with
+  an empty tile); no rows when the game does not exist. The number keeps two skips by the same player in
   the same match apart.
 
 _lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)

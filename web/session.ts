@@ -39,6 +39,14 @@ export const state = reactive({
 
 /** The last game answer as text; the game is replaced only when it changed. */
 let lastGame = "";
+/**
+ * Where the guest was playing at the last refresh, if a game was going on, so that if
+ * they are suddenly at no table the page can say why. Leaving on purpose clears it.
+ */
+let playingAt: { code: string; public: boolean } | null = null;
+/** When the server last answered a refresh, to tell "you were away" from "the table closed". */
+let lastAnswerAt = Date.now();
+const AWAY_GAP_MS = 20_000;
 /** When a launched lobby gives up waiting for its table to appear. */
 let startingUntil = 0;
 const STARTING_WAIT_MS = 8000;
@@ -140,6 +148,19 @@ export async function refresh() {
   const lobby = await send(() => client.tables.lobby({ token: me.token }));
   if (lobby === undefined) return;
   state.table = lobby.lobby.tables[0] ?? null;
+  const gap = Date.now() - lastAnswerAt;
+  lastAnswerAt = Date.now();
+  if (state.table === null && playingAt !== null) {
+    // Taken out of a game without asking: their page was closed or offline too long
+    // (so the others were not kept waiting), or the host closed the table.
+    if (gap < AWAY_GAP_MS) say("The host closed the table, so the game ended.");
+    else if (playingAt.public) {
+      say("You were away too long, so your seat went to someone else. Find a game with \"join games in progress\" on to jump back in.");
+    } else {
+      say(`You were away too long, so your seat was opened for someone else. If it's still open, join with code ${playingAt.code} to take it back.`);
+    }
+    playingAt = null;
+  }
   const queue = await send(() => client.matchmaking.view({ token: me.token }));
   if (queue === undefined) return;
   const next = queue.queue.lobbies[0] ?? null;
@@ -150,6 +171,8 @@ export async function refresh() {
   const view = await send(() => client.games.view({ token: me.token }));
   if (view === undefined) return;
   const game = view.view.games[0] ?? null;
+  const running = game !== null && (game.status === "ACTIVE" || game.status === "PAUSED");
+  playingAt = running && state.table ? { code: state.table.code, public: game.publicRules !== null } : null;
   const text = JSON.stringify(game);
   if (text !== lastGame) {
     lastGame = text;
@@ -175,6 +198,7 @@ export async function startSession(displayName: string) {
 }
 
 export async function endSession() {
+  playingAt = null;
   // Ending the session also gets the guest up from their table and out of the queue,
   // on the server.
   const me = state.me;
@@ -204,6 +228,7 @@ export async function joinTable(code: string) {
     const result = await send(() => client.tables.join({ token: state.me!.token, code: clean }), {
       NOT_FOUND: `No table has the code ${clean}. Check it with whoever shared it, or open your own table.`,
       CONFLICT: "That table is full (or you're still waiting for strangers). Try another table, or open your own.",
+      FORBIDDEN: "That table was made for strangers by matchmaking, so it can't be joined by code. Find a game with \"join games in progress\" on instead.",
     });
     if (result !== undefined) say("");
   });
@@ -212,6 +237,7 @@ export async function joinTable(code: string) {
 export async function leaveTable() {
   const table = state.table;
   if (table === null) return;
+  playingAt = null;
   await act(async () => {
     const result = await send(() => client.tables.leave({ token: state.me!.token, table: table.table }), {
       NOT_FOUND: "You had already left that table.",
@@ -223,6 +249,7 @@ export async function leaveTable() {
 export async function closeTable() {
   const table = state.table;
   if (table === null) return;
+  playingAt = null;
   await act(async () => {
     const result = await send(() => client.tables.close({ token: state.me!.token, table: table.table }), {
       FORBIDDEN: "Only the host can close the table. You can leave it instead.",
@@ -232,10 +259,13 @@ export async function closeTable() {
   });
 }
 
-/** Waits for three strangers who picked the same rules. */
-export async function findGame(rules: string) {
+/**
+ * Waits for three strangers who picked the same rules. With `midway`, the guest may
+ * instead be sent straight to an empty seat in a game of strangers already going on.
+ */
+export async function findGame(rules: string, midway: boolean) {
   await act(async () => {
-    const result = await send(() => client.matchmaking.enqueue({ token: state.me!.token, rules }), {
+    const result = await send(() => client.matchmaking.enqueue({ token: state.me!.token, rules, midway }), {
       CONFLICT: "You're already at a table or in the queue. Leave it before looking for a new game.",
       INVALID_REQUEST: "Those rules aren't available. Pick another set of rules.",
     });
@@ -288,7 +318,7 @@ export async function play(tile: string, side: Side) {
   if (game === null) return;
   await act(async () => {
     const result = await send(() => client.games.play({ token: state.me!.token, game: game.game, tile, side }), {
-      CONFLICT: "It's no longer your turn, or the game is over.",
+      CONFLICT: "It's no longer your turn, the game is paused, or it's over.",
       INVALID_REQUEST: "That tile doesn't fit on that end. Pick a highlighted tile.",
       NOT_FOUND: "That game is no longer being played.",
     });

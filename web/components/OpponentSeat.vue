@@ -5,13 +5,23 @@
 import DominoTile from "./DominoTile.vue";
 import PlayerBadge from "./PlayerBadge.vue";
 
-defineProps<{ name: string; note: string; tileCount: number; active: boolean; passed: boolean; side: "top" | "left" | "right" }>();
+defineProps<{
+  name: string;
+  note: string;
+  tileCount: number;
+  active: boolean;
+  passed: boolean;
+  side: "top" | "left" | "right";
+  bot?: boolean;
+  away?: boolean;
+  empty?: boolean;
+}>();
 </script>
 
 <template>
   <div class="opponent" :class="`opponent--${side}`">
-    <PlayerBadge :name="name" :note="note" :active="active" :passed="passed" stacked />
-    <TransitionGroup tag="div" name="tile" class="backs" :aria-label="`${tileCount} tiles`">
+    <PlayerBadge :name="name" :note="note" :active="active" :passed="passed" :bot="bot" :away="away" :empty="empty" stacked />
+    <TransitionGroup tag="div" name="tile" class="backs" :class="{ waiting: empty }" :aria-label="`${tileCount} tiles`">
       <DominoTile v-for="n in tileCount" :key="n" face-down :vertical="side === 'top'" class="back" />
     </TransitionGroup>
   </div>
@@ -38,6 +48,12 @@ defineProps<{ name: string; note: string; tileCount: number; active: boolean; pa
 .backs {
   display: flex;
   gap: 3px;
+  transition: opacity 0.3s;
+}
+
+/* An empty seat's tiles wait for whoever sits down. */
+.backs.waiting {
+  opacity: 0.4;
 }
 
 .opponent--left .backs,

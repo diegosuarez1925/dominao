@@ -5,10 +5,20 @@ export class NotQueued extends Error {}
 export class NoSuchLobby extends Error {}
 export class LobbyNotFull extends Error {}
 export class CountdownRunning extends Error {}
+export class PlaceKnown extends Error {}
+export class NoSuchPlace extends Error {}
 
 interface Entry {
   player: string;
   joinedAt: Date;
+  /** Whether the player will also take an empty seat in a game already being played. */
+  midway?: boolean;
+}
+
+/** A place where a launched lobby's game is played, which strangers may still sit down at. */
+interface Place {
+  _id: string;
+  rules: string;
 }
 
 /** One lobby per document, so filling a seat and launching are each one atomic write. */
@@ -36,6 +46,7 @@ const randomShuffle: Shuffle = (items) => {
 
 export class MatchmakingConcept {
   private readonly lobbies: Collection<Lobby>;
+  private readonly places: Collection<Place>;
   private indexed = false;
 
   constructor(
@@ -45,15 +56,16 @@ export class MatchmakingConcept {
     private readonly countdownMs: number = COUNTDOWN_MS,
   ) {
     this.lobbies = db.collection<Lobby>("matchmaking.lobbies");
+    this.places = db.collection<Place>("matchmaking.places");
   }
 
-  async enqueue({ player, rules }: { player: string; rules: string }) {
+  async enqueue({ player, rules, midway }: { player: string; rules: string; midway: boolean }) {
     await this.#ensureIndex();
     if ((await this.lobbies.findOne({ "entries.player": player })) !== null) {
       throw new AlreadyQueued("That player is already waiting for a game.");
     }
     const now = this.clock();
-    const entry = { player, joinedAt: now };
+    const entry = { player, joinedAt: now, midway };
     try {
       // Take a seat in the earliest lobby with these rules that still has room. The
       // filter and the push are one write, so two players cannot take the last seat.
@@ -109,6 +121,39 @@ export class MatchmakingConcept {
     return { first, second, third, fourth, rules: launched.rules };
   }
 
+  /** Remembers where a launched lobby's game is played, under the rules it was launched with. */
+  async adopt({ place, rules }: { place: string; rules: string }) {
+    const result = await this.places.updateOne({ _id: place }, { $setOnInsert: { rules } }, { upsert: true });
+    if (result.upsertedCount === 0) throw new PlaceKnown("That place already has strangers playing at it.");
+    return { place };
+  }
+
+  async release({ place }: { place: string }) {
+    const found = await this.places.findOneAndDelete({ _id: place });
+    if (found === null) throw new NoSuchPlace("There is no such place.");
+    return { place };
+  }
+
+  async _placeRules({ place }: { place: string }) {
+    const found = await this.places.findOne({ _id: place });
+    return found === null ? [] : [{ rules: found.rules }];
+  }
+
+  async _places({ rules }: { rules: string }) {
+    const found = await this.places.find({ rules }).sort({ _id: 1 }).toArray();
+    return found.map(({ _id }) => ({ place: _id }));
+  }
+
+  /** The player who has waited longest, under these rules, among those happy to join a game midway. */
+  async _midwayWaiting({ rules }: { rules: string }) {
+    const found = await this.lobbies.find({ rules, "entries.midway": true }).toArray();
+    const waiting = found
+      .flatMap((lobby) => lobby.entries)
+      .filter((entry) => entry.midway === true)
+      .toSorted((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime());
+    return waiting.length === 0 ? [] : [{ player: waiting[0].player }];
+  }
+
   async _lobbyOf({ player }: { player: string }) {
     const found = await this.lobbies.findOne({ "entries.player": player });
     return found === null ? [] : [{ lobby: found._id }];
@@ -124,7 +169,7 @@ export class MatchmakingConcept {
 
   async _entries({ lobby }: { lobby: string }) {
     const found = await this.lobbies.findOne({ _id: lobby });
-    return (found?.entries ?? []).map(({ player }) => ({ player }));
+    return (found?.entries ?? []).map(({ player, midway }) => ({ player, midway: midway === true }));
   }
 
   async #ensureIndex() {

@@ -1,19 +1,46 @@
 <script setup lang="ts">
 // A player at the table: their initial in a circle, their name, and a note such as
 // "you" or "partner". The player whose turn it is glows. An empty seat shows a dashed
-// circle instead. A player who just passed shakes and says so in a bubble.
-defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean; passed?: boolean }>();
+// circle instead. A player who just passed shakes and says so in a bubble. A bot gets a
+// robot face and a BOT tag; a player whose connection seems lost is faded, with a
+// pulsing dot.
+defineProps<{
+  name?: string;
+  note?: string;
+  active?: boolean;
+  stacked?: boolean;
+  passed?: boolean;
+  bot?: boolean;
+  away?: boolean;
+  empty?: boolean;
+}>();
 </script>
 
 <template>
-  <div class="badge" :class="{ active, stacked, passed, empty: !name }">
+  <div class="badge" :class="{ active, stacked, passed, bot, away, empty: empty || !name }">
     <Transition name="pop">
       <span v-if="passed" class="pass-bubble" role="status">¡Paso!</span>
     </Transition>
-    <span class="avatar badge-avatar" aria-hidden="true">{{ name ? name.charAt(0).toUpperCase() : "?" }}</span>
+    <span class="avatar badge-avatar" aria-hidden="true">
+      <svg v-if="bot" class="bot-face" viewBox="0 0 24 24">
+        <line x1="12" y1="2.5" x2="12" y2="6" />
+        <circle cx="12" cy="2.5" r="1.4" class="fill" />
+        <rect x="4" y="6" width="16" height="13" rx="3.5" />
+        <circle cx="9" cy="12" r="1.8" class="fill" />
+        <circle cx="15" cy="12" r="1.8" class="fill" />
+        <line x1="9" y1="16" x2="15" y2="16" />
+      </svg>
+      <template v-else>{{ name && !empty ? name.charAt(0).toUpperCase() : "?" }}</template>
+    </span>
     <span class="badge-text">
-      <span class="badge-name">{{ name ?? "Waiting…" }}</span>
-      <span v-if="note" class="badge-note">{{ note }}</span>
+      <span class="badge-name">
+        {{ name ?? "Waiting…" }}
+        <span v-if="bot" class="bot-tag">bot</span>
+      </span>
+      <span v-if="note" class="badge-note">
+        <span v-if="away" class="away-dot" aria-hidden="true" />
+        {{ note }}
+      </span>
     </span>
   </div>
 </template>
@@ -86,6 +113,61 @@ defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean;
   opacity: 0.8;
 }
 
+/* A bot: a steel-grey face and a small tag, so nobody mistakes it for a person. */
+.bot .badge-avatar {
+  color: var(--white);
+  background: #5d6b78;
+}
+
+.bot-face {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.bot-face .fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.bot-tag {
+  display: inline-block;
+  margin-left: 0.2rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+  color: #22303b;
+  background: #c9d3dc;
+}
+
+/* Lost connection: faded, with an amber dot that pulses by the note. */
+.away .badge-avatar {
+  opacity: 0.45;
+}
+
+.away-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.15rem;
+  border-radius: 50%;
+  background: #f2b84b;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
 /* Whose turn it is: a light-blue ring that breathes. */
 .active {
   background: rgb(169 207 226 / 0.25);
@@ -144,7 +226,8 @@ defineProps<{ name?: string; note?: string; active?: boolean; stacked?: boolean;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .active {
+  .active,
+  .away-dot {
     animation: none;
   }
 }

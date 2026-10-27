@@ -8,11 +8,16 @@ export class NotYourTurn extends Error {}
 export class NotInHand extends Error {}
 export class IllegalPlay extends Error {}
 export class UnknownRules extends Error {}
+export class GamePaused extends Error {}
+export class NotInGame extends Error {}
+export class AlreadyPlaying extends Error {}
+export class SeatTaken extends Error {}
 
-type Status = "ACTIVE" | "FINISHED" | "ABANDONED";
+type Status = "ACTIVE" | "PAUSED" | "FINISHED" | "ABANDONED";
 type Side = "LEFT" | "RIGHT";
 type Ending = "DOMINO" | "TRANQUE";
-type Move = "PLAYED" | "SKIPPED";
+/** A turn (a tile PLAYED, or SKIPPED), or a change of who sits in a seat: LEFT or SAT. */
+type Move = "PLAYED" | "SKIPPED" | "LEFT" | "SAT";
 /**
  * A celebrated way to win a match by domino. CAPICU: the last tile, not a double,
  * could have been played on either end of the board. CHUCHAZO: the last tile is 0-0.
@@ -80,9 +85,19 @@ const DEFAULT_RULES = "DEFAULT";
 interface Turn {
   matchNumber: number;
   seat: number;
+  /** Who it was: seats change hands, so the seat alone does not say. Older turns have none. */
+  player?: string;
   move: Move;
-  /** The tile played, or "" when the player was skipped. */
+  /** The tile played, or "" when the player was skipped, left or sat down. */
   tile: string;
+}
+
+/** A seat whose player left, waiting for someone to take it over. */
+interface Vacancy {
+  position: number;
+  /** Who left it. */
+  player: string;
+  since: Date;
 }
 
 interface Game {
@@ -107,13 +122,34 @@ interface Game {
   /** Each seat's hand, by seat position. */
   hands: Pips[][];
   results: Result[];
+  /** Seats nobody holds right now; the game is PAUSED while there are any. Older games have none. */
+  vacancies?: Vacancy[];
   startedAt: Date;
+  /** When the game last changed, so a bot can wait a moment before it moves. */
+  changedAt?: Date;
   /** Bumped on every change, so two plays at the same moment cannot both apply. */
   version: number;
 }
 
 const SEATS = 4;
 const HAND_SIZE = 7;
+
+/** A move a player could make right now. */
+export interface Option {
+  tile: string;
+  side: Side;
+}
+
+/**
+ * Picks a move when the game plays for someone (a bot). It gets every legal move,
+ * never an empty list, and the player's hand and the board's ends to think with.
+ * Pass another one to the concept to change how bots play.
+ */
+export type MoveChooser = (options: Option[], seen: { hand: string[]; left?: number; right?: number }) => Option;
+
+/** Plays any legal move, at random. */
+export const randomMove: MoveChooser = (options) =>
+  options[crypto.getRandomValues(new Uint32Array(1))[0] % options.length];
 
 /** Shuffles a list in place and returns it. Tests pass their own to get known deals. */
 export type Shuffle = <T>(items: T[]) => T[];
@@ -178,6 +214,21 @@ function specialOf([a, b]: Pips, board: Pips[]): Special {
   return matched ? "CAPICU" : "NONE";
 }
 
+/** Every legal move for a hand: any tile on an empty board, otherwise each tile on each end it fits. */
+function optionsFor(hand: Pips[], board: Pips[]): Option[] {
+  const options: Option[] = [];
+  for (const tile of hand) {
+    for (const side of ["LEFT", "RIGHT"] as const) {
+      if (placed(board, tile, side) !== undefined) options.push({ tile: tileName(tile), side });
+      if (board.length === 0) break;
+    }
+  }
+  return options;
+}
+
+/** Whether a game can still be played: it is being played, or paused for a missing player. */
+const running = (status: Status) => status === "ACTIVE" || status === "PAUSED";
+
 function rulesOf(game: Game): RuleSet {
   return RULESETS[game.rules ?? DEFAULT_RULES];
 }
@@ -217,6 +268,8 @@ export class DominoPlayingConcept {
   constructor(
     db: Db,
     private readonly shuffle: Shuffle = randomShuffle,
+    private readonly clock: () => Date = () => new Date(),
+    private readonly chooseMove: MoveChooser = randomMove,
   ) {
     this.games = db.collection<Game>("dominoPlaying.games");
   }
@@ -240,7 +293,7 @@ export class DominoPlayingConcept {
     if (!Object.hasOwn(RULESETS, rules)) throw new UnknownRules("Those are not rules this game knows.");
     const players = [first, second, third, fourth];
     if (new Set(players).size !== SEATS) throw new DuplicatePlayer("A game needs four different players.");
-    if (await this.games.findOne({ place, status: "ACTIVE" })) {
+    if (await this.games.findOne({ place, status: { $in: ["ACTIVE", "PAUSED"] } })) {
       throw new GameInProgress("A game is already being played there.");
     }
     const game: Game = {
@@ -259,7 +312,9 @@ export class DominoPlayingConcept {
       log: [],
       hands: [],
       results: [],
-      startedAt: new Date(),
+      vacancies: [],
+      startedAt: this.clock(),
+      changedAt: this.clock(),
       version: 0,
     };
     this.#deal(game, undefined);
@@ -268,50 +323,113 @@ export class DominoPlayingConcept {
   }
 
   async play({ game, player, tile, side }: { game: string; player: string; tile: string; side: string }) {
-    const found = await this.games.findOne({ _id: game });
-    if (found === null) throw new NoSuchGame("There is no such game.");
-    if (found.status !== "ACTIVE") throw new GameNotActive("That game is over.");
-    if (found.players[found.turn] !== player) throw new NotYourTurn("It is not your turn.");
-    const seat = found.turn;
+    const found = await this.#turnOf(game, player);
     const pipsOfTile = parseTile(tile);
-    const hand = found.hands[seat];
+    const hand = found.hands[found.turn];
     const index = pipsOfTile === undefined ? -1 : hand.findIndex((t) => tileName(t) === tileName(pipsOfTile));
     if (pipsOfTile === undefined || index === -1) throw new NotInHand("That tile is not in your hand.");
-    const board = placed(found.board, pipsOfTile, side === "LEFT" ? "LEFT" : "RIGHT");
-    if (board === undefined) throw new IllegalPlay("That tile does not match that end of the board.");
-
-    const toLeft = side === "LEFT" && found.board.length > 0;
-    const updated: Game = {
-      ...found,
-      board,
-      leftCount: (found.leftCount ?? 0) + (toLeft ? 1 : 0),
-      hands: found.hands.map((h) => [...h]),
-      log: [...(found.log ?? []), { matchNumber: found.matchNumber, seat, move: "PLAYED", tile: tileName(pipsOfTile) }],
-    };
-    updated.hands[seat].splice(index, 1);
-    this.#afterPlay(updated, seat, specialOf(pipsOfTile, found.board));
-
-    const { version } = found;
-    const result = await this.games.replaceOne({ _id: game, version }, { ...updated, version: version + 1 });
-    // Someone else changed the game since we read it (a double click, say); it is no longer this turn.
-    if (result.modifiedCount === 0) throw new NotYourTurn("It is not your turn.");
+    if (placed(found.board, pipsOfTile, side === "LEFT" ? "LEFT" : "RIGHT") === undefined) {
+      throw new IllegalPlay("That tile does not match that end of the board.");
+    }
+    await this.#apply(found, pipsOfTile, side === "LEFT" ? "LEFT" : "RIGHT");
     return { game };
+  }
+
+  /** Plays for a player who cannot choose (a bot): one of their legal moves, picked by the move chooser. */
+  async autoplay({ game, player }: { game: string; player: string }) {
+    const found = await this.#turnOf(game, player);
+    const hand = found.hands[found.turn];
+    const end = ends(found.board);
+    const options = optionsFor(hand, found.board);
+    const chosen = this.chooseMove(options, { hand: hand.map(tileName), left: end?.left, right: end?.right });
+    // A chooser that answers something illegal falls back to the first legal move.
+    const move = options.find((o) => o.tile === chosen?.tile && o.side === chosen?.side) ?? options[0];
+    await this.#apply(found, parseTile(move.tile)!, move.side);
+    return { game };
+  }
+
+  /** A player gets up mid-game: their seat (and hand) waits for someone else, and the game pauses. */
+  async vacate({ game, player }: { game: string; player: string }) {
+    return this.#retrying(async () => {
+      const found = await this.games.findOne({ _id: game });
+      if (found === null) throw new NoSuchGame("There is no such game.");
+      if (!running(found.status)) throw new GameNotActive("That game is over.");
+      const position = found.players.indexOf(player);
+      if (player === "" || position === -1) throw new NotInGame("That player is not playing in that game.");
+      const now = this.clock();
+      const players = [...found.players];
+      players[position] = "";
+      const log: Turn[] = [...(found.log ?? []), { matchNumber: found.matchNumber, seat: position, player, move: "LEFT", tile: "" }];
+      const vacancies = [...(found.vacancies ?? []), { position, player, since: now }];
+      const saved = await this.#save(found, { players, log, vacancies, status: "PAUSED", changedAt: now });
+      return saved && { game, place: found.place, position };
+    });
+  }
+
+  /** Someone takes over an empty seat, hand and all; once no seat is empty, play goes on. */
+  async seat({ game, position, player }: { game: string; position: number; player: string }) {
+    return this.#retrying(async () => {
+      const found = await this.games.findOne({ _id: game });
+      if (found === null) throw new NoSuchGame("There is no such game.");
+      if (!running(found.status)) throw new GameNotActive("That game is over.");
+      if (player === "" || found.players.includes(player)) {
+        throw new AlreadyPlaying("That player is already playing in that game.");
+      }
+      const vacancies = found.vacancies ?? [];
+      if (!vacancies.some((v) => v.position === position)) throw new SeatTaken("That seat is not empty.");
+      const now = this.clock();
+      const players = [...found.players];
+      players[position] = player;
+      const log: Turn[] = [...(found.log ?? []), { matchNumber: found.matchNumber, seat: position, player, move: "SAT", tile: "" }];
+      const left = vacancies.filter((v) => v.position !== position);
+      const status = left.length === 0 ? "ACTIVE" : "PAUSED";
+      // The seat's turn starts now, so a bot that sits down still waits a moment before moving.
+      const saved = await this.#save(found, { players, log, vacancies: left, status, changedAt: now });
+      return saved && { game };
+    });
   }
 
   async abandon({ game }: { game: string }) {
     const found = await this.games.findOne({ _id: game });
     if (found === null) throw new NoSuchGame("There is no such game.");
     const result = await this.games.updateOne(
-      { _id: game, status: "ACTIVE" },
-      { $set: { status: "ABANDONED" }, $inc: { version: 1 } },
+      { _id: game, status: { $in: ["ACTIVE", "PAUSED"] } },
+      { $set: { status: "ABANDONED", changedAt: this.clock() }, $inc: { version: 1 } },
     );
     if (result.modifiedCount === 0) throw new GameNotActive("That game is over.");
     return { game };
   }
 
   async _activeAt({ place }: { place: string }) {
-    const found = await this.games.findOne({ place, status: "ACTIVE" });
+    const found = await this.games.findOne({ place, status: { $in: ["ACTIVE", "PAUSED"] } });
     return found === null ? [] : [{ game: found._id }];
+  }
+
+  async _gameOf({ player }: { player: string }) {
+    if (player === "") return [];
+    const found = await this.games.findOne({ players: player, status: { $in: ["ACTIVE", "PAUSED"] } });
+    return found === null ? [] : [{ game: found._id }];
+  }
+
+  async _running() {
+    const found = await this.games.find({ status: { $in: ["ACTIVE", "PAUSED"] } }, { projection: { _id: 1 } }).toArray();
+    return found.map(({ _id }) => ({ game: _id }));
+  }
+
+  async _turn({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    if (found === null || found.status !== "ACTIVE") return [];
+    const since = found.changedAt ?? found.startedAt;
+    return [{ player: found.players[found.turn], waitingMs: this.clock().getTime() - since.getTime() }];
+  }
+
+  async _vacancies({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    if (found === null || !running(found.status)) return [];
+    const now = this.clock().getTime();
+    return (found.vacancies ?? [])
+      .toSorted((a, b) => a.position - b.position)
+      .map(({ position, player, since }) => ({ position, player, vacantMs: now - since.getTime() }));
   }
 
   async _latestAt({ place }: { place: string }) {
@@ -369,10 +487,10 @@ export class DominoPlayingConcept {
   async _log({ game }: { game: string }) {
     const found = await this.games.findOne({ _id: game });
     if (found === null) return [];
-    return (found.log ?? []).map(({ matchNumber, seat, move, tile }, index) => ({
+    return (found.log ?? []).map(({ matchNumber, seat, player, move, tile }, index) => ({
       turn: index + 1,
       matchNumber,
-      player: found.players[seat],
+      player: player ?? found.players[seat],
       move,
       tile,
     }));
@@ -394,6 +512,63 @@ export class DominoPlayingConcept {
     return Object.entries(RULESETS).map(([rules, { target, description }]) => ({ rules, target, description }));
   }
 
+  /** The game, if it is this player's turn in it and play can go on; refuses otherwise. */
+  async #turnOf(game: string, player: string) {
+    const found = await this.games.findOne({ _id: game });
+    if (found === null) throw new NoSuchGame("There is no such game.");
+    if (!running(found.status)) throw new GameNotActive("That game is over.");
+    if (found.status === "PAUSED") throw new GamePaused("The game is paused until every seat is taken.");
+    if (player === "" || found.players[found.turn] !== player) throw new NotYourTurn("It is not your turn.");
+    return found;
+  }
+
+  /** Plays a tile that fits for whoever's turn it is, then scores, skips or deals as needed. */
+  async #apply(found: Game, tile: Pips, side: Side) {
+    const seat = found.turn;
+    const toLeft = side === "LEFT" && found.board.length > 0;
+    const updated: Game = {
+      ...found,
+      board: placed(found.board, tile, side)!,
+      leftCount: (found.leftCount ?? 0) + (toLeft ? 1 : 0),
+      hands: found.hands.map((h) => [...h]),
+      log: [
+        ...(found.log ?? []),
+        { matchNumber: found.matchNumber, seat, player: found.players[seat], move: "PLAYED", tile: tileName(tile) },
+      ],
+      changedAt: this.clock(),
+    };
+    updated.hands[seat].splice(
+      updated.hands[seat].findIndex((t) => tileName(t) === tileName(tile)),
+      1,
+    );
+    this.#afterPlay(updated, seat, specialOf(tile, found.board));
+
+    const { version } = found;
+    const result = await this.games.replaceOne({ _id: found._id, version }, { ...updated, version: version + 1 });
+    // Someone else changed the game since we read it (a double click, say); it is no longer this turn.
+    if (result.modifiedCount === 0) throw new NotYourTurn("It is not your turn.");
+  }
+
+  /** Writes changes to a game unless it changed since it was read; answers whether it did. */
+  async #save(found: Game, changes: Partial<Game>) {
+    const result = await this.games.updateOne(
+      { _id: found._id, version: found.version },
+      { $set: changes, $inc: { version: 1 } },
+    );
+    return result.modifiedCount === 1;
+  }
+
+  /**
+   * Runs a read-and-write until no one else changed the game in between (a play at the
+   * same moment as a player leaving, say), so the change is never lost.
+   */
+  async #retrying<T>(attempt: () => Promise<T | false>): Promise<T> {
+    for (;;) {
+      const done = await attempt();
+      if (done !== false) return done;
+    }
+  }
+
   /** Deals a new match. The first match opens with the double six; later ones with the given starter. */
   #deal(game: Game, starter: number | undefined) {
     const tiles = this.shuffle(fullSet());
@@ -410,7 +585,7 @@ export class DominoPlayingConcept {
     game.starter = holder;
     game.hands[holder] = game.hands[holder].filter(([a, b]) => !(a === 6 && b === 6));
     game.board = [[6, 6]];
-    game.log.push({ matchNumber: game.matchNumber, seat: holder, move: "PLAYED", tile: "6-6" });
+    game.log.push({ matchNumber: game.matchNumber, seat: holder, player: game.players[holder], move: "PLAYED", tile: "6-6" });
     this.#afterPlay(game, holder);
   }
 
@@ -427,7 +602,7 @@ export class DominoPlayingConcept {
     for (let candidate = next(seat), step = 0; step < SEATS; candidate = next(candidate), step++) {
       if (canPlay(game.hands[candidate], game.board)) {
         for (const passed of skipped) {
-          game.log.push({ matchNumber: game.matchNumber, seat: passed, move: "SKIPPED", tile: "" });
+          game.log.push({ matchNumber: game.matchNumber, seat: passed, player: game.players[passed], move: "SKIPPED", tile: "" });
         }
         game.turn = candidate;
         return;

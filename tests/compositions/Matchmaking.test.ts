@@ -51,7 +51,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 test("four strangers fill a lobby, count down, and are seated at a new table with a game started", async () => {
   const players = await guests("Abuelo", "Papo", "Nando", "Cheo");
   const lobbies = [];
-  for (const guest of players) lobbies.push((await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT" })).body.lobby);
+  for (const guest of players) lobbies.push((await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT", midway: false })).body.lobby);
   expect(new Set(lobbies).size).toBe(1);
 
   const waiting = await queueOf(players[0]);
@@ -86,7 +86,7 @@ test("four strangers fill a lobby, count down, and are seated at a new table wit
 
 test("a guest can leave the queue before the game starts, which stops the countdown", async () => {
   const players = await guests("A", "B", "C", "D", "E");
-  for (const guest of players.slice(0, 4)) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT" });
+  for (const guest of players.slice(0, 4)) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT", midway: false });
   expect((await call("/matchmaking/leave", { token: players[3].token })).status).toBe(200);
   expect(await queueOf(players[3])).toBeUndefined();
   const waiting = await queueOf(players[0]);
@@ -98,15 +98,15 @@ test("a guest can leave the queue before the game starts, which stops the countd
   expect((await call("/matchmaking/launch", { token: players[0].token })).status).toBe(409);
 
   // A newcomer fills the seat and the countdown starts again.
-  await call("/matchmaking/enqueue", { token: players[4].token, rules: "DEFAULT" });
+  await call("/matchmaking/enqueue", { token: players[4].token, rules: "DEFAULT", midway: false });
   expect((await queueOf(players[4])).full).toBe(true);
   expect((await call("/matchmaking/leave", { token: players[3].token })).body).toEqual({ error: "NOT_FOUND" });
 });
 
 test("ending a session leaves the queue", async () => {
   const [a, b] = await guests("A", "B");
-  await call("/matchmaking/enqueue", { token: a.token, rules: "DEFAULT" });
-  await call("/matchmaking/enqueue", { token: b.token, rules: "DEFAULT" });
+  await call("/matchmaking/enqueue", { token: a.token, rules: "DEFAULT", midway: false });
+  await call("/matchmaking/enqueue", { token: b.token, rules: "DEFAULT", midway: false });
   await call("/guests/leave", { token: a.token });
   const waiting = await queueOf(b);
   expect(waiting.players.map((p: { player: string }) => p.player)).toEqual([b.session]);
@@ -116,25 +116,25 @@ test("queueing and sitting at a table exclude each other", async () => {
   const [host, queued] = await guests("Host", "Queued");
   const { code } = (await call("/tables/open", { token: host.token, rules: "DEFAULT" })).body;
   // A seated guest cannot queue.
-  expect((await call("/matchmaking/enqueue", { token: host.token, rules: "DEFAULT" })).body).toEqual({ error: "CONFLICT" });
+  expect((await call("/matchmaking/enqueue", { token: host.token, rules: "DEFAULT", midway: false })).body).toEqual({ error: "CONFLICT" });
   expect(await queueOf(host)).toBeUndefined();
 
   // A queued guest can neither open nor join a table.
-  await call("/matchmaking/enqueue", { token: queued.token, rules: "DEFAULT" });
+  await call("/matchmaking/enqueue", { token: queued.token, rules: "DEFAULT", midway: false });
   expect((await call("/tables/open", { token: queued.token, rules: "DEFAULT" })).body).toEqual({ error: "CONFLICT" });
   expect((await call("/tables/join", { token: queued.token, code })).body).toEqual({ error: "CONFLICT" });
   expect(await tableOf(queued)).toBeUndefined();
   // Queueing twice is refused too.
-  expect((await call("/matchmaking/enqueue", { token: queued.token, rules: "DEFAULT" })).body).toEqual({ error: "CONFLICT" });
+  expect((await call("/matchmaking/enqueue", { token: queued.token, rules: "DEFAULT", midway: false })).body).toEqual({ error: "CONFLICT" });
 });
 
 test("only someone waiting in the lobby can launch it, and an unknown guest is turned away", async () => {
   const players = await guests("A", "B", "C", "D", "Outsider");
-  for (const guest of players.slice(0, 4)) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT" });
+  for (const guest of players.slice(0, 4)) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT", midway: false });
   await wait(COUNTDOWN_MS + 50);
   expect((await call("/matchmaking/launch", { token: players[4].token })).body).toEqual({ error: "NOT_FOUND" });
   expect((await queueOf(players[0])).players).toHaveLength(4);
-  expect((await call("/matchmaking/enqueue", { token: "not-a-token", rules: "DEFAULT" })).status).toBe(401);
+  expect((await call("/matchmaking/enqueue", { token: "not-a-token", rules: "DEFAULT", midway: false })).status).toBe(401);
 });
 
 test("players are only matched with others who chose the same rules", async () => {
@@ -142,7 +142,7 @@ test("players are only matched with others who chose the same rules", async () =
   const choices = ["DEFAULT", "LONG", "DEFAULT", "LONG", "SHORT", "DEFAULT", "LONG", "DEFAULT"];
   const lobbyFor: Record<string, string[]> = {};
   for (const [i, guest] of players.entries()) {
-    const { lobby } = (await call("/matchmaking/enqueue", { token: guest.token, rules: choices[i] })).body;
+    const { lobby } = (await call("/matchmaking/enqueue", { token: guest.token, rules: choices[i], midway: false })).body;
     (lobbyFor[choices[i]] ??= []).push(lobby);
   }
   // Each rule set has one lobby of its own.
@@ -164,7 +164,7 @@ test("players are only matched with others who chose the same rules", async () =
 
 test("a launched LONG lobby starts a game to 500", async () => {
   const players = await guests("A", "B", "C", "D");
-  for (const guest of players) await call("/matchmaking/enqueue", { token: guest.token, rules: "LONG" });
+  for (const guest of players) await call("/matchmaking/enqueue", { token: guest.token, rules: "LONG", midway: false });
   await wait(COUNTDOWN_MS + 50);
   await call("/matchmaking/launch", { token: players[0].token });
   expect(await gameOf(players[2])).toMatchObject({ rules: "LONG", target: 500, status: "ACTIVE" });
@@ -172,7 +172,7 @@ test("a launched LONG lobby starts a game to 500", async () => {
 
 test("queueing with unknown or missing rules is refused", async () => {
   const [a] = await guests("A");
-  expect(await call("/matchmaking/enqueue", { token: a.token, rules: "BLITZ" })).toEqual({
+  expect(await call("/matchmaking/enqueue", { token: a.token, rules: "BLITZ", midway: false })).toEqual({
     status: 400,
     body: { error: "INVALID_REQUEST" },
   });

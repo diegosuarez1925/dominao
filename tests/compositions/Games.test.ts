@@ -117,17 +117,22 @@ test("playing out of turn is refused", async () => {
   expect((await call("/games/play", { token: other.token, game: state.game, tile, side: "UP" })).status).toBe(400);
 });
 
-test("a player leaving the table abandons the game", async () => {
+test("a player leaving pauses the game, and whoever joins takes their seat, hand and all", async () => {
   const { guests, table } = await fullTable();
   await call("/games/start", { token: guests[0].token });
+  const { hand } = await view(guests[3].token);
   await call("/tables/leave", { token: guests[3].token, table });
-  expect((await view(guests[0].token)).status).toBe("ABANDONED");
-  // Once the seat is filled again, the host can start a new game.
+  const paused = await view(guests[0].token);
+  expect(paused.status).toBe("PAUSED");
+  expect(paused.vacancies).toMatchObject([{ position: 3, player: guests[3].session, displayName: "Cheo" }]);
+  // The game is still being played, so the host cannot start another.
+  expect((await call("/games/start", { token: guests[0].token })).status).toBe(409);
   const newcomer = (await call("/guests/start", { displayName: "Tío" })).body;
   const { code } = (await call("/tables/lobby", { token: guests[0].token })).body.lobby.tables[0];
-  await call("/tables/join", { token: newcomer.token, code });
-  expect((await call("/games/start", { token: guests[0].token })).status).toBe(200);
-  expect((await view(newcomer.token)).status).toBe("ACTIVE");
+  expect((await call("/tables/join", { token: newcomer.token, code })).body.position).toBe(3);
+  const resumed = await view(newcomer.token);
+  expect(resumed).toMatchObject({ game: paused.game, status: "ACTIVE", vacancies: [], hand });
+  expect(resumed.log.at(-1)).toMatchObject({ move: "SAT", displayName: "Tío" });
 });
 
 test("the rule sets are listed, and a table's rules decide its game's target", async () => {

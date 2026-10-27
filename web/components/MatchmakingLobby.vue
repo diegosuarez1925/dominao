@@ -5,6 +5,7 @@ import { launchQueue, leaveQueue, rulesDescription, rulesName, state } from "../
 import LobbyTable, { type LobbySeat } from "./LobbyTable.vue";
 
 const props = defineProps<{ queue: QueueLobby }>();
+const midway = computed(() => props.queue.players.find((p) => p.player === state.me?.session)?.midway === true);
 
 /** The guest at the bottom, then the others in the order they arrived. */
 const seats = computed<LobbySeat[]>(() => {
@@ -69,6 +70,9 @@ onBeforeUnmount(() => clearInterval(timer));
       </div>
     </LobbyTable>
     <p class="lobby-hint">Seats and partners are drawn at random when the game starts.</p>
+    <p v-if="midway" class="lobby-hint">
+      You're also open to games in progress: if someone leaves a game with these rules, you'll take their seat right away.
+    </p>
     <div class="lobby-actions">
       <button class="btn btn--secondary" :disabled="state.busy" @click="leaveQueue">Leave queue</button>
     </div>

@@ -1,122 +1,150 @@
 bun test v1.4.2 (744846f84)
 
 tests/web/board.test.ts:
-(pass) plain tiles snake without overlapping, on both arms [7.84ms]
-(pass) a turn takes two standing tiles, leaving a gap between runs [0.99ms]
-(pass) doubles lie across the line, centred on it [3.44ms]
-(pass) a double at either corner keeps the snake going from its end [1.72ms]
-
-tests/compositions/Tables.test.ts:
-(pass) the journey: Abuelo opens a table and his three brothers join by code [271.22ms]
-(pass) a code that belongs to no table is not found [32.59ms]
-(pass) an invented token cannot open a table [5.24ms]
-(pass) when the last player leaves, the table closes and its code is freed [79.97ms]
-(pass) only the host can close a table with people at it [70.45ms]
-(pass) a guest who leaves the app also leaves their table [87.47ms]
-(pass) a table is opened with rules, and unknown or missing rules are refused [41.96ms]
-(pass) a guest already seated cannot join a second table, nor leave one they are not at [56.01ms]
-(pass) a guest at a table cannot also wait for a game with strangers [53.91ms]
-
-tests/compositions/Games.test.ts:
-(pass) only the host of a full table can start a game [85.70ms]
-(pass) each player sees the same game but only their own hand [105.03ms]
-(pass) four guests play a whole game to 200 through the API [2987.96ms]
-(pass) playing out of turn is refused [69.80ms]
-(pass) a player leaving the table abandons the game [81.13ms]
-(pass) the rule sets are listed, and a table's rules decide its game's target [57.11ms]
-(pass) a guest who is not at the table cannot play in its game, nor see it [71.88ms]
-(pass) players at another table see their own game only [79.75ms]
-(pass) a tile that does not fit, or is not in the hand, is refused through the API [67.57ms]
-
-tests/compositions/Guests.test.ts:
-(pass) a guest starts a session, is recognized by token, and leaves [22.52ms]
-(pass) an empty name is a bad request, and a missing name is invalid input [0.78ms]
-
-tests/compositions/Expiry.test.ts:
-(pass) an idle host is expired: their seat and token are freed and the host passes on [71.00ms]
-(pass) an idle player's game stops, and an idle guest stops waiting for strangers [70.38ms]
-(pass) nobody can expire a session that is still in use [12.54ms]
-
-tests/compositions/AccessControl.test.ts:
-(pass) every guest endpoint turns away an invented token, a signed-out token, and a session id [90.45ms]
-(pass) naming another guest in the request does not act as them [60.84ms]
-(pass) no response ever carries another guest's token [113.83ms]
-(pass) a guest at a table cannot open a second one [44.84ms]
-(pass) the host cannot start a second game while one is being played [54.51ms]
-(pass) a game that was stopped takes no more moves [59.11ms]
-(pass) a stranger matched into a game can only act as themself there [76.04ms]
-
-tests/compositions/Matchmaking.test.ts:
-(pass) four strangers fill a lobby, count down, and are seated at a new table with a game started [471.72ms]
-(pass) a guest can leave the queue before the game starts, which stops the countdown [419.52ms]
-(pass) ending a session leaves the queue [34.95ms]
-(pass) queueing and sitting at a table exclude each other [35.62ms]
-(pass) only someone waiting in the lobby can launch it, and an unknown guest is turned away [387.01ms]
-(pass) players are only matched with others who chose the same rules [460.04ms]
-(pass) a launched LONG lobby starts a game to 500 [434.41ms]
-(pass) queueing with unknown or missing rules is refused [12.81ms]
+(pass) plain tiles snake without overlapping, on both arms [2.46ms]
+(pass) a turn takes two standing tiles, leaving a gap between runs [0.65ms]
+(pass) doubles lie across the line, centred on it [0.42ms]
+(pass) a double at either corner keeps the snake going from its end [1.07ms]
 
 tests/concepts/Table.test.ts:
-(pass) principle: four sit by code, a fifth is refused, the host passes on, and the empty table closes [77.41ms]
-(pass) a player sits at only one table at a time [22.34ms]
-(pass) two tables cannot share a code [33.89ms]
-(pass) a freed seat is taken by the next player to join [30.02ms]
-(pass) when five rush for three seats at once, exactly three sit down [32.61ms]
-(pass) unknown tables and players who are not seated are refused [20.83ms]
-(pass) closing a table unseats everyone still there [22.98ms]
+(pass) principle: four sit by code, a fifth is refused, the host passes on, and the empty table closes [116.58ms]
+(pass) a player sits at only one table at a time [51.72ms]
+(pass) two tables cannot share a code [29.97ms]
+(pass) a freed seat is taken by the next player to join [51.46ms]
+(pass) when five rush for three seats at once, exactly three sit down [56.67ms]
+(pass) unknown tables and players who are not seated are refused [34.58ms]
+(pass) closing a table unseats everyone still there [38.91ms]
 
-tests/concepts/DominoPlaying.test.ts:
-(pass) the first match opens with the double six, played by whoever holds it, and the turn passes on [7.00ms]
-(pass) a tile goes on the end it matches, and its other number becomes the new end [33.80ms]
-(pass) each board tile knows how far it lies from the match's first tile [65.46ms]
-(pass) illegal moves are refused and change nothing [16.89ms]
-(pass) players who cannot play are skipped, and only they are [226.79ms]
-(pass) a domino: the team of the player who goes out scores the pips left in the other three hands, and the winner starts next [230.34ms]
-(pass) a tranque: the team holding fewer pips scores them all, and its player earliest in turn order starts next [52.85ms]
-(pass) a tied tranque scores nothing, and the same player starts again [433.45ms]
-(pass) whole games follow the rules at every match end, finish at their target, and never lose a tile, under every rule set [1741.41ms]
-(pass) two plays sent at once for the same turn: one counts, the other is refused [13.46ms]
-(pass) one active game per place, four different players, and abandoning ends it [9.58ms]
-(pass) the rule sets are listed with their targets, and a game plays to its rules' target [7.12ms]
-(pass) unknown rules are refused and no game is started [0.99ms]
-(pass) long games give prizes of 100, 75, 50 and 25 to the winners of the first four matches, then none [547.55ms]
-(pass) long games settle a tranque by the single player holding fewest pips [54.89ms]
-(pass) in a long game, opponents tied for fewest pips tie the tranque: no points and no prize [1533.10ms]
-(pass) in a long game, partners tied for fewest pips win the tranque, and the earlier of them starts [517.74ms]
-(pass) a capicú: the last tile could go on either end; long games pay 100 for it [426.68ms]
-(pass) a capicú is recorded under other rules too, but pays nothing extra [423.63ms]
-(pass) ends showing the same number make no capicú: 3-5 on ends 3 and 3 is a plain domino [695.55ms]
-(pass) a last double is never a capicú, even when it fits both ends [283.15ms]
-(pass) a last tile that fits one end only is a plain domino [301.59ms]
-(pass) a chuchazo: winning with the double blank; long games pay 100 for it [959.50ms]
-
-tests/concepts/GuestSessioning.test.ts:
-(pass) principle: a guest resumes with their token, until they stay away too long and expire [14.76ms]
-(pass) only an idle session can expire, and only once [34.99ms]
-(pass) resuming counts as activity, so an active guest never expires [9.80ms]
-(pass) display names are trimmed and must be 1 to 20 characters [10.33ms]
-(pass) two guests may share a name but never a token [8.37ms]
-(pass) an invented token is refused [0.96ms]
-(pass) ending a session makes its token unknown [7.19ms]
-
-tests/concepts/CodeGenerating.test.ts:
-(pass) principle: a code is taken until it is removed [10.86ms]
-(pass) codes have the requested size, 6 by default, and a readable alphabet [6.95ms]
-(pass) sizes of 5 or less, or fractions, are refused [0.75ms]
-(pass) codes never repeat within a context, even when requested at the same moment [79.15ms]
-(pass) removing a code that is not in use is refused [6.83ms]
+tests/concepts/Botting.test.ts:
+(pass) principle: a new bot has a name that says it is a bot, and nobody else has one [13.64ms]
+(pass) every bot is a different bot, even when two are made at once [27.50ms]
 
 tests/concepts/Matchmaking.test.ts:
-(pass) principle: four strangers fill a lobby, a leaver stops the countdown, and the full lobby launches [19.03ms]
-(pass) a fifth player starts a new lobby rather than overfilling a full one [14.44ms]
-(pass) players who leave free a seat, and the earliest lobby with room fills first [15.10ms]
-(pass) only players asking for the same rules share a lobby [13.42ms]
-(pass) the last player to leave removes the lobby, and they can queue again [14.15ms]
-(pass) many players queueing at once never put more than four in a lobby [56.35ms]
-(pass) errors: queueing twice, leaving when not queued, and launching too early or a missing lobby [18.57ms]
-(pass) a full lobby launches once even when all four ask at the same moment [16.00ms]
+(pass) principle: four strangers fill a lobby, a leaver stops the countdown, and the full lobby launches [52.19ms]
+(pass) a fifth player starts a new lobby rather than overfilling a full one [38.42ms]
+(pass) players who leave free a seat, and the earliest lobby with room fills first [38.58ms]
+(pass) only players asking for the same rules share a lobby [28.14ms]
+(pass) the last player to leave removes the lobby, and they can queue again [29.39ms]
+(pass) many players queueing at once never put more than four in a lobby [78.05ms]
+(pass) errors: queueing twice, leaving when not queued, and launching too early or a missing lobby [38.83ms]
+(pass) a full lobby launches once even when all four ask at the same moment [27.70ms]
+(pass) principle: Matchmaking remembers where its games are played, until told to forget [24.12ms]
+(pass) the longest waiting player happy to join midway is found, only under their rules [50.36ms]
 
- 92 pass
+tests/concepts/GuestSessioning.test.ts:
+(pass) principle: a guest resumes with their token, until they stay away too long and expire [18.97ms]
+(pass) only an idle session can expire, and only once [23.99ms]
+(pass) resuming counts as activity, so an active guest never expires [17.86ms]
+(pass) display names are trimmed and must be 1 to 20 characters [15.24ms]
+(pass) two guests may share a name but never a token [13.53ms]
+(pass) an invented token is refused [2.60ms]
+(pass) ending a session makes its token unknown [19.45ms]
+
+tests/concepts/CodeGenerating.test.ts:
+(pass) principle: a code is taken until it is removed [21.74ms]
+(pass) codes have the requested size, 6 by default, and a readable alphabet [15.12ms]
+(pass) sizes of 5 or less, or fractions, are refused [2.38ms]
+(pass) codes never repeat within a context, even when requested at the same moment [225.69ms]
+(pass) removing a code that is not in use is refused [21.42ms]
+
+tests/concepts/DominoPlaying.test.ts:
+(pass) the first match opens with the double six, played by whoever holds it, and the turn passes on [17.08ms]
+(pass) a tile goes on the end it matches, and its other number becomes the new end [75.50ms]
+(pass) each board tile knows how far it lies from the match's first tile [81.09ms]
+(pass) illegal moves are refused and change nothing [30.90ms]
+(pass) players who cannot play are skipped, and only they are [592.14ms]
+(pass) a domino: the team of the player who goes out scores the pips left in the other three hands, and the winner starts next [525.72ms]
+(pass) a tranque: the team holding fewer pips scores them all, and its player earliest in turn order starts next [154.07ms]
+(pass) a tied tranque scores nothing, and the same player starts again [1090.07ms]
+(pass) whole games follow the rules at every match end, finish at their target, and never lose a tile, under every rule set [4966.39ms]
+(pass) two plays sent at once for the same turn: one counts, the other is refused [23.11ms]
+(pass) one active game per place, four different players, and abandoning ends it [18.44ms]
+(pass) principle: a player who gets up pauses the game, and whoever sits down carries on with their hand [32.07ms]
+(pass) several seats can be empty at once; the game waits for all of them [23.24ms]
+(pass) vacate and seat refuse what does not make sense [25.13ms]
+(pass) a player leaving at the same moment as a play loses neither [20.04ms]
+(pass) autoplay makes a legal move for whoever's turn it is, as the move chooser picks [19.63ms]
+(pass) a chooser that answers an illegal move gets a legal one played instead [13.05ms]
+(pass) four seats played by autoplay alone finish a whole game by the rules [303.73ms]
+(pass) _turn says how long the player whose turn it is has had to move [12.15ms]
+(pass) the rule sets are listed with their targets, and a game plays to its rules' target [9.50ms]
+(pass) unknown rules are refused and no game is started [1.68ms]
+(pass) long games give prizes of 100, 75, 50 and 25 to the winners of the first four matches, then none [1194.63ms]
+(pass) long games settle a tranque by the single player holding fewest pips [125.67ms]
+(pass) in a long game, opponents tied for fewest pips tie the tranque: no points and no prize [3992.65ms]
+(pass) in a long game, partners tied for fewest pips win the tranque, and the earlier of them starts [1314.78ms]
+(pass) a capicú: the last tile could go on either end; long games pay 100 for it [925.21ms]
+(pass) a capicú is recorded under other rules too, but pays nothing extra [994.72ms]
+(pass) ends showing the same number make no capicú: 3-5 on ends 3 and 3 is a plain domino [1471.69ms]
+(pass) a last double is never a capicú, even when it fits both ends [391.11ms]
+(pass) a last tile that fits one end only is a plain domino [589.97ms]
+(pass) a chuchazo: winning with the double blank; long games pay 100 for it [2280.95ms]
+
+tests/compositions/Tables.test.ts:
+(pass) the journey: Abuelo opens a table and his three brothers join by code [159.78ms]
+(pass) a code that belongs to no table is not found [23.68ms]
+(pass) an invented token cannot open a table [3.95ms]
+(pass) when the last player leaves, the table closes and its code is freed [78.03ms]
+(pass) only the host can close a table with people at it [56.36ms]
+(pass) a guest who leaves the app also leaves their table [78.13ms]
+(pass) a table is opened with rules, and unknown or missing rules are refused [55.29ms]
+(pass) a guest already seated cannot join a second table, nor leave one they are not at [83.53ms]
+(pass) a guest at a table cannot also wait for a game with strangers [44.17ms]
+
+tests/compositions/Guests.test.ts:
+(pass) a guest starts a session, is recognized by token, and leaves [51.85ms]
+(pass) an empty name is a bad request, and a missing name is invalid input [2.72ms]
+
+tests/compositions/Matchmaking.test.ts:
+(pass) four strangers fill a lobby, count down, and are seated at a new table with a game started [625.70ms]
+(pass) a guest can leave the queue before the game starts, which stops the countdown [478.10ms]
+(pass) ending a session leaves the queue [56.73ms]
+(pass) queueing and sitting at a table exclude each other [73.50ms]
+(pass) only someone waiting in the lobby can launch it, and an unknown guest is turned away [424.83ms]
+(pass) players are only matched with others who chose the same rules [544.69ms]
+(pass) a launched LONG lobby starts a game to 500 [462.70ms]
+(pass) queueing with unknown or missing rules is refused [26.78ms]
+
+tests/compositions/Replacement.test.ts:
+(pass) principle: a leaver's seat waits 30 seconds, then a bot plays it, until a friend takes it over [274.41ms]
+(pass) a friend who joins before the 30 seconds are up takes the empty seat, and no bot comes [196.17ms]
+(pass) a bot takes its turn after a moment to think, with a legal move [223.65ms]
+(pass) one guest and three bots play a whole game to its end [9244.67ms]
+(pass) the game ends early only when every person has left [195.67ms]
+(pass) a player whose page stops checking in is taken out of the game, which pauses for them [194.88ms]
+(pass) a stranger happy to join midway, under the same rules, is sent straight to an empty seat [276.52ms]
+(pass) when a seat empties, the stranger who has waited longest to join midway is sent to it [205.25ms]
+(pass) a stranger happy to join midway takes over a bot at a table of strangers [245.37ms]
+(pass) a table of strangers cannot be joined by its code [159.77ms]
+(pass) once a table of strangers closes, nobody is sent to it [172.75ms]
+(pass) the ticker's endpoints change nothing when asked early, or about the wrong seat or player [157.78ms]
+
+tests/compositions/AccessControl.test.ts:
+(pass) every guest endpoint turns away an invented token, a signed-out token, and a session id [268.07ms]
+(pass) naming another guest in the request does not act as them [194.49ms]
+(pass) no response ever carries another guest's token [374.46ms]
+(pass) a guest at a table cannot open a second one [101.16ms]
+(pass) the host cannot start a second game while one is being played [122.59ms]
+(pass) a paused game, and a stopped one, take no more moves [157.17ms]
+(pass) a stranger matched into a game can only act as themself there [215.04ms]
+
+tests/compositions/Games.test.ts:
+(pass) only the host of a full table can start a game [93.51ms]
+(pass) each player sees the same game but only their own hand [135.77ms]
+(pass) four guests play a whole game to 200 through the API [15220.31ms]
+(pass) playing out of turn is refused [133.00ms]
+(pass) a player leaving pauses the game, and whoever joins takes their seat, hand and all [166.45ms]
+(pass) the rule sets are listed, and a table's rules decide its game's target [99.06ms]
+(pass) a guest who is not at the table cannot play in its game, nor see it [134.94ms]
+(pass) players at another table see their own game only [159.51ms]
+(pass) a tile that does not fit, or is not in the hand, is refused through the API [153.86ms]
+
+tests/compositions/Expiry.test.ts:
+(pass) an idle host is expired: their seat and token are freed and the host passes on [111.66ms]
+(pass) an idle player's game stops, and an idle guest stops waiting for strangers [162.31ms]
+(pass) nobody can expire a session that is still in use [25.41ms]
+
+ 116 pass
  0 fail
- 1837 expect() calls
-Ran 92 tests across 12 files. [19.36s]
+ 2073 expect() calls
+Ran 116 tests across 14 files. [56.04s]

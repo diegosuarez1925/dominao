@@ -433,3 +433,90 @@ Asked for: fix the expired-guest bug above, bringing back P1's `system_expire`.
   `--after-redeploy` checks the same guests, table and game are still there.
 - Run on 2026-10-27 against https://dominao.mit-sdg.dev: all 43 checks passed,
   including persistence across a redeploy. Output: `tests/deploy-output.txt`.
+
+### Leaving mid-game: pausing, replacements and bots
+
+Asked for: when someone leaves, pause the game instead of ending it; wait 30 seconds
+(shown) for a person to take the seat, then put in a bot that plays random legal
+moves; let a person take over from the bot later. At private tables anyone joining
+may take the seat; at tables of strangers only someone who chose the same rules and
+said they are OK joining games midway. End the game only if all four people leave.
+
+**Concepts**
+- *DominoPlaying* (changed). New status `PAUSED`, and new log moves `LEFT` and `SAT`.
+  `vacate(game, player)` empties a seat, keeping its hand, and pauses the game;
+  `seat(game, position, player)` puts someone in an empty seat with that hand, and
+  play resumes once no seat is empty. Nobody can play while paused (`GAME_PAUSED`).
+  `autoplay(game, player)` plays for whoever's turn it is, picking from every legal
+  move with a *move chooser* passed to the concept (random for now); swapping the
+  chooser in `src/assembly.ts` changes how every bot plays and nothing else. New
+  queries: `_turn` (whose turn, and for how long), `_vacancies` (empty seats, who
+  left them, for how long), `_gameOf`, `_running`. DominoPlaying's players are now
+  "seat holders" (a guest's session or a bot) in `design/types.md`. Vacate and seat
+  retry if the game changed underneath them, so a play and a leave at the same moment
+  never lose either.
+- *Botting* (new). Creates bots with names like "Bot Chago"; `_name(bot)` answers
+  only for bots, which is how the app tells a bot from a person. Kept separate from
+  DominoPlaying so the game never needs to know who is a bot.
+- *Matchmaking* (changed). Entries remember `midway` (whether the player is OK joining
+  a game in progress), and `_midwayWaiting(rules)` finds the one who has waited
+  longest. Matchmaking now also remembers the tables its launched lobbies play at
+  (`adopt`, `release`, `_places`, `_placeRules`), which is what makes a table "public".
+- *GuestSessioning* (small change). `_idleFor(session)` says how long since a guest's
+  page last checked in, used to show "reconnecting…" and to drop vanished players.
+
+**Reactions** (new composition `Seats`, plus changes in `Games`, `Tables`, `Matchmaking`)
+- `AbandonGameWhenPlayerLeaves` is gone. Leaving a table during a game now
+  `vacate`s the seat (`VacateSeatWhenPlayerLeaves`). The game is abandoned only by
+  closing the table, which happens on its own when the last person leaves.
+- Bots never take Table seats; only people do. So a free Table seat always means an
+  empty or bot seat in the game, and since Table hands out the lowest free seat, table
+  positions stay game positions. Joining a table mid-game `seat`s the joiner
+  (`TakeEmptySeat`) or, if a bot holds that seat, vacates the bot and seats the joiner
+  (`ReplaceBotWithJoiner`).
+- A one-second server ticker (`src/ticker.ts`) asks three endpoints: `/games/seat-bot`
+  once a seat has waited 30 s, `/games/bot-move` once a bot has "thought" for 1.5 s,
+  and `/games/drop-absent` for a guest whose page has not checked in for 45 s (which
+  leaves the table for them, pausing the game). Each endpoint re-checks the time
+  itself, like `/guests/expire`, so asking early or as anyone else changes nothing.
+  Timings are in `src/timing.ts`.
+- Tables of strangers: a midway guest who asks for a game while such a table with
+  their rules has a seat to fill is sent there at once (`SendMidwayGuestToOpenSeat`);
+  when a seat empties there, the longest-waiting midway guest is sent
+  (`FillEmptySeatFromQueue`); being seated removes them from their lobby
+  (`StopWaitingOnceSeated`); closing the table forgets it (`ForgetClosedTable`).
+  Joining such a table by its code is refused (`PUBLIC_TABLE`, 403), so its seats only
+  go to strangers who opted in.
+
+**Frontend**
+- A "Game paused" card on the board names who left, counts down to the bot with a
+  bar, and says what it waits for: the table code to share (private) or a stranger
+  who chose these rules and is OK joining midway (public).
+- The empty seat shows a dashed circle, "Papo's seat", "empty · bot in 23s", and its
+  tiles faded. A bot has a robot face and a BOT tag. A player not heard from for 7 s
+  is faded with a pulsing dot and "reconnecting…".
+- Short notes pop up when someone leaves, sits down, a bot takes a seat, someone takes
+  over from a bot, or a player who seemed disconnected is back. Someone arriving
+  mid-game is told whose seat and tiles they took. The move log lists leaves and
+  sit-downs.
+- Home: a "Join games in progress" switch under "Play with strangers", remembered on
+  the device; the waiting screen reminds the guest when it is on.
+- Leaving asks first and says what happens (pause, bot after 30 s, and at a private
+  table that they can come back with the code while the seat is open). A guest taken
+  out for being away is told so when their page comes back.
+
+**Tests.** Concept tests for vacate, seat, autoplay (including a cheating chooser and
+a whole game of autoplay), Botting, and Matchmaking places and midway waiters.
+`tests/compositions/Replacement.test.ts` (12 tests, with a hand-moved clock and the
+ticker run by hand) covers the 30 s wait and the bot, bot moves, a joiner taking over
+from a bot with its hand, one guest and three bots finishing a whole game, the game
+ending only when everyone leaves, dropping a vanished player, the public rules (same
+rules and opt-in, in both orders, a bot replaced by a midway stranger, no joining by
+code, a closed table forgotten), and the ticker endpoints refusing early or wrong
+asks. Older tests that expected leaving to end the game now expect a pause. 116 pass.
+Checked by hand in a browser with four players (private and public).
+
+**Known limits.** A guest whose tab is in the background for minutes can be slowed
+by the browser enough to be dropped after 45 s; their seat stays open (or held by a
+bot), so they can take it back. If two tables of strangers need someone, a midway
+guest goes to the first one found.

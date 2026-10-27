@@ -70,7 +70,9 @@ const Open = endpoint(
 
 /**
  * A code nobody holds answers NO_SUCH_TABLE here, before Table is ever asked. A guest
- * waiting for strangers must leave the queue first.
+ * waiting for strangers must leave the queue first. A table Matchmaking seated
+ * strangers at is answered PUBLIC_TABLE: its empty seats go to strangers who asked to
+ * join midway, through the queue, not to whoever has its code.
  */
 const JoinByCode = endpoint(
   "/tables/join",
@@ -78,10 +80,21 @@ const JoinByCode = endpoint(
     receive({ token, code })
       .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
       .then(
-        where(no(Matchmaking._lobbyOf({ player: session })), Table._getByCode({ code }).is({ table }))
+        where(
+          no(Matchmaking._lobbyOf({ player: session })),
+          Table._getByCode({ code }).is({ table }),
+          no(Matchmaking._placeRules({ place: table })),
+        )
           .then(Table.join({ table, player: session }).responds({ position }))
           .then(respond({ table, position }))
           .named("code-found"),
+        where(
+          no(Matchmaking._lobbyOf({ player: session })),
+          Table._getByCode({ code }).is({ table }),
+          Matchmaking._placeRules({ place: table }),
+        )
+          .then(respond({ error: "PUBLIC_TABLE" }))
+          .named("public-table"),
         where(no(Matchmaking._lobbyOf({ player: session })), no(Table._getByCode({ code })))
           .then(respond({ error: "NO_SUCH_TABLE" }))
           .named("code-unknown"),

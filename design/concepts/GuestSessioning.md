@@ -81,4 +81,8 @@ _getName(session: Session) : optional (displayName: String)
 
 _idle() : many (session: Session)
   Answers every session whose lastSeen is more than the inactivity limit ago.
+
+_idleFor(session: Session) : optional (idleMs: Number)
+  Answers how many milliseconds have passed since the session's lastSeen, and no row
+  when the session does not exist.
 ```

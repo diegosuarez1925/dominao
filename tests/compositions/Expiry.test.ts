@@ -19,7 +19,7 @@ const clock = () => now;
 
 beforeAll(async () => {
   testDb = await openTestDb();
-  const application = assembleApplication(testDb.db, { sessionClock: clock });
+  const application = assembleApplication(testDb.db, { clock });
   gateway = createGateway({ application });
   api = createHttpHandler({ application, gateway, policy });
 }, 120_000);
@@ -88,16 +88,16 @@ test("an idle player's game stops, and an idle guest stops waiting for strangers
   for (const p of players.slice(1)) await call("/tables/join", { token: p.token, code });
   await call("/games/start", { token: players[0].token });
   const waiting = await guest("Tío");
-  await call("/matchmaking/enqueue", { token: waiting.token, rules: "DEFAULT" });
+  await call("/matchmaking/enqueue", { token: waiting.token, rules: "DEFAULT", midway: false });
 
   await stayAway(...players.slice(0, 3));
   await sweep();
-  // Cheo was idle: he left the table, which abandoned the game, as leaving does.
-  expect((await call("/games/view", { token: players[0].token })).body.view.games[0].status).toBe("ABANDONED");
+  // Cheo was idle: he left the table, which paused the game until his seat is taken, as leaving does.
+  expect((await call("/games/view", { token: players[0].token })).body.view.games[0].status).toBe("PAUSED");
   expect((await call("/tables/lobby", { token: players[0].token })).body.lobby.tables[0].seats).toHaveLength(3);
   // Tío was idle too, and his lobby is gone with him.
   const fresh = await guest("Prima");
-  const { lobby } = (await call("/matchmaking/enqueue", { token: fresh.token, rules: "DEFAULT" })).body;
+  const { lobby } = (await call("/matchmaking/enqueue", { token: fresh.token, rules: "DEFAULT", midway: false })).body;
   const queued = (await call("/matchmaking/view", { token: fresh.token })).body.queue.lobbies[0];
   expect(queued.lobby).toBe(lobby);
   expect(queued.players.map((p: { displayName: string }) => p.displayName)).toEqual(["Prima"]);

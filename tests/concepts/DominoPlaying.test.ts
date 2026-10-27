@@ -5,14 +5,19 @@
 // concept's queries, following the rules, not copied from the code.
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import {
+  AlreadyPlaying,
   DominoPlayingConcept,
   DuplicatePlayer,
   GameInProgress,
   GameNotActive,
+  GamePaused,
   IllegalPlay,
+  type MoveChooser,
+  NotInGame,
   NotInHand,
   NotYourTurn,
   RULESETS,
+  SeatTaken,
   UnknownRules,
 } from "../../src/concepts/DominoPlaying.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
@@ -316,6 +321,157 @@ test("one active game per place, four different players, and abandoning ends it"
   expect(await dominoes._latestAt({ place: "t" })).toEqual([{ game }]);
   expect((await dominoes._summary({ game }))[0].status).toBe("ABANDONED");
   await expect(dominoes.abandon({ game })).rejects.toThrow(GameNotActive);
+});
+
+// Leaving and taking over a seat
+
+const turnOf = async (dominoes: DominoPlayingConcept, game: string) => (await dominoes._summary({ game }))[0].turnPlayer;
+
+/** A clock tests move by hand. */
+function handClock(start = Date.parse("2026-10-27T12:00:00Z")) {
+  let now = start;
+  return { clock: () => new Date(now), pass: (ms: number) => (now += ms) };
+}
+
+test("principle: a player who gets up pauses the game, and whoever sits down carries on with their hand", async () => {
+  const { clock, pass } = handClock();
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1), clock);
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  const before = await snapshot(dominoes, game);
+  const turnPlayer = await turnOf(dominoes, game);
+
+  pass(1000);
+  expect(await dominoes.vacate({ game, player: "papo" })).toEqual({ game, place: "t", position: 1 });
+  expect((await dominoes._summary({ game }))[0].status).toBe("PAUSED");
+  expect(await dominoes._activeAt({ place: "t" })).toEqual([{ game }]);
+  expect(await dominoes._gameOf({ player: "papo" })).toEqual([]);
+  expect((await dominoes._players({ game }))[1]).toEqual({ position: 1, player: "", tileCount: before.hands.papo.length });
+  pass(5000);
+  expect(await dominoes._vacancies({ game })).toEqual([{ position: 1, player: "papo", vacantMs: 5000 }]);
+  // Nobody plays while a seat is empty, not even whoever's turn it is.
+  const [tile] = before.hands[turnPlayer];
+  await expect(dominoes.play({ game, player: turnPlayer, tile, side: "LEFT" })).rejects.toThrow(GamePaused);
+  expect(await dominoes._turn({ game })).toEqual([]);
+
+  await dominoes.seat({ game, position: 1, player: "tio" });
+  expect((await dominoes._summary({ game }))[0].status).toBe("ACTIVE");
+  expect(await dominoes._vacancies({ game })).toEqual([]);
+  expect(await dominoes._hand({ game, player: "tio" })).toEqual(before.hands.papo.toSorted().map((t) => ({ tile: t })));
+  expect(await dominoes._gameOf({ player: "tio" })).toEqual([{ game }]);
+  const log = await dominoes._log({ game });
+  expect(log.slice(-2).map(({ player, move }) => ({ player, move }))).toEqual([
+    { player: "papo", move: "LEFT" },
+    { player: "tio", move: "SAT" },
+  ]);
+  // Play picks up exactly where it stopped: same turn, same board, scores untouched.
+  const after = await snapshot(dominoes, game);
+  expect(await turnOf(dominoes, game)).toBe(turnPlayer === "papo" ? "tio" : turnPlayer);
+  expect(after.ends).toEqual(before.ends);
+  expect([after.scoreA, after.scoreB]).toEqual([before.scoreA, before.scoreB]);
+});
+
+test("several seats can be empty at once; the game waits for all of them", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  await dominoes.vacate({ game, player: "papo" });
+  await dominoes.vacate({ game, player: "cheo" });
+  expect((await dominoes._vacancies({ game })).map((v) => v.position)).toEqual([1, 3]);
+  await dominoes.seat({ game, position: 3, player: "tio" });
+  expect((await dominoes._summary({ game }))[0].status).toBe("PAUSED");
+  await dominoes.seat({ game, position: 1, player: "prima" });
+  expect((await dominoes._summary({ game }))[0].status).toBe("ACTIVE");
+});
+
+test("vacate and seat refuse what does not make sense", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  await expect(dominoes.vacate({ game: "nope", player: "papo" })).rejects.toThrow();
+  await expect(dominoes.vacate({ game, player: "stranger" })).rejects.toThrow(NotInGame);
+  await expect(dominoes.seat({ game, position: 2, player: "tio" })).rejects.toThrow(SeatTaken);
+  await dominoes.vacate({ game, player: "papo" });
+  await expect(dominoes.vacate({ game, player: "papo" })).rejects.toThrow(NotInGame);
+  // Someone already playing cannot take a second seat, and a seat holds one person.
+  await expect(dominoes.seat({ game, position: 1, player: "nando" })).rejects.toThrow(AlreadyPlaying);
+  await dominoes.seat({ game, position: 1, player: "tio" });
+  await expect(dominoes.seat({ game, position: 1, player: "prima" })).rejects.toThrow(SeatTaken);
+  // A paused game can still be abandoned, and then nothing changes it.
+  await dominoes.vacate({ game, player: "tio" });
+  await dominoes.abandon({ game });
+  await expect(dominoes.seat({ game, position: 1, player: "tio" })).rejects.toThrow(GameNotActive);
+  await expect(dominoes.vacate({ game, player: "abuelo" })).rejects.toThrow(GameNotActive);
+  expect(await dominoes._vacancies({ game })).toEqual([]);
+});
+
+test("a player leaving at the same moment as a play loses neither", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  const { hands, ends } = await snapshot(dominoes, game);
+  const turnPlayer = await turnOf(dominoes, game);
+  const tile = hands[turnPlayer].find((t) => fits(t, ends!.right))!;
+  const leaver = seats.find((p) => p !== turnPlayer)!;
+  const [played, left] = await Promise.allSettled([
+    dominoes.play({ game, player: turnPlayer, tile, side: "RIGHT" }),
+    dominoes.vacate({ game, player: leaver }),
+  ]);
+  expect(left.status).toBe("fulfilled");
+  const log = (await dominoes._log({ game })).map((t) => t.move);
+  expect(log).toContain("LEFT");
+  // The play either counted, or was refused because the game had paused first.
+  expect(log.includes("PLAYED") && log.filter((m) => m === "PLAYED").length === 2).toBe(played.status === "fulfilled");
+});
+
+test("autoplay makes a legal move for whoever's turn it is, as the move chooser picks", async () => {
+  const offered: string[][] = [];
+  // Always picks the last option offered, and records what it was offered.
+  const last: MoveChooser = (options) => {
+    offered.push(options.map((o) => `${o.tile}:${o.side}`));
+    return options.at(-1)!;
+  };
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1), undefined, last);
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  const { hands, ends } = await snapshot(dominoes, game);
+  const turnPlayer = await turnOf(dominoes, game);
+  await expect(dominoes.autoplay({ game, player: seats.find((p) => p !== turnPlayer)! })).rejects.toThrow(NotYourTurn);
+  await dominoes.autoplay({ game, player: turnPlayer });
+  // Every tile that fits either end was offered, on each end it fits.
+  const expected = hands[turnPlayer].flatMap((t) =>
+    (["LEFT", "RIGHT"] as const).filter((side) => fits(t, side === "LEFT" ? ends!.left : ends!.right)).map((side) => `${t}:${side}`),
+  );
+  expect(offered[0].toSorted()).toEqual(expected.toSorted());
+  const [chosenTile] = offered[0].at(-1)!.split(":");
+  expect((await dominoes._log({ game })).at(-1)).toMatchObject({ player: turnPlayer, move: "PLAYED", tile: chosenTile });
+});
+
+test("a chooser that answers an illegal move gets a legal one played instead", async () => {
+  const cheat: MoveChooser = () => ({ tile: "9-9", side: "LEFT" });
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1), undefined, cheat);
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  const turnPlayer = await turnOf(dominoes, game);
+  await dominoes.autoplay({ game, player: turnPlayer });
+  expect((await dominoes._log({ game })).at(-1)).toMatchObject({ player: turnPlayer, move: "PLAYED" });
+});
+
+test("four seats played by autoplay alone finish a whole game by the rules", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(7));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "SHORT" });
+  for (let moves = 0; moves < 2000; moves++) {
+    const [turn] = await dominoes._turn({ game });
+    if (turn === undefined) break;
+    await dominoes.autoplay({ game, player: turn.player });
+  }
+  const [summary] = await dominoes._summary({ game });
+  expect(summary.status).toBe("FINISHED");
+  expect(Math.max(summary.scoreA, summary.scoreB)).toBeGreaterThanOrEqual(100);
+});
+
+test("_turn says how long the player whose turn it is has had to move", async () => {
+  const { clock, pass } = handClock();
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(1), clock);
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  pass(2500);
+  const turnPlayer = await turnOf(dominoes, game);
+  expect(await dominoes._turn({ game })).toEqual([{ player: turnPlayer, waitingMs: 2500 }]);
+  expect(await dominoes._running()).toEqual([{ game }]);
 });
 
 // Rule sets

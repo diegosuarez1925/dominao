@@ -1,6 +1,6 @@
 # Games
 
-A game of dominoes is played at a private table. Table and DominoPlaying know
+A game of dominoes is played at a table. Table and DominoPlaying know
 nothing of each other; this composition decides that the table is the game's place,
 and that the seats, in order, are the turn order, so the players in seats 0 and 2
 are partners against seats 1 and 3, as the lobby already tells them.
@@ -41,7 +41,13 @@ never anyone else's. The page asks for it every couple of seconds.
 Games.ViewGame at /games/view
 ```
 
-A game needs all four players, so when anyone
-[leaves the table](reaction:Games.AbandonGameWhenPlayerLeaves) or the host
-[closes it](reaction:Games.AbandonGameWhenTableCloses), the game being played there
-is abandoned.
+The view also says who holds each seat (a guest by name, or a bot by its bot name),
+how long since each guest's page last checked in (so the page can show who seems to
+have lost their connection), each empty seat with who left it and how long ago, how
+long a seat waits before a bot takes it, and, for a game of strangers, the rules
+Matchmaking matched them by.
+
+Someone getting up no longer ends the game: it pauses until their seat is taken, as
+described for [seats](Seats.md). The game is abandoned only when the host
+[closes the table](reaction:Games.AbandonGameWhenTableCloses), which also happens on
+its own once the last person has left.

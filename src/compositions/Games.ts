@@ -6,16 +6,20 @@
  * table is where a game is played and that its seats, in order, are the turn order.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, no, reaction, when, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
+import { ABSENT_MS, BOT_AFTER_MS } from "../timing.ts";
 import { sides, strings } from "./validators.ts";
 
-const { DominoPlaying, GuestSessioning, Table } = concepts;
+const { Botting, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
 
 /**
  * The game at the guest's table as that guest sees it: the scores, the board, whose
  * turn it is, everyone's tile count, their own hand (and nobody else's), every turn
- * so far, and how the last match ended.
+ * so far, and how the last match ended. Each seat says who holds it (a guest by name,
+ * or a bot by its bot name) and how long since that guest's page last checked in;
+ * each empty seat says who left it and how long ago, so the page can count down to
+ * the bot taking over. `publicRules` is set when strangers were matched into the game.
  */
 const GameView = former(
   "the game seen by (session)",
@@ -41,6 +45,14 @@ const GameView = former(
       player,
       tileCount,
       displayName,
+      botName,
+      idleMs,
+      vacantPosition,
+      leaver,
+      leaverName,
+      leaverBot,
+      vacantMs,
+      placeRules,
       resultMatch,
       winner,
       team,
@@ -55,6 +67,7 @@ const GameView = former(
       move,
       movedTile,
       moverName,
+      moverBot,
     },
   ) =>
     form({
@@ -63,9 +76,13 @@ const GameView = former(
           DominoPlaying._latestAt({ place: table }).is({ game }),
           DominoPlaying._summary({ game }).is({ rules, status, target, matchNumber, scoreA, scoreB, turnPlayer }),
           DominoPlaying._ruleset({ rules }).is({ description: rulesDescription }),
+          whether(Matchmaking._placeRules({ place: table }).is({ rules: placeRules })),
         )
         .form({
           game,
+          publicRules: placeRules,
+          botAfterMs: BOT_AFTER_MS,
+          absentAfterMs: ABSENT_MS,
           rules,
           rulesDescription,
           status,
@@ -82,11 +99,32 @@ const GameView = former(
           }),
           hand: each(DominoPlaying._hand({ game, player: session }).is({ tile })).form({ tile }),
           players: each(DominoPlaying._players({ game }).is({ position, player, tileCount }))
-            .where(GuestSessioning._getName({ session: player }).is({ displayName }))
-            .form({ position, player, displayName, tileCount }),
+            .where(
+              whether(GuestSessioning._getName({ session: player }).is({ displayName })),
+              whether(Botting._name({ bot: player }).is({ name: botName })),
+              whether(GuestSessioning._idleFor({ session: player }).is({ idleMs })),
+            )
+            .form({ position, player, displayName, botName, idleMs, tileCount }),
+          vacancies: each(DominoPlaying._vacancies({ game }).is({ position: vacantPosition, player: leaver, vacantMs }))
+            .where(
+              whether(GuestSessioning._getName({ session: leaver }).is({ displayName: leaverName })),
+              whether(Botting._name({ bot: leaver }).is({ name: leaverBot })),
+            )
+            .form({ position: vacantPosition, player: leaver, displayName: leaverName, botName: leaverBot, vacantMs }),
           log: each(DominoPlaying._log({ game }).is({ turn: turnNumber, matchNumber: turnMatch, player: mover, move, tile: movedTile }))
-            .where(GuestSessioning._getName({ session: mover }).is({ displayName: moverName }))
-            .form({ turn: turnNumber, matchNumber: turnMatch, player: mover, displayName: moverName, move, tile: movedTile }),
+            .where(
+              whether(GuestSessioning._getName({ session: mover }).is({ displayName: moverName })),
+              whether(Botting._name({ bot: mover }).is({ name: moverBot })),
+            )
+            .form({
+              turn: turnNumber,
+              matchNumber: turnMatch,
+              player: mover,
+              displayName: moverName,
+              botName: moverBot,
+              move,
+              tile: movedTile,
+            }),
           lastResult: each(
             DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
           ).form({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
@@ -165,13 +203,6 @@ const Play = endpoint(
   },
 );
 
-// A game needs all four players, so it stops when anyone gets up from the table.
-const AbandonGameWhenPlayerLeaves = reaction(({ table, game }) =>
-  when(Table.leave({}).responds({ table }))
-    .where(DominoPlaying._activeAt({ place: table }).is({ game }))
-    .then(DominoPlaying.abandon({ game })),
-);
-
 // Closing a table stops the game being played at it.
 const AbandonGameWhenTableCloses = reaction(({ table, code, game }) =>
   when(Table.close({ table }).responds({ code }))
@@ -186,6 +217,5 @@ export const composition = {
   ViewGame,
   StartGame,
   Play,
-  AbandonGameWhenPlayerLeaves,
   AbandonGameWhenTableCloses,
 };

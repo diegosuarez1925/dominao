@@ -5,7 +5,9 @@ import {
   LobbyNotFull,
   MatchmakingConcept,
   NoSuchLobby,
+  NoSuchPlace,
   NotQueued,
+  PlaceKnown,
 } from "../../src/concepts/Matchmaking.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
@@ -38,7 +40,7 @@ async function queue(players: string[], rules = "STANDARD") {
   const lobbies: string[] = [];
   for (const player of players) {
     advance(1000);
-    lobbies.push((await matchmaking.enqueue({ player, rules })).lobby);
+    lobbies.push((await matchmaking.enqueue({ player, rules, midway: false })).lobby);
   }
   return lobbies;
 }
@@ -46,7 +48,7 @@ async function queue(players: string[], rules = "STANDARD") {
 test("principle: four strangers fill a lobby, a leaver stops the countdown, and the full lobby launches", async () => {
   const [lobby, ...others] = await queue(["abuelo", "papo", "nando"]);
   expect(others).toEqual([lobby, lobby]);
-  expect(await matchmaking._entries({ lobby })).toEqual([{ player: "abuelo" }, { player: "papo" }, { player: "nando" }]);
+  expect(await matchmaking._entries({ lobby })).toEqual([{ player: "abuelo", midway: false }, { player: "papo", midway: false }, { player: "nando", midway: false }]);
   expect(await matchmaking._status({ lobby })).toEqual([{ rules: "STANDARD", full: false, secondsLeft: 0 }]);
 
   // The fourth fills it and the countdown starts.
@@ -84,7 +86,7 @@ test("a fifth player starts a new lobby rather than overfilling a full one", asy
   const lobbies = await queue(["a", "b", "c", "d", "e"]);
   expect(new Set(lobbies.slice(0, 4)).size).toBe(1);
   expect(lobbies[4]).not.toBe(lobbies[0]);
-  expect(await matchmaking._entries({ lobby: lobbies[4] })).toEqual([{ player: "e" }]);
+  expect(await matchmaking._entries({ lobby: lobbies[4] })).toEqual([{ player: "e", midway: false }]);
   expect(await matchmaking._lobbyOf({ player: "e" })).toEqual([{ lobby: lobbies[4] }]);
 });
 
@@ -95,10 +97,10 @@ test("players who leave free a seat, and the earliest lobby with room fills firs
   const [next] = await queue(["f"]);
   expect(next).toBe(lobbies[0]);
   expect(await matchmaking._entries({ lobby: lobbies[0] })).toEqual([
-    { player: "a" },
-    { player: "c" },
-    { player: "d" },
-    { player: "f" },
+    { player: "a", midway: false },
+    { player: "c", midway: false },
+    { player: "d", midway: false },
+    { player: "f", midway: false },
   ]);
 });
 
@@ -121,7 +123,7 @@ test("the last player to leave removes the lobby, and they can queue again", asy
 
 test("many players queueing at once never put more than four in a lobby", async () => {
   const players = Array.from({ length: 12 }, (_, i) => `p${i}`);
-  const results = await Promise.all(players.map((player) => matchmaking.enqueue({ player, rules: "STANDARD" })));
+  const results = await Promise.all(players.map((player) => matchmaking.enqueue({ player, rules: "STANDARD", midway: false })));
   const counts = new Map<string, number>();
   for (const { lobby } of results) counts.set(lobby, (counts.get(lobby) ?? 0) + 1);
   for (const [lobby, count] of counts) {
@@ -134,9 +136,9 @@ test("many players queueing at once never put more than four in a lobby", async 
 
 test("errors: queueing twice, leaving when not queued, and launching too early or a missing lobby", async () => {
   const [lobby] = await queue(["a"]);
-  await expect(matchmaking.enqueue({ player: "a", rules: "STANDARD" })).rejects.toThrow(AlreadyQueued);
-  await expect(matchmaking.enqueue({ player: "a", rules: "TO_100" })).rejects.toThrow(AlreadyQueued);
-  expect(await matchmaking._entries({ lobby })).toEqual([{ player: "a" }]);
+  await expect(matchmaking.enqueue({ player: "a", rules: "STANDARD", midway: false })).rejects.toThrow(AlreadyQueued);
+  await expect(matchmaking.enqueue({ player: "a", rules: "TO_100", midway: false })).rejects.toThrow(AlreadyQueued);
+  expect(await matchmaking._entries({ lobby })).toEqual([{ player: "a", midway: false }]);
 
   await expect(matchmaking.cancel({ player: "nobody" })).rejects.toThrow(NotQueued);
 
@@ -159,4 +161,39 @@ test("a full lobby launches once even when all four ask at the same moment", asy
   const outcomes = await Promise.allSettled([1, 2, 3, 4].map(() => matchmaking.launch({ lobby })));
   expect(outcomes.filter((o) => o.status === "fulfilled")).toHaveLength(1);
   for (const o of outcomes) if (o.status === "rejected") expect(o.reason).toBeInstanceOf(NoSuchLobby);
+});
+
+// Places where launched games are played, and players happy to join one midway
+
+test("principle: Matchmaking remembers where its games are played, until told to forget", async () => {
+  await matchmaking.adopt({ place: "t1", rules: "STANDARD" });
+  await matchmaking.adopt({ place: "t2", rules: "TO_100" });
+  expect(await matchmaking._placeRules({ place: "t1" })).toEqual([{ rules: "STANDARD" }]);
+  expect(await matchmaking._placeRules({ place: "a-private-table" })).toEqual([]);
+  expect(await matchmaking._places({ rules: "STANDARD" })).toEqual([{ place: "t1" }]);
+  await expect(matchmaking.adopt({ place: "t1", rules: "TO_100" })).rejects.toThrow(PlaceKnown);
+  await matchmaking.release({ place: "t1" });
+  expect(await matchmaking._places({ rules: "STANDARD" })).toEqual([]);
+  await expect(matchmaking.release({ place: "t1" })).rejects.toThrow(NoSuchPlace);
+});
+
+test("the longest waiting player happy to join midway is found, only under their rules", async () => {
+  await matchmaking.enqueue({ player: "fresh", rules: "STANDARD", midway: false });
+  expect(await matchmaking._midwayWaiting({ rules: "STANDARD" })).toEqual([]);
+  advance(1000);
+  await matchmaking.enqueue({ player: "early", rules: "STANDARD", midway: true });
+  advance(1000);
+  await matchmaking.enqueue({ player: "late", rules: "STANDARD", midway: true });
+  await matchmaking.enqueue({ player: "other", rules: "TO_100", midway: true });
+  expect(await matchmaking._midwayWaiting({ rules: "STANDARD" })).toEqual([{ player: "early" }]);
+  expect(await matchmaking._midwayWaiting({ rules: "TO_100" })).toEqual([{ player: "other" }]);
+  // They still wait in an ordinary lobby, with the others who chose those rules.
+  const [{ lobby }] = await matchmaking._lobbyOf({ player: "early" });
+  expect(await matchmaking._entries({ lobby })).toEqual([
+    { player: "fresh", midway: false },
+    { player: "early", midway: true },
+    { player: "late", midway: true },
+  ]);
+  await matchmaking.cancel({ player: "early" });
+  expect(await matchmaking._midwayWaiting({ rules: "STANDARD" })).toEqual([{ player: "late" }]);
 });

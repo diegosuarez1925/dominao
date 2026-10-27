@@ -1,8 +1,12 @@
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
+import { BottingConcept } from "./concepts/Botting.ts";
+import { DominoPlayingConcept } from "./concepts/DominoPlaying.ts";
 import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
 import { EXPIRY_INTERVAL_MS, expireIdleSessions } from "./expiry.ts";
+import { startTicker } from "./ticker.ts";
+import { TICK_MS } from "./timing.ts";
 import { policy } from "./http.ts";
 import { db } from "./db.ts";
 // The Vue page. Bun bundles it (with the Vue plugin from bunfig.toml) when the server
@@ -38,5 +42,9 @@ const sessions = new GuestSessioningConcept(db);
 setInterval(() => {
   expireIdleSessions(gateway, sessions).catch((error) => console.error("Expiring idle sessions failed:", error));
 }, EXPIRY_INTERVAL_MS);
+
+// Empty seats get bots, bots take their turns, and players who vanished are taken out
+// of their games, on a one-second timer.
+startTicker(gateway, { games: new DominoPlayingConcept(db), sessions, bots: new BottingConcept(db) }, TICK_MS);
 
 console.log(`Backend ready on ${server.url}`);
