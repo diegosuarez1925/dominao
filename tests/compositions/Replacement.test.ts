@@ -335,21 +335,24 @@ test("once a table of strangers closes, nobody is sent to it", async () => {
 
 test("the ticker's endpoints change nothing when asked early, or about the wrong seat or player", async () => {
   const { guests, table } = await privateGame();
-  const [abuelo, papo] = guests;
+  const [abuelo] = guests;
   const { game, turnPlayer } = await view(abuelo);
+  // Someone other than the host and whoever's turn it is, so the turn is still theirs after.
+  const papo = guests.find((g) => g !== abuelo && g.session !== turnPlayer)!;
   const conflict = { status: 409, body: { error: "CONFLICT" } };
   // A seat nobody left, a player who is here, and a person's turn.
-  expect(await call("/games/seat-bot", { game, position: 1 })).toEqual(conflict);
+  const seat = guests.indexOf(papo);
+  expect(await call("/games/seat-bot", { game, position: seat })).toEqual(conflict);
   expect(await call("/games/drop-absent", { game, player: papo.session })).toEqual(conflict);
   expect(await call("/games/bot-move", { game })).toEqual(conflict);
   // A seat that has not waited long enough yet.
   await call("/tables/leave", { token: papo.token, table });
   pass(BOT_AFTER_MS - 1);
   await checkIn(...guests);
-  expect(await call("/games/seat-bot", { game, position: 1 })).toEqual(conflict);
+  expect(await call("/games/seat-bot", { game, position: seat })).toEqual(conflict);
   // Badly formed asks.
   expect((await call("/games/seat-bot", { game, position: 7 })).status).toBe(400);
-  expect((await call("/games/seat-bot", { game, position: "1" })).status).toBe(400);
+  expect((await call("/games/seat-bot", { game, position: String(seat) })).status).toBe(400);
   expect((await call("/games/drop-absent", { game })).status).toBe(400);
 
   const unchanged = await view(abuelo);

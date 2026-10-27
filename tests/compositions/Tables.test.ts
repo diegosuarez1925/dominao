@@ -163,5 +163,5 @@ test("a guest already seated cannot join a second table, nor leave one they are 
 test("a guest at a table cannot also wait for a game with strangers", async () => {
   const abuelo = await guest("Abuelo");
   await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" });
-  expect((await call("/matchmaking/enqueue", { token: abuelo.token, rules: "DEFAULT" })).status).toBe(409);
+  expect((await call("/matchmaking/enqueue", { token: abuelo.token, rules: "DEFAULT", midway: false })).status).toBe(409);
 });
