@@ -8,8 +8,8 @@ This README is the entry point. The first part is the P3 submission: the live ap
 
 | | |
 |---|---|
-| Deployed app | DEPLOY_LINK_HERE |
-| Journey recording (YouTube) | YOUTUBE_LINK_HERE |
+| Deployed app | https://dominao.mit-sdg.dev/ |
+| Journey recording (YouTube) | https://youtu.be/T4UbuC2Oy6U |
 | Updated user journey | [below](#updated-user-journey) |
 | Visual design study | [below](#visual-design-study) |
 | Code | [src](src) (concepts, syncs, server) and [web](web) (Vue frontend) |
@@ -24,7 +24,7 @@ The [recording](YOUTUBE_LINK_HERE) follows this journey in the deployed app. The
 
 ## Visual design study
 
-**Typography.** Bungee, a loud signage font, for the big moments (logo, titles, the ¡Capicú! banner), inspired by hand-painted Puerto Rican street signs. Nunito, a rounded sans-serif, for everything you read, in the style of friendly game apps.
+**Typography.** Bungee, a loud signage font, for the big moments (logo, titles, the ¡Capicú! banner), inspired by hand-painted Puerto Rican street signs. Nunito, a rounded sans-serif, for everything you read, in the style of friendly game apps and the rounded-off nature of dominos.
 
 ![Typography slide](visual-study/typography.png)
 
