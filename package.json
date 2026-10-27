@@ -22,6 +22,7 @@
     "check": "sync-engine check && sync-engine artifacts check && tsc --noEmit",
     "start": "bun src/main.ts",
     "preview": "NODE_ENV=production PORT=3000 bun src/main.ts",
+    "check:deploy": "bun scripts/validate-deploy.ts https://dominao.mit-sdg.dev",
     "check:design": "sync-engine check-design design/concepts/*.md design/types.md design/compositions/*.md",
     "dev": "bun run db:up && bun run --parallel dev:backend dev:frontend",
     "dev:backend": "bun --watch src/main.ts",

@@ -10,3 +10,6 @@ node_modules/
 # Demo videos go on YouTube; the class platform rejects commits over 50 MB.
 *.mov
 *.mp4
+
+# Saved by scripts/validate-deploy.ts --keep, holds test guests' tokens
+scripts/.deploy-check.json
