@@ -502,6 +502,11 @@ export class DominoPlayingConcept {
     return last === undefined ? [] : [{ ...last, prize: last.prize ?? 0, special: last.special ?? "NONE", bonus: last.bonus ?? 0 }];
   }
 
+  async _results({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    return (found?.results ?? []).map((r) => ({ ...r, prize: r.prize ?? 0, special: r.special ?? "NONE", bonus: r.bonus ?? 0 }));
+  }
+
   async _ruleset({ rules }: { rules: string }) {
     if (!Object.hasOwn(RULESETS, rules)) return [];
     const { target, description } = RULESETS[rules];

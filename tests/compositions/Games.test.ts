@@ -99,6 +99,13 @@ test("four guests play a whole game to 200 through the API", async () => {
   expect(final.status).toBe("FINISHED");
   expect(Math.max(final.scoreA, final.scoreB)).toBeGreaterThanOrEqual(200);
   expect(final.lastResult).toHaveLength(1);
+  // The score table: one line per match, in order, the last one the lastResult, adding up to the score.
+  const results = [...final.results].sort((a: { matchNumber: number }, b: { matchNumber: number }) => a.matchNumber - b.matchNumber);
+  expect(results.map((r: { matchNumber: number }) => r.matchNumber)).toEqual(results.map((_: unknown, index: number) => index + 1));
+  expect(results.at(-1)).toMatchObject({ matchNumber: final.lastResult[0].matchNumber, points: final.lastResult[0].points });
+  const scored = (team: number) =>
+    results.filter((r: { team: number }) => r.team === team).reduce((sum: number, r: { points: number }) => sum + r.points, 0);
+  expect([scored(0), scored(1)]).toEqual([final.scoreA, final.scoreB]);
   // Every turn is in the log, even repeated skips: one row per play (plus the opening
   // double six, which plays itself), numbered 1, 2, 3, … with no gaps.
   const turns = final.log.map((row: { turn: number }) => row.turn).sort((a: number, b: number) => a - b);

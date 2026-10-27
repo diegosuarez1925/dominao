@@ -276,7 +276,7 @@ const logOpen = remembered("dominao.logOpen", false);
 <template>
   <section class="game-table">
     <div class="area-score">
-      <ScoreCard v-model:open="scoreOpen" :game="game" :my-team="myTeam" :last-result="lastResult" :hold="!!celebrating" />
+      <ScoreCard v-model:open="scoreOpen" :game="game" :my-team="myTeam" :hold="!!celebrating" />
     </div>
 
     <div v-for="seat in others" :key="seat.side" :class="`area-${seat.side}`">

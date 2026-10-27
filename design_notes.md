@@ -537,3 +537,33 @@ Asked for: a how-to-play panel on the home screen, opened by a button.
   players". It now says the game pauses until someone (or, after 30 seconds, a bot)
   takes the seat, and it also warns during a paused game.
 - Frontend only: no concept, reaction or API changes.
+
+### A score table with every match
+
+Asked for: the in-game score card to list every match like a hand-written score
+sheet (one row per match), with matches won by Us and by Them told apart at a glance,
+and the two columns more clearly separated.
+
+- **Backend.** DominoPlaying already kept every match's result but only answered the
+  last one. A new query, `_results(game)`, answers them all in the order played (spec
+  in `design/concepts/DominoPlaying.md`). The game view (`GameView` in
+  `src/compositions/Games.ts`) now carries them as `results`. No new action, reaction
+  or endpoint, and no P1 concept changes: it is a read of state the concept already had.
+- **The card** (`web/components/ScoreCard.vue`) is drawn like the sheet at a real
+  domino table: an Us column and a Them column with the players' names, a numbered
+  line per match with the points written under whoever won it (and a small label for
+  a tranque, capicú or chuchazo), "tie · nobody scores" across both columns for a
+  tied tranque, and a "being played…" line for the current match. Totals and points
+  "to go" sit under a double line.
+- **Who won, at a glance:** a match we won is a blue cell with a blue rule on its
+  edge; one they won is a red cell with a red rule. The empty side stays blank paper.
+- **Less cluttered:** a ruled line down the middle between the columns, wider
+  padding, dashed lines between matches, and the match numbers in a narrow margin.
+- Long games scroll inside the card, keeping the column headings and the totals in
+  view, and it jumps to the newest line when one is written. While a match's
+  celebration plays, its line waits, as the scores already did. The fold-down "Us X vs
+  Them Y" bar is unchanged.
+- Tests: the whole-game concept test checks `_results` after every match (all of
+  them, in order, the newest equal to `_lastResult`) and that they add up to the final
+  score under every rule set; the Games composition test checks the same through the
+  view. 116 pass. Checked by hand at 1200 and 390 px wide.

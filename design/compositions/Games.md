@@ -34,7 +34,7 @@ Games.Play at /games/play
 Each player [looks at the game](reaction:Games.ViewGame) at their table through
 [their own view](former:Games.GameView): the scores, the line of tiles, whose turn
 it is, which rules are in play, how many tiles everyone holds, a log of every play
-and skip by name, how the last match ended (with any prize, and any Capicú or Chuchazo and its bonus), and their own hand, but
+and skip by name, how the last match ended (with any prize, and any Capicú or Chuchazo and its bonus), every match's result for the score table, and their own hand, but
 never anyone else's. The page asks for it every couple of seconds.
 
 ```endpoints

@@ -16,8 +16,9 @@ const { Botting, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts
 /**
  * The game at the guest's table as that guest sees it: the scores, the board, whose
  * turn it is, everyone's tile count, their own hand (and nobody else's), every turn
- * so far, and how the last match ended. Each seat says who holds it (a guest by name,
- * or a bot by its bot name) and how long since that guest's page last checked in;
+ * so far, how the last match ended, and how every match so far ended (for the score
+ * table). Each seat says who holds it (a guest by name, or a bot by its bot name) and
+ * how long since that guest's page last checked in;
  * each empty seat says who left it and how long ago, so the page can count down to
  * the bot taking over. `publicRules` is set when strangers were matched into the game.
  */
@@ -54,6 +55,12 @@ const GameView = former(
       vacantMs,
       placeRules,
       resultMatch,
+      pastMatch,
+      pastWinner,
+      pastTeam,
+      pastPoints,
+      pastSpecial,
+      pastEnding,
       winner,
       team,
       points,
@@ -128,6 +135,16 @@ const GameView = former(
           lastResult: each(
             DominoPlaying._lastResult({ game }).is({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
           ).form({ matchNumber: resultMatch, winner, team, points, prize, special, bonus, ending }),
+          results: each(
+            DominoPlaying._results({ game }).is({
+              matchNumber: pastMatch,
+              winner: pastWinner,
+              team: pastTeam,
+              points: pastPoints,
+              special: pastSpecial,
+              ending: pastEnding,
+            }),
+          ).form({ matchNumber: pastMatch, winner: pastWinner, team: pastTeam, points: pastPoints, special: pastSpecial, ending: pastEnding }),
         }),
     }),
 );

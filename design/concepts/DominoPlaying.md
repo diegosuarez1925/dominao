@@ -302,6 +302,11 @@ _lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: N
   ended. Points include the prize and the bonus. On a tied tranque, team is -1 and
   points, prize and bonus are 0, and special is NONE.
 
+_results(game: Game) : many (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)
+  Answers how every finished match of the game ended, in the order they were
+  played, as _lastResult describes each one; no rows before any match has ended or
+  when the game does not exist.
+
 _ruleset(rules: RuleSet) : optional (target: Number, description: String)
   Answers the target of a rule set and a sentence describing it, and no row when the
   rule set is not known.

@@ -93,6 +93,7 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 - `_board(game: Game) : many (tile: Tile, left: Number, right: Number, fromFirst: Number)`
 - `_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)`
 - `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)`
+- `_results(game: Game) : many (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)`
 - `_ruleset(rules: RuleSet) : optional (target: Number, description: String)`
 - `_rulesets() : many (rules: RuleSet, target: Number, description: String)`
 
@@ -215,7 +216,7 @@ Authored path: `Games.GameView`.
 - Covered by [Games](../design/compositions/Games.md), line 35.
 
 ```former
-Former "the game seen by (session)" — inputs (session); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, botName, idleMs, vacantPosition, leaver, leaverName, leaverBot, vacantMs, placeRules, resultMatch, winner, team, points, prize, special, bonus, ending, turnNumber, turnMatch, mover, move, movedTile, moverName, moverBot); promises exactly one record — forms:
+Former "the game seen by (session)" — inputs (session); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, botName, idleMs, vacantPosition, leaver, leaverName, leaverBot, vacantMs, placeRules, resultMatch, pastMatch, pastWinner, pastTeam, pastPoints, pastSpecial, pastEnding, winner, team, points, prize, special, bonus, ending, turnNumber, turnMatch, mover, move, movedTile, moverName, moverBot); promises exactly one record — forms:
   a record of
     games: each Table._tableOf (player: session) has (table)
       where DominoPlaying._latestAt (place: table) has (game)
@@ -269,6 +270,14 @@ Former "the game seen by (session)" — inputs (session); bindings (table, game,
             position
             tileCount
         publicRules: placeRules
+        results: each DominoPlaying._results (game) has (ending: pastEnding, matchNumber: pastMatch, points: pastPoints, special: pastSpecial, team: pastTeam, winner: pastWinner)
+          form a record of
+            ending: pastEnding
+            matchNumber: pastMatch
+            points: pastPoints
+            special: pastSpecial
+            team: pastTeam
+            winner: pastWinner
         rules
         rulesDescription
         scoreA

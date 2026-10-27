@@ -270,6 +270,8 @@ test("whole games follow the rules at every match end, finish at their target, a
     const { dominoes, game } = await seeded(100 + index, rules);
     let matches = 0;
     let ending: Ending | undefined;
+    const results: Ending["result"][] = [];
+    expect(await dominoes._results({ game })).toEqual([]);
     while (
       (ending = await playUntil(dominoes, game, (e) => {
         expect(e.result).toEqual(expectedResult(e, rules));
@@ -277,6 +279,9 @@ test("whole games follow the rules at every match end, finish at their target, a
       }))
     ) {
       matches++;
+      // Every match so far is listed, oldest first, the newest just as _lastResult tells it.
+      results.push(ending.result);
+      expect(await dominoes._results({ game })).toEqual(results);
       await expectNextMatch(ending, dominoes, game);
       const held = (await dominoes._players({ game })).reduce((sum, row) => sum + row.tileCount, 0);
       if (ending.summary.status === "ACTIVE") expect(held).toBe(28);
@@ -288,6 +293,9 @@ test("whole games follow the rules at every match end, finish at their target, a
     expect(Math.max(final.scoreA, final.scoreB)).toBeGreaterThanOrEqual(RULESETS[rules].target);
     expect(Math.max(ending!.before.scoreA, ending!.before.scoreB)).toBeLessThan(RULESETS[rules].target);
     expect(matches).toBeGreaterThan(1);
+    // The listed matches add up to the final score.
+    const scored = (team: number) => results.filter((r) => r.team === team).reduce((sum, r) => sum + r.points, 0);
+    expect([scored(0), scored(1)]).toEqual([final.scoreA, final.scoreB]);
     // A finished game takes no more plays, and no longer blocks a new one at its place.
     await expect(dominoes.play({ game, player: final.turnPlayer, tile: "0-0", side: "LEFT" })).rejects.toThrow(GameNotActive);
     await expect(dominoes.start({ place: `table-${rules}-${100 + index}`, ...players, rules })).resolves.toHaveProperty("game");
