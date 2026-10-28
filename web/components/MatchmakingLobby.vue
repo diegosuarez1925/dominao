@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { QueueLobby } from "../api.ts";
-import { launchQueue, leaveQueue, rulesDescription, rulesName, state } from "../session.ts";
+import { leaveQueue, rulesDescription, rulesName, state } from "../session.ts";
 import LobbyTable, { type LobbySeat } from "./LobbyTable.vue";
 
 const props = defineProps<{ queue: QueueLobby }>();
@@ -29,19 +29,9 @@ watch(
     secondsLeft.value = full ? seconds : 0;
   },
 );
-let asked = false;
+// At zero the server starts the game on its own; the table shows up on a later refresh.
 const timer = setInterval(() => {
-  if (!props.queue.full) {
-    asked = false;
-    return;
-  }
-  secondsLeft.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-  // At zero, ask the server to start the game (and again now and then, in case the
-  // clocks disagree and it said "not yet").
-  if (secondsLeft.value === 0 && !asked) {
-    asked = true;
-    launchQueue().finally(() => setTimeout(() => (asked = false), 1000));
-  }
+  secondsLeft.value = props.queue.full ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0;
 }, 250);
 onBeforeUnmount(() => clearInterval(timer));
 </script>
@@ -60,7 +50,7 @@ onBeforeUnmount(() => clearInterval(timer));
         <Transition name="pop" mode="out-in">
           <span :key="secondsLeft" class="countdown">{{ secondsLeft }}</span>
         </Transition>
-        <span class="table-label">Game starts soon</span>
+        <span class="table-label">{{ secondsLeft === 0 ? "Dealing the tiles…" : "Game starts soon" }}</span>
       </div>
       <div v-else class="stack center">
         <span class="spinner" aria-hidden="true" />

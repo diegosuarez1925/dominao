@@ -72,7 +72,6 @@ const guestEndpoints = (table: string, game: string, code: string): [string, Rec
   ["/matchmaking/view", {}],
   ["/matchmaking/enqueue", { rules: "DEFAULT", midway: false }],
   ["/matchmaking/leave", {}],
-  ["/matchmaking/launch", {}],
 ];
 
 test("every guest endpoint turns away an invented token, a signed-out token, and a session id", async () => {
@@ -178,11 +177,10 @@ test("a stranger matched into a game can only act as themself there", async () =
   const strangers = [];
   for (const displayName of ["Uno", "Dos", "Tres", "Cuatro"]) strangers.push(await guest(displayName));
   for (const s of strangers) await call("/matchmaking/enqueue", { token: s.token, rules: "DEFAULT", midway: false });
-  // Someone not in the lobby cannot launch it, even naming it.
+  // The server launches the lobby (as its timer would); nobody acts for a guest in doing so.
   const outsider = await guest("Fuera");
   const { lobby } = (await call("/matchmaking/view", { token: strangers[0].token })).body.queue.lobbies[0];
-  expect((await call("/matchmaking/launch", { token: outsider.token, lobby })).status).toBe(404);
-  expect((await call("/matchmaking/launch", { token: strangers[0].token })).status).toBe(200);
+  expect((await call("/matchmaking/launch", { lobby })).status).toBe(200);
 
   const game = await view(strangers[0].token);
   expect(game.status).toBe("ACTIVE");

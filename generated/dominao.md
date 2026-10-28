@@ -153,6 +153,7 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
 
 - `_lobbyOf(player: Player) : optional (lobby: Lobby)`
 - `_status(lobby: Lobby) : optional (rules: Rules, full: Flag, secondsLeft: Number)`
+- `_ready() : many (lobby: Lobby)`
 - `_entries(lobby: Lobby) : many (player: Player, midway: Flag)`
 - `_placeRules(place: Place) : optional (rules: Rules)`
 - `_places(rules: Rules) : many (place: Place)`
@@ -780,7 +781,7 @@ then
 ### Matchmaking.FillEmptySeatFromQueue
 
 Authored path: `Matchmaking.FillEmptySeatFromQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 59.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 61.
 
 ```reaction
 when DominoPlaying.vacate (place)
@@ -795,7 +796,7 @@ then
 ### Matchmaking.ForgetClosedTable
 
 Authored path: `Matchmaking.ForgetClosedTable`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 64.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 66.
 
 ```reaction
 when requested Table.close (table)
@@ -809,53 +810,24 @@ then
 
 Authored path: `Matchmaking.Launch`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 39.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
-when RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
-then
-  GuestSessioning.resume (token)
-```
-
-### Matchmaking.Launch:not-queued#2
-
-Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 39.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
-
-```reaction
-when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
-where
-  no Matchmaking._lobbyOf (player: session)
-  earlier, RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
-then
-  RequestBoundary.respond (error: "NOT_QUEUED", requestId)
-```
-
-### Matchmaking.Launch:queued#2
-
-Authored path: `Matchmaking.Launch`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 39.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
-
-```reaction
-when GuestSessioning.resume (token, displayName, session), asked by Matchmaking.Launch
-where
-  Matchmaking._lobbyOf (player: session) has (lobby)
+when RequestBoundary.request (lobby, path: "/matchmaking/launch", requestId)
 then
   Matchmaking.launch (lobby)
 ```
 
-### Matchmaking.Launch:queued#3
+### Matchmaking.Launch#2
 
 Authored path: `Matchmaking.Launch`.
 - Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 39.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 44.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 46.
 
 ```reaction
-when Matchmaking.launch (lobby, first, fourth, second, third), asked by Matchmaking.Launch:queued#2
+when Matchmaking.launch (lobby, first, fourth, second, third), asked by Matchmaking.Launch
 where
-  earlier, RequestBoundary.request (path: "/matchmaking/launch", requestId, token)
+  earlier, RequestBoundary.request (lobby, path: "/matchmaking/launch", requestId)
 then
   RequestBoundary.respond (lobby, requestId)
 ```
@@ -927,7 +899,7 @@ then
 ### Matchmaking.SeatLaunchedLobby
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when Matchmaking.launch (first, fourth, rules, second, third)
@@ -938,7 +910,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#2
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Matchmaking.SeatLaunchedLobby
@@ -951,7 +923,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#3
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when Table.open (code, host: first, rules, table), asked by Matchmaking.SeatLaunchedLobby#2
@@ -964,7 +936,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#4
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
@@ -977,7 +949,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#5
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
@@ -990,7 +962,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#6
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when Table.join (player: fourth, table), asked by Matchmaking.SeatLaunchedLobby#5
@@ -1005,7 +977,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#7
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 47.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
 
 ```reaction
 when DominoPlaying.start (first, fourth, place: table, rules, second, third), asked by Matchmaking.SeatLaunchedLobby#6
@@ -1016,7 +988,7 @@ then
 ### Matchmaking.SendMidwayGuestToOpenSeat
 
 Authored path: `Matchmaking.SendMidwayGuestToOpenSeat`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 57.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 59.
 
 ```reaction
 when Matchmaking.enqueue (midway: true, player, rules)
@@ -1057,7 +1029,7 @@ then
 ### Matchmaking.StopWaitingOnceSeated
 
 Authored path: `Matchmaking.StopWaitingOnceSeated`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 62.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 64.
 
 ```reaction
 when requested Table.join (player)
@@ -1731,7 +1703,7 @@ not listed here have no explicit input contract.
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`
 - `/matchmaking/enqueue` — requires `token`, `rules`, `midway`
-- `/matchmaking/launch` — requires `token`
+- `/matchmaking/launch` — requires `lobby`
 - `/matchmaking/leave` — requires `token`
 - `/matchmaking/view` — requires `token`
 - `/tables/close` — requires `token`, `table`

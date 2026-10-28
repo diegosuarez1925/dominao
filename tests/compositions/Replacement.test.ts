@@ -5,6 +5,7 @@ import { assembleApplication } from "../../src/assembly.ts";
 import { BottingConcept } from "../../src/concepts/Botting.ts";
 import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
 import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
+import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
 import { policy } from "../../src/http.ts";
 import { tick } from "../../src/ticker.ts";
 import { ABSENT_MS, BOT_AFTER_MS, BOT_MOVE_MS } from "../../src/timing.ts";
@@ -60,6 +61,7 @@ const runTicker = () =>
     games: new DominoPlayingConcept(testDb.db, undefined, clock),
     sessions: new GuestSessioningConcept(testDb.db, clock),
     bots: new BottingConcept(testDb.db),
+    matchmaking: new MatchmakingConcept(testDb.db, clock, undefined, 0),
   });
 
 const view = async (g: Guest) => (await call("/games/view", { token: g.token })).body.view.games[0];
@@ -82,7 +84,7 @@ async function publicGame(rules = "DEFAULT") {
   const guests = [];
   for (const name of ["Uno", "Dos", "Tres", "Cuatro"]) guests.push(await guest(name));
   for (const g of guests) await call("/matchmaking/enqueue", { token: g.token, rules, midway: false });
-  await call("/matchmaking/launch", { token: guests[0].token });
+  await runTicker();
   const { table, code } = await tableOf(guests[0]);
   return { guests, table, code };
 }

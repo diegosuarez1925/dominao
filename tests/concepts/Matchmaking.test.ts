@@ -63,11 +63,13 @@ test("principle: four strangers fill a lobby, a leaver stops the countdown, and 
   await queue(["tito"]);
   expect(await matchmaking._status({ lobby })).toEqual([{ rules: "STANDARD", full: true, secondsLeft: 10 }]);
 
-  // Not yet: the countdown is still running.
+  // Not yet: the countdown is still running, and the lobby is not ready.
   advance(9000);
   await expect(matchmaking.launch({ lobby })).rejects.toThrow(CountdownRunning);
+  expect(await matchmaking._ready()).toEqual([]);
   advance(1000);
   expect(await matchmaking._status({ lobby })).toEqual([{ rules: "STANDARD", full: true, secondsLeft: 0 }]);
+  expect(await matchmaking._ready()).toEqual([{ lobby }]);
 
   // Launching hands out the players in shuffled order (reversed here) and empties the queue.
   expect(await matchmaking.launch({ lobby })).toEqual({
@@ -79,6 +81,7 @@ test("principle: four strangers fill a lobby, a leaver stops the countdown, and 
   });
   expect(await matchmaking._status({ lobby })).toEqual([]);
   expect(await matchmaking._entries({ lobby })).toEqual([]);
+  expect(await matchmaking._ready()).toEqual([]);
   for (const player of ["abuelo", "nando", "cheo", "tito"]) expect(await matchmaking._lobbyOf({ player })).toEqual([]);
 });
 
@@ -164,6 +167,21 @@ test("a full lobby launches once even when all four ask at the same moment", asy
 });
 
 // Places where launched games are played, and players happy to join one midway
+
+test("_ready lists only full lobbies whose countdown is over, the one that filled first first", async () => {
+  const [standard] = await queue(["a", "b", "c", "d"]);
+  const [long] = await queue(["e", "f", "g", "h"], "LONG");
+  await queue(["i", "j"], "SHORT");
+  expect(await matchmaking._ready()).toEqual([]);
+  advance(COUNTDOWN - 4000);
+  // The STANDARD lobby filled four seconds before the LONG one.
+  expect(await matchmaking._ready()).toEqual([{ lobby: standard }]);
+  advance(4000);
+  expect(await matchmaking._ready()).toEqual([{ lobby: standard }, { lobby: long }]);
+  // A leaver takes a lobby off the list until it fills and counts down again.
+  await matchmaking.cancel({ player: "a" });
+  expect(await matchmaking._ready()).toEqual([{ lobby: long }]);
+});
 
 test("principle: Matchmaking remembers where its games are played, until told to forget", async () => {
   await matchmaking.adopt({ place: "t1", rules: "STANDARD" });

@@ -87,24 +87,18 @@ const LeaveQueue = endpoint(
 );
 
 /**
- * Any player in a full lobby may ask to launch it once its countdown is over;
- * Matchmaking refuses an early ask, and only the first of several asks succeeds.
+ * A full lobby is launched once its countdown is over. The server's own ticker asks,
+ * so the game starts even if every waiting page is in the background. Matchmaking
+ * refuses an early ask, and only the first of several asks succeeds, so anyone asking
+ * (or asking twice) changes nothing.
  */
 const Launch = endpoint(
   "/matchmaking/launch",
-  ({ token, session, displayName, lobby, first, second, third, fourth }) =>
-    receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(
-        where(Matchmaking._lobbyOf({ player: session }).is({ lobby }))
-          .then(Matchmaking.launch({ lobby }).responds({ first, second, third, fourth }))
-          .then(respond({ lobby }))
-          .named("queued"),
-        where(no(Matchmaking._lobbyOf({ player: session })))
-          .then(respond({ error: "NOT_QUEUED" }))
-          .named("not-queued"),
-      ),
-  { input: { required: ["token"] }, validators: { input: strings("token") } },
+  ({ lobby, first, second, third, fourth }) =>
+    receive({ lobby })
+      .then(Matchmaking.launch({ lobby }).responds({ first, second, third, fourth }))
+      .then(respond({ lobby })),
+  { input: { required: ["lobby"] }, validators: { input: strings("lobby") } },
 );
 
 // A launched lobby becomes a table: the first player opens it under a fresh code and

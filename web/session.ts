@@ -282,23 +282,6 @@ export async function leaveQueue() {
   });
 }
 
-/**
- * Asks to start the game once the countdown shows zero. Every waiting tab asks; the
- * server refuses an early ask and lets only the first one through, so refusals here
- * are expected and not shown.
- */
-export async function launchQueue() {
-  const me = state.me;
-  if (me === null || state.queue === null) return;
-  try {
-    const result = await client.matchmaking.launch({ token: me.token });
-    if (!("error" in result)) startingUntil = Date.now() + STARTING_WAIT_MS;
-  } catch {
-    // The refresh below says whether the server can be reached.
-  }
-  await refresh();
-}
-
 export async function startGame() {
   await act(async () => {
     const result = await send(() => client.games.start({ token: state.me!.token }), {

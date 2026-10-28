@@ -35,10 +35,12 @@ game starts, which also stops a running countdown. A guest who ends their sessio
 Matchmaking.LeaveQueue at /matchmaking/leave
 ```
 
-When the countdown of a full lobby reaches zero, any player waiting in it can
-[launch it](reaction:Matchmaking.Launch); Matchmaking refuses an early launch, and
-when several players ask at once only the first succeeds. A guest waiting nowhere is
-answered `NOT_QUEUED`.
+When the countdown of a full lobby reaches zero, the server
+[launches it](reaction:Matchmaking.Launch) on its own: its one-second ticker asks
+Matchmaking which full lobbies are ready and asks to launch each, so the game starts
+even if every waiting page is in the background. Nobody's page asks. Matchmaking
+refuses an early launch, and when several asks arrive at once only the first
+succeeds, so asking from outside changes nothing.
 
 ```endpoints
 Matchmaking.Launch at /matchmaking/launch

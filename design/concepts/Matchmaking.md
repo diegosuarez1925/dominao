@@ -132,6 +132,10 @@ _status(lobby: Lobby) : optional (rules: Rules, full: Flag, secondsLeft: Number)
   in its countdown (0 when it is not full or the countdown has run out); no row when
   the lobby does not exist.
 
+_ready() : many (lobby: Lobby)
+  Answers every full lobby whose countdown has run out, so it can be launched, the
+  one that filled first first; no rows when there is none.
+
 _entries(lobby: Lobby) : many (player: Player, midway: Flag)
   Answers the players waiting in the lobby in the order they joined, with whether
   each would join a game midway, and no rows when the lobby does not exist.

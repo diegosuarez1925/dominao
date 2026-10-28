@@ -567,3 +567,29 @@ and the two columns more clearly separated.
   them, in order, the newest equal to `_lastResult`) and that they add up to the final
   score under every rule set; the Games composition test checks the same through the
   view. 116 pass. Checked by hand at 1200 and 390 px wide.
+
+### The server starts games of strangers
+
+Asked for: matchmaking games are started by the server; private games are still
+started by their host.
+
+- **Before:** every waiting page counted down and, at zero, asked
+  `/matchmaking/launch` with its token; the first ask launched the lobby. A game of
+  strangers only started if at least one of their tabs was open and awake.
+- **Now:** the server's one-second ticker (`src/ticker.ts`, the same one that seats
+  bots) asks Matchmaking which full lobbies are ready and launches each one. The page
+  only shows the countdown, then "Dealing the tiles…" until the table appears.
+- **Concept change:** Matchmaking gets one query, `_ready()`: every full lobby whose
+  countdown has run out, the one that filled first first. `launch` is unchanged and
+  still refuses an early ask (`COUNTDOWN_RUNNING`), and only the first of several asks
+  succeeds.
+- **Endpoint change:** `/matchmaking/launch` now takes the `lobby` and no token, like
+  the other ticker endpoints (`/games/seat-bot` and friends). It is safe to leave open:
+  it can only do what the server is about to do anyway, at the time it would do it.
+  A launched lobby is still seated by `SeatLaunchedLobby` exactly as before.
+- Tests: the Matchmaking composition tests now run the ticker by hand instead of
+  having players launch (too early it leaves the lobby alone; once the countdown is
+  over the game starts with nobody asking; several ready lobbies launch in one tick,
+  each into its own game; an unknown or missing lobby is refused); a concept test for
+  `_ready`. 118 pass. Checked in a browser: four queued guests got their game with no
+  page asking.

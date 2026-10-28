@@ -204,12 +204,12 @@ export type DominaoWire = {
   };
   "/matchmaking/launch": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
     };
-    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "CODE_IN_USE" | "COUNTDOWN_RUNNING" | "DUPLICATE_PLAYER" | "GAME_IN_PROGRESS" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "INVALID_LENGTH" | "LOBBY_NOT_FULL" | "NOT_IN_GAME" | "NOT_QUEUED" | "NO_SUCH_GAME" | "NO_SUCH_LOBBY" | "NO_SUCH_TABLE" | "PLACE_KNOWN" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_RULES" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "CODE_IN_USE" | "COUNTDOWN_RUNNING" | "DUPLICATE_PLAYER" | "GAME_IN_PROGRESS" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "INVALID_LENGTH" | "LOBBY_NOT_FULL" | "NOT_IN_GAME" | "NOT_QUEUED" | "NO_SUCH_GAME" | "NO_SUCH_LOBBY" | "NO_SUCH_TABLE" | "PLACE_KNOWN" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_RULES" };
   };
   "/matchmaking/leave": {
     input: {
@@ -499,12 +499,12 @@ export type DominaoWireHttp = {
   };
   "/matchmaking/launch": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["launch"]>[0], ["lobby"]>>;
     };
-    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" };
   };
   "/matchmaking/leave": {
     input: {

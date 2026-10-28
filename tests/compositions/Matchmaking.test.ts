@@ -2,18 +2,25 @@ import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "../../src/assembly.ts";
+import { BottingConcept } from "../../src/concepts/Botting.ts";
+import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
+import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
+import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
 import { policy } from "../../src/http.ts";
+import { tick } from "../../src/ticker.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
 let testDb: TestDb;
 let api: (request: Request) => Promise<Response>;
+let gateway: ReturnType<typeof createGateway>;
 // A short countdown, so tests can wait it out.
 const COUNTDOWN_MS = 300;
 
 beforeAll(async () => {
   testDb = await openTestDb();
   const application = assembleApplication(testDb.db, { matchmakingCountdownMs: COUNTDOWN_MS });
-  api = createHttpHandler({ application, gateway: createGateway({ application }), policy });
+  gateway = createGateway({ application });
+  api = createHttpHandler({ application, gateway, policy });
 }, 120_000);
 
 beforeEach(async () => {
@@ -48,6 +55,15 @@ const tableOf = async (guest: Guest) => (await call("/tables/lobby", { token: gu
 const gameOf = async (guest: Guest) => (await call("/games/view", { token: guest.token })).body.view.games[0];
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** What the server's one-second timer does, run once: it launches lobbies whose countdown is over. */
+const runTicker = () =>
+  tick(gateway, {
+    games: new DominoPlayingConcept(testDb.db),
+    sessions: new GuestSessioningConcept(testDb.db),
+    bots: new BottingConcept(testDb.db),
+    matchmaking: new MatchmakingConcept(testDb.db, undefined, undefined, COUNTDOWN_MS),
+  });
+
 test("four strangers fill a lobby, count down, and are seated at a new table with a game started", async () => {
   const players = await guests("Abuelo", "Papo", "Nando", "Cheo");
   const lobbies = [];
@@ -59,12 +75,15 @@ test("four strangers fill a lobby, count down, and are seated at a new table wit
   expect(waiting.rules).toBe("DEFAULT");
   expect(waiting.players.map((p: { displayName: string }) => p.displayName).sort()).toEqual(["Abuelo", "Cheo", "Nando", "Papo"]);
 
-  // Too early: refused, and everyone is still waiting.
-  expect((await call("/matchmaking/launch", { token: players[1].token })).status).toBe(409);
+  // Too early: the server's timer leaves the lobby alone, and asking from outside is refused.
+  await runTicker();
+  expect(await queueOf(players[1])).toBeDefined();
+  expect((await call("/matchmaking/launch", { lobby: waiting.lobby })).body).toEqual({ error: "CONFLICT" });
   expect(await queueOf(players[1])).toBeDefined();
 
+  // Once the countdown is over the server launches it, with no page asking.
   await wait(COUNTDOWN_MS + 50);
-  expect((await call("/matchmaking/launch", { token: players[2].token })).status).toBe(200);
+  await runTicker();
 
   // Nobody waits any more; all four sit at the same table, with a game being played.
   const table = await tableOf(players[0]);
@@ -80,8 +99,10 @@ test("four strangers fill a lobby, count down, and are seated at a new table wit
   const bySeat = [...table.seats].sort((a: { position: number }, b: { position: number }) => a.position - b.position);
   expect(game.players.map((p: { player: string }) => p.player)).toEqual(bySeat.map((s: { player: string }) => s.player));
 
-  // A second launch finds nothing to launch.
-  expect((await call("/matchmaking/launch", { token: players[0].token })).body).toEqual({ error: "NOT_FOUND" });
+  // A second launch finds nothing to launch, and the timer has nothing left to do.
+  expect((await call("/matchmaking/launch", { lobby: waiting.lobby })).body).toEqual({ error: "NOT_FOUND" });
+  await runTicker();
+  expect((await tableOf(players[0])).table).toBe(table.table);
 });
 
 test("a guest can leave the queue before the game starts, which stops the countdown", async () => {
@@ -95,7 +116,9 @@ test("a guest can leave the queue before the game starts, which stops the countd
 
   // Without a fourth player the lobby cannot launch, however long they wait.
   await wait(COUNTDOWN_MS + 50);
-  expect((await call("/matchmaking/launch", { token: players[0].token })).status).toBe(409);
+  await runTicker();
+  expect((await queueOf(players[0])).players).toHaveLength(3);
+  expect((await call("/matchmaking/launch", { lobby: waiting.lobby })).body).toEqual({ error: "CONFLICT" });
 
   // A newcomer fills the seat and the countdown starts again.
   await call("/matchmaking/enqueue", { token: players[4].token, rules: "DEFAULT", midway: false });
@@ -128,13 +151,26 @@ test("queueing and sitting at a table exclude each other", async () => {
   expect((await call("/matchmaking/enqueue", { token: queued.token, rules: "DEFAULT", midway: false })).body).toEqual({ error: "CONFLICT" });
 });
 
-test("only someone waiting in the lobby can launch it, and an unknown guest is turned away", async () => {
-  const players = await guests("A", "B", "C", "D", "Outsider");
-  for (const guest of players.slice(0, 4)) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT", midway: false });
-  await wait(COUNTDOWN_MS + 50);
-  expect((await call("/matchmaking/launch", { token: players[4].token })).body).toEqual({ error: "NOT_FOUND" });
+test("launching only needs the lobby, and asking for an unknown one or with no lobby is refused", async () => {
+  const players = await guests("A", "B", "C", "D");
+  for (const guest of players) await call("/matchmaking/enqueue", { token: guest.token, rules: "DEFAULT", midway: false });
+  expect((await call("/matchmaking/launch", { lobby: "no-such-lobby" })).body).toEqual({ error: "NOT_FOUND" });
+  expect((await call("/matchmaking/launch", {})).status).toBe(400);
+  expect((await call("/matchmaking/launch", { lobby: 7 })).status).toBe(400);
   expect((await queueOf(players[0])).players).toHaveLength(4);
   expect((await call("/matchmaking/enqueue", { token: "not-a-token", rules: "DEFAULT", midway: false })).status).toBe(401);
+});
+
+test("the server launches every ready lobby in one go, each into its own game", async () => {
+  const players = await guests("A", "B", "C", "D", "E", "F", "G", "H");
+  for (const [i, guest] of players.entries()) {
+    await call("/matchmaking/enqueue", { token: guest.token, rules: i < 4 ? "DEFAULT" : "SHORT", midway: false });
+  }
+  await wait(COUNTDOWN_MS + 50);
+  await runTicker();
+  expect(await gameOf(players[0])).toMatchObject({ rules: "DEFAULT", status: "ACTIVE" });
+  expect(await gameOf(players[7])).toMatchObject({ rules: "SHORT", status: "ACTIVE" });
+  expect((await tableOf(players[0])).table).not.toBe((await tableOf(players[7])).table);
 });
 
 test("players are only matched with others who chose the same rules", async () => {
@@ -157,8 +193,9 @@ test("players are only matched with others who chose the same rules", async () =
 
   // Once launched, the DEFAULT game plays to 200.
   await wait(COUNTDOWN_MS + 50);
-  expect((await call("/matchmaking/launch", { token: players[0].token })).status).toBe(200);
+  await runTicker();
   expect(await gameOf(players[0])).toMatchObject({ rules: "DEFAULT", target: 200 });
+  expect(await queueOf(players[1])).toMatchObject({ rules: "LONG", full: false });
   expect((await tableOf(players[0])).rules).toBe("DEFAULT");
 });
 
@@ -166,7 +203,7 @@ test("a launched LONG lobby starts a game to 500", async () => {
   const players = await guests("A", "B", "C", "D");
   for (const guest of players) await call("/matchmaking/enqueue", { token: guest.token, rules: "LONG", midway: false });
   await wait(COUNTDOWN_MS + 50);
-  await call("/matchmaking/launch", { token: players[0].token });
+  await runTicker();
   expect(await gameOf(players[2])).toMatchObject({ rules: "LONG", target: 500, status: "ACTIVE" });
 });
 
