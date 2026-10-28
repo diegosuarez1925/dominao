@@ -153,6 +153,7 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
 
 - `_lobbyOf(player: Player) : optional (lobby: Lobby)`
 - `_status(lobby: Lobby) : optional (rules: Rules, full: Flag, secondsLeft: Number)`
+- `_lobbies() : many (lobby: Lobby)`
 - `_ready() : many (lobby: Lobby)`
 - `_entries(lobby: Lobby) : many (player: Player, midway: Flag)`
 - `_placeRules(place: Place) : optional (rules: Rules)`
@@ -189,6 +190,7 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Queries
 
+- `_tables() : many (table: Table)`
 - `_getByCode(code: String) : optional (table: Table)`
 - `_get(table: Table) : optional (host: Player, code: String, rules: Rules)`
 - `_seats(table: Table) : many (position: Number, player: Player)`
@@ -708,6 +710,81 @@ then
   RequestBoundary.respond (requestId, session, token: code)
 ```
 
+### Matchmaking.DropAbsentWaiter:away
+
+Authored path: `Matchmaking.DropAbsentWaiter`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 50.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 55.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/drop-absent", player, requestId)
+where
+  Matchmaking._lobbyOf (player)
+  GuestSessioning._idleFor (session: player) has (idleMs)
+  idleMs is at least 120000
+then
+  Matchmaking.cancel (player)
+```
+
+### Matchmaking.DropAbsentWaiter:away#2
+
+Authored path: `Matchmaking.DropAbsentWaiter`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 50.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 55.
+
+```reaction
+when Matchmaking.cancel (player, lobby), asked by Matchmaking.DropAbsentWaiter:away
+where
+  earlier, RequestBoundary.request (path: "/matchmaking/drop-absent", player, requestId)
+then
+  RequestBoundary.respond (lobby, requestId)
+```
+
+### Matchmaking.DropAbsentWaiter:not-a-guest
+
+Authored path: `Matchmaking.DropAbsentWaiter`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 50.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 55.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/drop-absent", player, requestId)
+where
+  Matchmaking._lobbyOf (player)
+  no GuestSessioning._idleFor (session: player)
+then
+  RequestBoundary.respond (error: "NOT_QUEUED", requestId)
+```
+
+### Matchmaking.DropAbsentWaiter:not-queued
+
+Authored path: `Matchmaking.DropAbsentWaiter`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 50.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 55.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/drop-absent", player, requestId)
+where
+  no Matchmaking._lobbyOf (player)
+then
+  RequestBoundary.respond (error: "NOT_QUEUED", requestId)
+```
+
+### Matchmaking.DropAbsentWaiter:present
+
+Authored path: `Matchmaking.DropAbsentWaiter`.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 50.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 55.
+
+```reaction
+when RequestBoundary.request (path: "/matchmaking/drop-absent", player, requestId)
+where
+  Matchmaking._lobbyOf (player)
+  GuestSessioning._idleFor (session: player) has (idleMs)
+  idleMs is less than 120000
+then
+  RequestBoundary.respond (error: "STILL_HERE", requestId)
+```
+
 ### Matchmaking.Enqueue
 
 Authored path: `Matchmaking.Enqueue`.
@@ -784,7 +861,7 @@ then
 ### Matchmaking.FillEmptySeatFromQueue
 
 Authored path: `Matchmaking.FillEmptySeatFromQueue`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 61.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 70.
 
 ```reaction
 when DominoPlaying.vacate (place)
@@ -799,7 +876,7 @@ then
 ### Matchmaking.ForgetClosedTable
 
 Authored path: `Matchmaking.ForgetClosedTable`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 66.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 75.
 
 ```reaction
 when requested Table.close (table)
@@ -902,7 +979,7 @@ then
 ### Matchmaking.SeatLaunchedLobby
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when Matchmaking.launch (first, fourth, rules, second, third)
@@ -913,7 +990,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#2
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when CodeGenerating.generate (context: "TABLE_CODES", size: 6, code), asked by Matchmaking.SeatLaunchedLobby
@@ -926,7 +1003,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#3
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when Table.open (code, host: first, rules, table), asked by Matchmaking.SeatLaunchedLobby#2
@@ -939,7 +1016,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#4
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when Table.join (player: second, table), asked by Matchmaking.SeatLaunchedLobby#3
@@ -952,7 +1029,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#5
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when Table.join (player: third, table), asked by Matchmaking.SeatLaunchedLobby#4
@@ -965,7 +1042,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#6
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when Table.join (player: fourth, table), asked by Matchmaking.SeatLaunchedLobby#5
@@ -980,7 +1057,7 @@ then
 ### Matchmaking.SeatLaunchedLobby#7
 
 Authored path: `Matchmaking.SeatLaunchedLobby`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 49.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 58.
 
 ```reaction
 when DominoPlaying.start (first, fourth, place: table, rules, second, third), asked by Matchmaking.SeatLaunchedLobby#6
@@ -991,7 +1068,7 @@ then
 ### Matchmaking.SendMidwayGuestToOpenSeat
 
 Authored path: `Matchmaking.SendMidwayGuestToOpenSeat`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 59.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 68.
 
 ```reaction
 when Matchmaking.enqueue (midway: true, player, rules)
@@ -1032,7 +1109,7 @@ then
 ### Matchmaking.StopWaitingOnceSeated
 
 Authored path: `Matchmaking.StopWaitingOnceSeated`.
-- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 64.
+- Covered by [Matchmaking](../design/compositions/Matchmaking.md), line 73.
 
 ```reaction
 when requested Table.join (player)
@@ -1340,8 +1417,8 @@ then
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 55.
-- Covered by [Tables](../design/compositions/Tables.md), line 62.
+- Covered by [Tables](../design/compositions/Tables.md), line 67.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -1352,8 +1429,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 55.
-- Covered by [Tables](../design/compositions/Tables.md), line 62.
+- Covered by [Tables](../design/compositions/Tables.md), line 67.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -1367,8 +1444,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 55.
-- Covered by [Tables](../design/compositions/Tables.md), line 62.
+- Covered by [Tables](../design/compositions/Tables.md), line 67.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -1381,8 +1458,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 55.
-- Covered by [Tables](../design/compositions/Tables.md), line 62.
+- Covered by [Tables](../design/compositions/Tables.md), line 67.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -1396,7 +1473,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 66.
 
 ```reaction
 when Table.leave (table)
@@ -1406,10 +1483,103 @@ then
   Table.close (table)
 ```
 
+### Tables.DropAbsentSitter:away
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+where
+  Table._tableOf (player) has (table)
+  no DominoPlaying._activeAt (place: table)
+  GuestSessioning._idleFor (session: player) has (idleMs)
+  idleMs is at least 120000
+then
+  Table.leave (player, table)
+```
+
+### Tables.DropAbsentSitter:away#2
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when Table.leave (player, table), asked by Tables.DropAbsentSitter:away
+where
+  earlier, RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+then
+  RequestBoundary.respond (requestId, table)
+```
+
+### Tables.DropAbsentSitter:not-a-guest
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+where
+  Table._tableOf (player) has (table)
+  no DominoPlaying._activeAt (place: table)
+  no GuestSessioning._idleFor (session: player)
+then
+  RequestBoundary.respond (error: "NOT_SEATED", requestId)
+```
+
+### Tables.DropAbsentSitter:not-seated
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+where
+  no Table._tableOf (player)
+then
+  RequestBoundary.respond (error: "NOT_SEATED", requestId)
+```
+
+### Tables.DropAbsentSitter:playing
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+where
+  Table._tableOf (player) has (table)
+  DominoPlaying._activeAt (place: table)
+then
+  RequestBoundary.respond (error: "GAME_IN_PROGRESS", requestId)
+```
+
+### Tables.DropAbsentSitter:present
+
+Authored path: `Tables.DropAbsentSitter`.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 60.
+
+```reaction
+when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
+where
+  Table._tableOf (player) has (table)
+  no DominoPlaying._activeAt (place: table)
+  GuestSessioning._idleFor (session: player) has (idleMs)
+  idleMs is less than 120000
+then
+  RequestBoundary.respond (error: "STILL_HERE", requestId)
+```
+
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 57.
+- Covered by [Tables](../design/compositions/Tables.md), line 69.
 
 ```reaction
 when Table.close (code)
@@ -1511,8 +1681,8 @@ then
 ### Tables.Leave
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 51.
-- Covered by [Tables](../design/compositions/Tables.md), line 61.
+- Covered by [Tables](../design/compositions/Tables.md), line 63.
+- Covered by [Tables](../design/compositions/Tables.md), line 73.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -1523,8 +1693,8 @@ then
 ### Tables.Leave#2
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 51.
-- Covered by [Tables](../design/compositions/Tables.md), line 61.
+- Covered by [Tables](../design/compositions/Tables.md), line 63.
+- Covered by [Tables](../design/compositions/Tables.md), line 73.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Leave
@@ -1537,8 +1707,8 @@ then
 ### Tables.Leave#3
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 51.
-- Covered by [Tables](../design/compositions/Tables.md), line 61.
+- Covered by [Tables](../design/compositions/Tables.md), line 63.
+- Covered by [Tables](../design/compositions/Tables.md), line 73.
 
 ```reaction
 when Table.leave (player: session, table), asked by Tables.Leave#2
@@ -1551,7 +1721,7 @@ then
 ### Tables.LeaveTableOnSessionEnd
 
 Authored path: `Tables.LeaveTableOnSessionEnd`.
-- Covered by [Tables](../design/compositions/Tables.md), line 52.
+- Covered by [Tables](../design/compositions/Tables.md), line 64.
 
 ```reaction
 when GuestSessioning.end (session)
@@ -1564,7 +1734,7 @@ then
 ### Tables.LeaveTableOnSessionExpire
 
 Authored path: `Tables.LeaveTableOnSessionExpire`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
+- Covered by [Tables](../design/compositions/Tables.md), line 65.
 
 ```reaction
 when GuestSessioning.expire (session)
@@ -1815,11 +1985,13 @@ not listed here have no explicit input contract.
 - `/guests/leave` — requires `token`
 - `/guests/me` — requires `token`
 - `/guests/start` — requires `displayName`
+- `/matchmaking/drop-absent` — requires `player`
 - `/matchmaking/enqueue` — requires `token`, `rules`, `midway`
 - `/matchmaking/launch` — requires `lobby`
 - `/matchmaking/leave` — requires `token`
 - `/matchmaking/view` — requires `token`
 - `/tables/close` — requires `token`, `table`
+- `/tables/drop-absent` — requires `player`
 - `/tables/join` — requires `token`, `code`
 - `/tables/leave` — requires `token`, `table`
 - `/tables/lobby` — requires `token`

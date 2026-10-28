@@ -5,6 +5,7 @@ import { BottingConcept } from "./concepts/Botting.ts";
 import { DominoPlayingConcept } from "./concepts/DominoPlaying.ts";
 import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
 import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
+import { TableConcept } from "./concepts/Table.ts";
 import { EXPIRY_INTERVAL_MS, expireIdleSessions } from "./expiry.ts";
 import { startTicker } from "./ticker.ts";
 import { TICK_MS } from "./timing.ts";
@@ -45,10 +46,17 @@ setInterval(() => {
 }, EXPIRY_INTERVAL_MS);
 
 // Full lobbies whose countdown is over are launched, empty seats get bots, bots take
-// their turns, and players who vanished are taken out of their games, on a one-second timer.
+// their turns, and players who vanished are taken out of their games, tables and the
+// queue, on a one-second timer.
 startTicker(
   gateway,
-  { games: new DominoPlayingConcept(db), sessions, bots: new BottingConcept(db), matchmaking: new MatchmakingConcept(db) },
+  {
+    games: new DominoPlayingConcept(db),
+    sessions,
+    bots: new BottingConcept(db),
+    matchmaking: new MatchmakingConcept(db),
+    tables: new TableConcept(db),
+  },
   TICK_MS,
 );
 

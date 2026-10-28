@@ -112,6 +112,9 @@ close(table: Table) : returns (code: String)
 ## Queries
 
 ```queries
+_tables() : many (table: Table)
+  Answers every table there is.
+
 _getByCode(code: String) : optional (table: Table)
   Answers the table with this code, and no row when no table has it.
 

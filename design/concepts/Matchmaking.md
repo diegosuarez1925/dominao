@@ -132,6 +132,9 @@ _status(lobby: Lobby) : optional (rules: Rules, full: Flag, secondsLeft: Number)
   in its countdown (0 when it is not full or the countdown has run out); no row when
   the lobby does not exist.
 
+_lobbies() : many (lobby: Lobby)
+  Answers every lobby there is, the oldest first.
+
 _ready() : many (lobby: Lobby)
   Answers every full lobby whose countdown has run out, so it can be launched, the
   one that filled first first; no rows when there is none.

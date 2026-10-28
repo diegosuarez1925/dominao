@@ -17,5 +17,15 @@ export const BOT_MOVE_MS = 1_500;
  */
 export const ABSENT_MS = 45_000;
 
+/**
+ * How long someone sitting at a table with no game yet, or waiting for strangers, can
+ * go unseen before they are taken out as if they had left. Longer than in a game:
+ * nobody is kept waiting yet, and a browser may slow a background tab's check-ins to
+ * about once a minute, so someone who only switched tabs must not be taken out. An
+ * open page that sits idle still checks in by itself, so only a closed (or offline)
+ * page reaches this.
+ */
+export const AWAY_BEFORE_GAME_MS = 2 * 60_000;
+
 /** How often the server looks for empty seats, bots' turns and absent players. */
 export const TICK_MS = 1_000;

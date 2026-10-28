@@ -46,6 +46,15 @@ succeeds, so asking from outside changes nothing.
 Matchmaking.Launch at /matchmaking/launch
 ```
 
+Likewise, a guest whose page has not checked in for two minutes (it was closed, or
+went offline) [stops waiting](reaction:Matchmaking.DropAbsentWaiter), asked by the
+same ticker, so no game is started around someone who is gone. A full lobby's
+countdown stops as if they had left. A guest whose page is open but idle keeps waiting.
+
+```endpoints
+Matchmaking.DropAbsentWaiter at /matchmaking/drop-absent
+```
+
 A launched lobby is [seated at a new table](reaction:Matchmaking.SeatLaunchedLobby):
 the app asks CodeGenerating for a table code, the first of the shuffled players opens
 the table under the lobby's rules, the other three join in order, and DominoPlaying

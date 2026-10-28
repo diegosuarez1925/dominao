@@ -6,8 +6,9 @@
  * Table knows nothing about the game; it only seats people.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
+import { AWAY_BEFORE_GAME_MS } from "../timing.ts";
 import { seats, strings } from "./validators.ts";
 
 const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
@@ -182,6 +183,51 @@ const SwapSeats = endpoint(
   },
 );
 
+/**
+ * Asked by the server's ticker: someone sitting at a table with no game being played
+ * whose page has not checked in for a while (it was closed, or went offline) is taken
+ * out as if they had left, so the table does not wait on them and, if they were the
+ * host, hosting passes on. An open page checks in by itself, so an idle guest stays.
+ * In a game the shorter wait in Seats applies instead (GAME_IN_PROGRESS here).
+ */
+const DropAbsentSitter = endpoint(
+  "/tables/drop-absent",
+  ({ player, table, idleMs }) =>
+    receive({ player }).then(
+      where(
+        Table._tableOf({ player }).is({ table }),
+        no(DominoPlaying._activeAt({ place: table })),
+        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        is.ge(idleMs, AWAY_BEFORE_GAME_MS),
+      )
+        .then(Table.leave({ table, player }))
+        .then(respond({ table }))
+        .named("away"),
+      where(
+        Table._tableOf({ player }).is({ table }),
+        no(DominoPlaying._activeAt({ place: table })),
+        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        is.lt(idleMs, AWAY_BEFORE_GAME_MS),
+      )
+        .then(respond({ error: "STILL_HERE" }))
+        .named("present"),
+      where(Table._tableOf({ player }).is({ table }), DominoPlaying._activeAt({ place: table }))
+        .then(respond({ error: "GAME_IN_PROGRESS" }))
+        .named("playing"),
+      where(
+        Table._tableOf({ player }).is({ table }),
+        no(DominoPlaying._activeAt({ place: table })),
+        no(GuestSessioning._idleFor({ session: player })),
+      )
+        .then(respond({ error: "NOT_SEATED" }))
+        .named("not-a-guest"),
+      where(no(Table._tableOf({ player })))
+        .then(respond({ error: "NOT_SEATED" }))
+        .named("not-seated"),
+    ),
+  { input: { required: ["player"] }, validators: { input: strings("player") } },
+);
+
 // When the last player leaves, nobody is left to close the table, so the app does.
 const CloseEmptyTable = reaction(({ table }) =>
   when(Table.leave({}).responds({ table }))
@@ -214,6 +260,7 @@ export const composition = {
   Open,
   JoinByCode,
   SwapSeats,
+  DropAbsentSitter,
   Leave,
   Close,
   CloseEmptyTable,

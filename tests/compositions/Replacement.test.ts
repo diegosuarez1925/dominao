@@ -6,9 +6,10 @@ import { BottingConcept } from "../../src/concepts/Botting.ts";
 import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
 import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
 import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
+import { TableConcept } from "../../src/concepts/Table.ts";
 import { policy } from "../../src/http.ts";
 import { tick } from "../../src/ticker.ts";
-import { ABSENT_MS, BOT_AFTER_MS, BOT_MOVE_MS } from "../../src/timing.ts";
+import { ABSENT_MS, AWAY_BEFORE_GAME_MS, BOT_AFTER_MS, BOT_MOVE_MS } from "../../src/timing.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
 // Someone getting up mid-game pauses it; a person who sits down carries on with their
@@ -62,6 +63,7 @@ const runTicker = () =>
     sessions: new GuestSessioningConcept(testDb.db, clock),
     bots: new BottingConcept(testDb.db),
     matchmaking: new MatchmakingConcept(testDb.db, clock, undefined, 0),
+    tables: new TableConcept(testDb.db),
   });
 
 const view = async (g: Guest) => (await call("/games/view", { token: g.token })).body.view.games[0];
@@ -361,4 +363,63 @@ test("the ticker's endpoints change nothing when asked early, or about the wrong
   expect(unchanged.status).toBe("PAUSED");
   expect(unchanged.players.every((p: { botName: string | null }) => p.botName === null)).toBe(true);
   expect(unchanged.turnPlayer).toBe(turnPlayer);
+});
+
+test("someone whose page closed is taken off a table with no game yet, and hosting passes on; an open idle page stays", async () => {
+  const [abuelo, papo, nando] = [await guest("Abuelo"), await guest("Papo"), await guest("Nando")];
+  const { table, code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
+  for (const g of [papo, nando]) await call("/tables/join", { token: g.token, code });
+  const seated = async () => (await tableOf(papo)).seats.map((s: { player: string }) => s.player);
+
+  // Abuelo (the host) closes his tab. Papo and Nando sit idle with theirs open, which keeps checking in.
+  for (let waited = 0; waited < AWAY_BEFORE_GAME_MS - 2_000; waited += 2_000) {
+    pass(2_000);
+    await checkIn(papo, nando);
+  }
+  await runTicker();
+  expect(await seated()).toEqual([abuelo.session, papo.session, nando.session]);
+  // Asking early changes nothing.
+  expect(await call("/tables/drop-absent", { player: abuelo.session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+
+  pass(2_000);
+  await checkIn(papo, nando);
+  await runTicker();
+  expect(await seated()).toEqual([papo.session, nando.session]);
+  expect((await tableOf(papo)).host).toBe(papo.session);
+  expect(await tableOf(abuelo)).toBeUndefined();
+  // His code still works for someone else, and the table keeps going.
+  expect((await tableOf(nando)).table).toBe(table);
+});
+
+test("a table whose last sitter's page closed is closed, and its code freed", async () => {
+  const solo = await guest("Solo");
+  const { code } = (await call("/tables/open", { token: solo.token, rules: "DEFAULT" })).body;
+  pass(AWAY_BEFORE_GAME_MS);
+  await runTicker();
+  expect(await tableOf(solo)).toBeUndefined();
+  const other = await guest("Otro");
+  expect((await call("/tables/join", { token: other.token, code })).body).toEqual({ error: "NOT_FOUND" });
+});
+
+test("a guest whose page closed stops waiting for strangers, which stops a countdown; an open idle page keeps waiting", async () => {
+  const [uno, dos, tres] = [await guest("Uno"), await guest("Dos"), await guest("Tres")];
+  for (const g of [uno, dos, tres]) await enqueue(g, "LONG", false);
+  pass(AWAY_BEFORE_GAME_MS - 1);
+  await checkIn(dos, tres);
+  await runTicker();
+  expect((await queueOf(dos)).players).toHaveLength(3);
+  pass(1);
+  await runTicker();
+  expect((await queueOf(dos)).players.map((p: { player: string }) => p.player)).toEqual([dos.session, tres.session]);
+  expect(await queueOf(uno)).toBeUndefined();
+  expect(await call("/matchmaking/drop-absent", { player: dos.session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect(await call("/matchmaking/drop-absent", { player: uno.session })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
+  expect((await call("/matchmaking/drop-absent", {})).status).toBe(400);
+});
+
+test("in a game the table sweep leaves seats to the game's own, shorter rule", async () => {
+  const { guests } = await privateGame();
+  expect(await call("/tables/drop-absent", { player: guests[1].session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect(await call("/tables/drop-absent", { player: "nobody" })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
+  expect((await call("/tables/drop-absent", { player: 7 })).status).toBe(400);
 });

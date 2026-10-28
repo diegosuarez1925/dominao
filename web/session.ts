@@ -44,9 +44,13 @@ let lastGame = "";
  * they are suddenly at no table the page can say why. Leaving on purpose clears it.
  */
 let playingAt: { code: string; public: boolean } | null = null;
+/** The code of the table the guest sits at while no game is being played there. */
+let sittingAt: string | null = null;
 /** When the server last answered a refresh, to tell "you were away" from "the table closed". */
 let lastAnswerAt = Date.now();
 const AWAY_GAP_MS = 20_000;
+/** Before a game the server waits two minutes; a page silent this long was what it saw. */
+const AWAY_BEFORE_GAME_GAP_MS = 100_000;
 /** When a launched lobby gives up waiting for its table to appear. */
 let startingUntil = 0;
 const STARTING_WAIT_MS = 8000;
@@ -161,9 +165,18 @@ export async function refresh() {
     }
     playingAt = null;
   }
+  // Taken off a table with no game yet: their page was closed or offline for minutes.
+  if (state.table === null && sittingAt !== null && gap >= AWAY_BEFORE_GAME_GAP_MS) {
+    say(`You were away too long, so you were taken off the table. If it's still open, join with code ${sittingAt} to sit back down.`);
+  }
+  sittingAt = null;
   const queue = await send(() => client.matchmaking.view({ token: me.token }));
   if (queue === undefined) return;
   const next = queue.queue.lobbies[0] ?? null;
+  // Out of a lobby that was still filling up: away too long, so they stopped waiting.
+  if (state.queue !== null && !state.queue.full && next === null && gap >= AWAY_BEFORE_GAME_GAP_MS) {
+    say("You were away too long, so you stopped waiting for a game. Look for one again whenever you're ready.");
+  }
   // A full lobby that vanished was launched; its table is on the way.
   if (state.queue?.full && next === null) startingUntil = Date.now() + STARTING_WAIT_MS;
   state.queue = next;
@@ -173,6 +186,7 @@ export async function refresh() {
   const game = view.view.games[0] ?? null;
   const running = game !== null && (game.status === "ACTIVE" || game.status === "PAUSED");
   playingAt = running && state.table ? { code: state.table.code, public: game.publicRules !== null } : null;
+  sittingAt = !running && state.table ? state.table.code : null;
   const text = JSON.stringify(game);
   if (text !== lastGame) {
     lastGame = text;
@@ -238,6 +252,7 @@ export async function leaveTable() {
   const table = state.table;
   if (table === null) return;
   playingAt = null;
+  sittingAt = null;
   await act(async () => {
     const result = await send(() => client.tables.leave({ token: state.me!.token, table: table.table }), {
       NOT_FOUND: "You had already left that table.",
@@ -262,6 +277,7 @@ export async function closeTable() {
   const table = state.table;
   if (table === null) return;
   playingAt = null;
+  sittingAt = null;
   await act(async () => {
     const result = await send(() => client.tables.close({ token: state.me!.token, table: table.table }), {
       FORBIDDEN: "Only the host can close the table. You can leave it instead.",

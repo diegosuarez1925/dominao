@@ -48,6 +48,18 @@ answered `NOT_HOST`, and swapping a seat with itself `SAME_SEAT`.
 Tables.SwapSeats at /tables/swap
 ```
 
+Someone who closes their page without pressing Leave should not hold a seat. An open
+page checks in every couple of seconds, even when nobody touches it, so the server's
+ticker [takes out someone whose page has not checked in for two minutes](reaction:Tables.DropAbsentSitter)
+from a table with no game being played, exactly as if they had left (so hosting
+passes on, and an empty table closes). The wait is generous because a browser may
+slow a background tab's check-ins to about once a minute. In a game, the shorter wait
+described for [seats](Seats.md) applies instead, and this answers `GAME_IN_PROGRESS`.
+
+```endpoints
+Tables.DropAbsentSitter at /tables/drop-absent
+```
+
 A player can [leave a table](reaction:Tables.Leave), and a guest who ends their
 session [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd), and so does one whose
 session [expires](reaction:Tables.LeaveTableOnSessionExpire). When the last one leaves, the

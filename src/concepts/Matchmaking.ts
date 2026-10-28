@@ -167,6 +167,11 @@ export class MatchmakingConcept {
     return [{ rules: found.rules, full, secondsLeft: full ? Math.max(0, Math.ceil(remaining / 1000)) : 0 }];
   }
 
+  async _lobbies() {
+    const found = await this.lobbies.find({}, { projection: { _id: 1 } }).sort({ openedAt: 1, _id: 1 }).toArray();
+    return found.map(({ _id }) => ({ lobby: _id }));
+  }
+
   /** Every full lobby whose countdown has run out, so it can be launched; oldest first. */
   async _ready() {
     const ready = new Date(this.clock().getTime() - this.countdownMs);

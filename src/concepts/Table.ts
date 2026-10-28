@@ -123,6 +123,11 @@ export class TableConcept {
     return { code: found.code };
   }
 
+  async _tables() {
+    const found = await this.tables.find({}, { projection: { _id: 1 } }).sort({ _id: 1 }).toArray();
+    return found.map(({ _id }) => ({ table: _id }));
+  }
+
   async _getByCode({ code }: { code: string }) {
     const found = await this.tables.findOne({ code });
     return found === null ? [] : [{ table: found._id }];

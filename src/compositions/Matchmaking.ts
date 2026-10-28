@@ -7,8 +7,9 @@
  * launched lobby becomes a table whose seats are the lobby's shuffled players.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
+import { AWAY_BEFORE_GAME_MS } from "../timing.ts";
 import { flags, strings } from "./validators.ts";
 
 const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
@@ -101,6 +102,41 @@ const Launch = endpoint(
   { input: { required: ["lobby"] }, validators: { input: strings("lobby") } },
 );
 
+/**
+ * Asked by the server's ticker: a guest waiting for strangers whose page has not
+ * checked in for a while (it was closed, or went offline) stops waiting, as if they
+ * had left the queue, so no game is started around someone who is gone. An open page
+ * checks in by itself, so an idle guest keeps waiting.
+ */
+const DropAbsentWaiter = endpoint(
+  "/matchmaking/drop-absent",
+  ({ player, lobby, idleMs }) =>
+    receive({ player }).then(
+      where(
+        Matchmaking._lobbyOf({ player }),
+        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        is.ge(idleMs, AWAY_BEFORE_GAME_MS),
+      )
+        .then(Matchmaking.cancel({ player }).responds({ lobby }))
+        .then(respond({ lobby }))
+        .named("away"),
+      where(
+        Matchmaking._lobbyOf({ player }),
+        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        is.lt(idleMs, AWAY_BEFORE_GAME_MS),
+      )
+        .then(respond({ error: "STILL_HERE" }))
+        .named("present"),
+      where(Matchmaking._lobbyOf({ player }), no(GuestSessioning._idleFor({ session: player })))
+        .then(respond({ error: "NOT_QUEUED" }))
+        .named("not-a-guest"),
+      where(no(Matchmaking._lobbyOf({ player })))
+        .then(respond({ error: "NOT_QUEUED" }))
+        .named("not-queued"),
+    ),
+  { input: { required: ["player"] }, validators: { input: strings("player") } },
+);
+
 // A launched lobby becomes a table: the first player opens it under a fresh code and
 // the lobby's rules, the others sit down in their shuffled order, and the game starts
 // by those rules with no host needed. Matchmaking remembers the table, so strangers
@@ -174,6 +210,7 @@ export const composition = {
   Enqueue,
   LeaveQueue,
   Launch,
+  DropAbsentWaiter,
   SeatLaunchedLobby,
   SendMidwayGuestToOpenSeat,
   FillEmptySeatFromQueue,

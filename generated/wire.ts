@@ -191,6 +191,15 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_NAME" | "TOKEN_IN_USE" };
   };
+  "/matchmaking/drop-absent": {
+    input: {
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>[0], ["player"]>]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_QUEUED" | "STILL_HERE" };
+  };
   "/matchmaking/enqueue": {
     input: {
       "midway": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["midway"]>>;
@@ -250,6 +259,15 @@ export type DominaoWire = {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
     };
     error: { error: AppWideError | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_HOST" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "UNKNOWN_SESSION" };
+  };
+  "/tables/drop-absent": {
+    input: {
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>[0], ["player"]>]>>;
+    };
+    output: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_IN_PROGRESS" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "STILL_HERE" | "TABLE_FULL" };
   };
   "/tables/join": {
     input: {
@@ -497,6 +515,15 @@ export type DominaoWireHttp = {
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" };
   };
+  "/matchmaking/drop-absent": {
+    input: {
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>[0], ["player"]>]>>;
+    };
+    output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" };
+  };
   "/matchmaking/enqueue": {
     input: {
       "midway": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["midway"]>>;
@@ -556,6 +583,15 @@ export type DominaoWireHttp = {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/tables/drop-absent": {
+    input: {
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>[0], ["player"]>]>>;
+    };
+    output: {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" };
   };
   "/tables/join": {
     input: {

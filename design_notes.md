@@ -625,3 +625,35 @@ starts, since until now join order alone decided the teams.
   swapping once the game starts; moving to an empty seat; a guest at no table); the
   access-control sweep now covers `/tables/swap`, and no stranger can rearrange a
   matched table. 121 pass. Checked in a browser at 1200 and 390 px.
+
+### Closed tabs no longer hold a seat before the game
+
+Asked for: someone who closes the tab at a table (without pressing Leave) should not
+leave everyone stuck, but someone sitting idle with the page open must stay.
+
+- **Before:** in a game, a page that stopped checking in for 45 s was taken out and
+  the game paused (Step 10). But at a table with no game yet, or in the queue for
+  strangers, a closed tab kept its place until the guest session expired (12 hours):
+  a private table could not fill, a host who left could not be replaced, and a lobby
+  could launch around someone who was gone.
+- **Now:** the server's one-second ticker also takes out, as if they had left, anyone
+  whose page has not checked in for **two minutes** while sitting at a table with no
+  game being played (`/tables/drop-absent`: hosting passes on, an empty table closes
+  and frees its code) or while waiting in the queue (`/matchmaking/drop-absent`: a full
+  lobby's countdown stops). Both endpoints check the time themselves and answer
+  `STILL_HERE` if asked early; the table one answers `GAME_IN_PROGRESS` during a game,
+  where the 45 s rule applies.
+- **Idle is not away.** An open page checks in every two seconds on its own, so a
+  guest who just sits there is never taken out. Two minutes (not 45 s) because nobody
+  is waiting on them yet, and because browsers may slow a background tab's timers to
+  about once a minute, so someone who only switched tabs is safe.
+- **Concept changes:** two listing queries the ticker needs, `Table._tables()` and
+  `Matchmaking._lobbies()`. No actions changed.
+- **Page:** if a page that was asleep or offline comes back to find it was taken off
+  its table or out of the queue, it says so (with the table code to sit back down).
+- Tests (clock moved by hand): a closed host tab is taken off after exactly two
+  minutes while the idle open pages stay, and hosting passes on; a lone sitter's table
+  closes and its code is freed; a closed tab leaves the queue while idle ones keep
+  waiting; early asks and asks during a game are refused. 125 pass. Checked live in a
+  browser: the host closed his tab, the other guest's page sat idle for 2 min 15 s,
+  and only the host was taken off.

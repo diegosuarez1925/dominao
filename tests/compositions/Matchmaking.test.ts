@@ -6,6 +6,7 @@ import { BottingConcept } from "../../src/concepts/Botting.ts";
 import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
 import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
 import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
+import { TableConcept } from "../../src/concepts/Table.ts";
 import { policy } from "../../src/http.ts";
 import { tick } from "../../src/ticker.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
@@ -62,6 +63,7 @@ const runTicker = () =>
     sessions: new GuestSessioningConcept(testDb.db),
     bots: new BottingConcept(testDb.db),
     matchmaking: new MatchmakingConcept(testDb.db, undefined, undefined, COUNTDOWN_MS),
+    tables: new TableConcept(testDb.db),
   });
 
 test("four strangers fill a lobby, count down, and are seated at a new table with a game started", async () => {
