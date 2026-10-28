@@ -58,12 +58,13 @@ const view = async (token: string) => {
 };
 
 /** Every endpoint that acts for a guest, with a body that is otherwise well formed. */
-const guestEndpoints = (table: string, game: string, code: string): [string, Record<string, string>][] => [
+const guestEndpoints = (table: string, game: string, code: string): [string, Record<string, unknown>][] => [
   ["/guests/me", {}],
   ["/guests/leave", {}],
   ["/tables/lobby", {}],
   ["/tables/open", { rules: "DEFAULT" }],
   ["/tables/join", { code }],
+  ["/tables/swap", { first: 1, second: 2 }],
   ["/tables/leave", { table }],
   ["/tables/close", { table }],
   ["/games/view", {}],
@@ -188,6 +189,8 @@ test("a stranger matched into a game can only act as themself there", async () =
   const { host } = (await call("/tables/lobby", { token: strangers[0].token })).body.lobby.tables[0];
   for (const s of strangers) {
     expect((await call("/games/start", { token: s.token })).status).toBe(s.session === host ? 409 : 403);
+    // Nor can anyone rearrange the drawn seats.
+    expect((await call("/tables/swap", { token: s.token, first: 0, second: 1 })).status).toBe(s.session === host ? 409 : 403);
   }
   // The outsider sees nothing of it.
   expect((await call("/games/view", { token: outsider.token })).body.view.games).toEqual([]);

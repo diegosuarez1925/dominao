@@ -181,6 +181,9 @@ Defined in [Table](../design/concepts/Table.md), line 1.
   - Refuses `TABLE_FULL`: That table is full.
 - `leave(table: Table, player: Player) : returns (table: Table)`
   - Refuses `NOT_SEATED`: That player is not sitting at that table.
+- `swap(table: Table, first: Number, second: Number) : returns (table: Table)`
+  - Refuses `NO_SUCH_TABLE`: There is no such table.
+  - Refuses `SAME_SEAT`: Pick two different seats.
 - `close(table: Table) : returns (code: String)`
   - Refuses `NO_SUCH_TABLE`: There is no such table.
 
@@ -1337,8 +1340,8 @@ then
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
-- Covered by [Tables](../design/compositions/Tables.md), line 50.
+- Covered by [Tables](../design/compositions/Tables.md), line 55.
+- Covered by [Tables](../design/compositions/Tables.md), line 62.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -1349,8 +1352,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
-- Covered by [Tables](../design/compositions/Tables.md), line 50.
+- Covered by [Tables](../design/compositions/Tables.md), line 55.
+- Covered by [Tables](../design/compositions/Tables.md), line 62.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -1364,8 +1367,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
-- Covered by [Tables](../design/compositions/Tables.md), line 50.
+- Covered by [Tables](../design/compositions/Tables.md), line 55.
+- Covered by [Tables](../design/compositions/Tables.md), line 62.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -1378,8 +1381,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 43.
-- Covered by [Tables](../design/compositions/Tables.md), line 50.
+- Covered by [Tables](../design/compositions/Tables.md), line 55.
+- Covered by [Tables](../design/compositions/Tables.md), line 62.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Close
@@ -1393,7 +1396,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
 
 ```reaction
 when Table.leave (table)
@@ -1406,7 +1409,7 @@ then
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 45.
+- Covered by [Tables](../design/compositions/Tables.md), line 57.
 
 ```reaction
 when Table.close (code)
@@ -1508,8 +1511,8 @@ then
 ### Tables.Leave
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 39.
-- Covered by [Tables](../design/compositions/Tables.md), line 49.
+- Covered by [Tables](../design/compositions/Tables.md), line 51.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -1520,8 +1523,8 @@ then
 ### Tables.Leave#2
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 39.
-- Covered by [Tables](../design/compositions/Tables.md), line 49.
+- Covered by [Tables](../design/compositions/Tables.md), line 51.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when GuestSessioning.resume (token, displayName, session), asked by Tables.Leave
@@ -1534,8 +1537,8 @@ then
 ### Tables.Leave#3
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 39.
-- Covered by [Tables](../design/compositions/Tables.md), line 49.
+- Covered by [Tables](../design/compositions/Tables.md), line 51.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when Table.leave (player: session, table), asked by Tables.Leave#2
@@ -1548,7 +1551,7 @@ then
 ### Tables.LeaveTableOnSessionEnd
 
 Authored path: `Tables.LeaveTableOnSessionEnd`.
-- Covered by [Tables](../design/compositions/Tables.md), line 40.
+- Covered by [Tables](../design/compositions/Tables.md), line 52.
 
 ```reaction
 when GuestSessioning.end (session)
@@ -1561,7 +1564,7 @@ then
 ### Tables.LeaveTableOnSessionExpire
 
 Authored path: `Tables.LeaveTableOnSessionExpire`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 53.
 
 ```reaction
 when GuestSessioning.expire (session)
@@ -1685,6 +1688,116 @@ then
   RequestBoundary.respond (lobby: former "the lobby of (session)" with (session), requestId)
 ```
 
+### Tables.SwapSeats
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  GuestSessioning.resume (token)
+```
+
+### Tables.SwapSeats:game-running#2
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.SwapSeats
+where
+  Table._tableOf (player: session) has (table)
+  Table._get (table) has (host: session)
+  DominoPlaying._activeAt (place: table)
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  RequestBoundary.respond (error: "GAME_IN_PROGRESS", requestId)
+```
+
+### Tables.SwapSeats:host-before-game#2
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.SwapSeats
+where
+  Table._tableOf (player: session) has (table)
+  Table._get (table) has (host: session)
+  no DominoPlaying._activeAt (place: table)
+  no Matchmaking._placeRules (place: table)
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  Table.swap (first, second, table)
+```
+
+### Tables.SwapSeats:host-before-game#3
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when Table.swap (first, second, table), asked by Tables.SwapSeats:host-before-game#2
+where
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  RequestBoundary.respond (requestId, table)
+```
+
+### Tables.SwapSeats:not-host#2
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.SwapSeats
+where
+  Table._tableOf (player: session) has (table)
+  no Table._get (table) has (host: session)
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  RequestBoundary.respond (error: "NOT_HOST", requestId)
+```
+
+### Tables.SwapSeats:not-seated#2
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.SwapSeats
+where
+  no Table._tableOf (player: session)
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  RequestBoundary.respond (error: "NOT_SEATED", requestId)
+```
+
+### Tables.SwapSeats:public-table#2
+
+Authored path: `Tables.SwapSeats`.
+- Covered by [Tables](../design/compositions/Tables.md), line 41.
+- Covered by [Tables](../design/compositions/Tables.md), line 48.
+
+```reaction
+when GuestSessioning.resume (token, displayName, session), asked by Tables.SwapSeats
+where
+  Table._tableOf (player: session) has (table)
+  Table._get (table) has (host: session)
+  no DominoPlaying._activeAt (place: table)
+  Matchmaking._placeRules (place: table)
+  earlier, RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
+then
+  RequestBoundary.respond (error: "PUBLIC_TABLE", requestId)
+```
+
 ## Endpoint input contracts
 
 Before recording an action ask, the boundary rejects a body that is not an
@@ -1711,3 +1824,4 @@ not listed here have no explicit input contract.
 - `/tables/leave` — requires `token`, `table`
 - `/tables/lobby` — requires `token`
 - `/tables/open` — requires `token`, `rules`
+- `/tables/swap` — requires `token`, `first`, `second`

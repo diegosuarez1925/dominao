@@ -593,3 +593,35 @@ started by their host.
   each into its own game; an unknown or missing lobby is refused); a concept test for
   `_ready`. 118 pass. Checked in a browser: four queued guests got their game with no
   page asking.
+
+### Choosing seats at a private table
+
+Asked for: a way to move people between seats at a private table before the game
+starts, since until now join order alone decided the teams.
+
+- **Concept change (Table):** a new action, `swap(table, first, second)`. Whoever sits
+  in one seat moves to the other and vice versa; either may be empty, so it also moves
+  one player to a free seat. It refuses `SAME_SEAT` for one seat twice and
+  `NO_SUCH_TABLE`. The host stays host wherever they sit. Table still knows nothing
+  of games: it is the composition that limits when swapping is allowed. This is the
+  one addition to the P1 Table concept, and the principle now includes it (Abuelo
+  swaps seats 1 and 2 to sit across from the brother he wants as partner).
+- **Endpoint:** `/tables/swap` (token, first, second). Only the host
+  (`NOT_HOST`), only while no game is ACTIVE or PAUSED at the table, because then
+  seats are its turn order (`GAME_IN_PROGRESS`), and not at a table of strangers,
+  whose seats were drawn at random (`PUBLIC_TABLE`). Seats must be whole numbers 0 to 3.
+  Starting a game is unchanged: DominoPlaying is still started with the table's seats
+  in order, so the swapped seats are the game's turn order and teams.
+- **Screen:** at a private table, before the game, the host taps a seat (it lifts and
+  gets a light-blue ring), then another, and the two swap; tapping the same seat
+  cancels. A line under the table says partners sit across from each other and how to
+  swap; the other players are told the host can do it.
+- Known limit: two swaps of the same seats sent at the very same moment are not
+  atomic. Only the host can swap, and their page sends one at a time, so this does
+  not come up in use.
+- Tests: concept tests (swap two players, move one to an empty seat, two empty seats,
+  host kept, `SAME_SEAT`, unknown table); composition tests (the host picks partners
+  and the game follows the new order; others are refused; bad seat numbers; no
+  swapping once the game starts; moving to an empty seat; a guest at no table); the
+  access-control sweep now covers `/tables/swap`, and no stranger can rearrange a
+  matched table. 121 pass. Checked in a browser at 1200 and 390 px.

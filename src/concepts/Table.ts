@@ -5,6 +5,7 @@ export class CodeInUse extends Error {}
 export class NoSuchTable extends Error {}
 export class TableFull extends Error {}
 export class NotSeated extends Error {}
+export class SameSeat extends Error {}
 
 interface TableDoc {
   _id: string;
@@ -89,6 +90,28 @@ export class TableConcept {
     if (found?.host === player) {
       const next = await this.seats.find({ table }).sort({ position: 1 }).limit(1).next();
       if (next !== null) await this.tables.updateOne({ _id: table }, { $set: { host: next.player } });
+    }
+    return { table };
+  }
+
+  /**
+   * Whoever sits at `first` moves to `second` and whoever sits at `second` moves to
+   * `first`; either seat may be empty, so this also moves one player to a free seat.
+   */
+  async swap({ table, first, second }: { table: string; first: number; second: number }) {
+    if (!(await this.tables.findOne({ _id: table }))) throw new NoSuchTable("There is no such table.");
+    if (first === second) throw new SameSeat("Pick two different seats.");
+    const atFirst = await this.seats.findOne({ table, position: first });
+    const atSecond = await this.seats.findOne({ table, position: second });
+    // Each table and position is unique, so one of the two steps aside while the other moves.
+    if (atFirst !== null && atSecond !== null) {
+      await this.seats.updateOne({ _id: atFirst._id }, { $set: { position: SEATS_PER_TABLE + first } });
+      await this.seats.updateOne({ _id: atSecond._id }, { $set: { position: first } });
+      await this.seats.updateOne({ _id: atFirst._id }, { $set: { position: second } });
+    } else if (atFirst !== null) {
+      await this.seats.updateOne({ _id: atFirst._id }, { $set: { position: second } });
+    } else if (atSecond !== null) {
+      await this.seats.updateOne({ _id: atSecond._id }, { $set: { position: first } });
     }
     return { table };
   }

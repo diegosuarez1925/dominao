@@ -246,6 +246,18 @@ export async function leaveTable() {
   });
 }
 
+/** The host swaps two seats (either may be empty) to choose who partners whom. */
+export async function swapSeats(first: number, second: number) {
+  await act(async () => {
+    const result = await send(() => client.tables.swap({ token: state.me!.token, first, second }), {
+      CONFLICT: "Seats can't change once the game has started.",
+      FORBIDDEN: "Only the host can move people between seats.",
+      NOT_FOUND: "You're no longer at this table.",
+    });
+    if (result !== undefined) say("");
+  });
+}
+
 export async function closeTable() {
   const table = state.table;
   if (table === null) return;

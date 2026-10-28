@@ -36,6 +36,18 @@ new arrivals appear without reloading.
 Tables.ShowLobby at /tables/lobby
 ```
 
+Seats are filled in the order people join, and partners sit across from each other
+(seats 0 and 2 against 1 and 3), so join order alone would pick the teams. The host
+can [swap any two seats](reaction:Tables.SwapSeats), or move someone to an empty one,
+to choose who partners whom. That is only while no game is being played at the table,
+since once one starts the seats are its turn order (`GAME_IN_PROGRESS`); a table
+Matchmaking seated strangers at keeps its drawn seats (`PUBLIC_TABLE`). Anyone else is
+answered `NOT_HOST`, and swapping a seat with itself `SAME_SEAT`.
+
+```endpoints
+Tables.SwapSeats at /tables/swap
+```
+
 A player can [leave a table](reaction:Tables.Leave), and a guest who ends their
 session [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd), and so does one whose
 session [expires](reaction:Tables.LeaveTableOnSessionExpire). When the last one leaves, the

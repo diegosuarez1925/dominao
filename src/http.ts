@@ -39,5 +39,6 @@ export const policy = httpPolicy({
     TOO_SOON: "CONFLICT",
     NOT_A_BOT: "CONFLICT",
     STILL_HERE: "CONFLICT",
+    SAME_SEAT: "INVALID_REQUEST",
   },
 });

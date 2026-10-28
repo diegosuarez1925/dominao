@@ -44,6 +44,7 @@ import {
   CodeInUse,
   NoSuchTable,
   NotSeated,
+  SameSeat,
   TableConcept,
   TableFull,
 } from "./concepts/Table.ts";
@@ -107,6 +108,7 @@ const table = registerConcept({
     CODE_IN_USE: CodeInUse,
     NO_SUCH_TABLE: NoSuchTable,
     NOT_SEATED: NotSeated,
+    SAME_SEAT: SameSeat,
     TABLE_FULL: TableFull,
   },
 });

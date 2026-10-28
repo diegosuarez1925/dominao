@@ -2,21 +2,32 @@
 // A square table seen from above, with one player on each side: the guest at the
 // bottom, then counter-clockwise (right, top, left). The middle of the table holds
 // whatever the lobby wants to show there, such as the join code or the countdown.
+// With `pickable`, each seat is a button, so the host can pick two seats to swap.
 import PlayerBadge from "./PlayerBadge.vue";
 
 export type LobbySeat = { name: string; note?: string } | null;
 
-/** The four seats, in the order bottom, right, top, left. */
-defineProps<{ seats: LobbySeat[] }>();
+/** The four seats, in the order bottom, right, top, left; `picked` is the index of a picked seat. */
+defineProps<{ seats: LobbySeat[]; pickable?: boolean; picked?: number | null }>();
+const emit = defineEmits<{ pick: [index: number] }>();
 const SIDES = ["bottom", "right", "top", "left"] as const;
 </script>
 
 <template>
   <div class="lobby-table">
     <div v-for="(side, index) in SIDES" :key="side" class="seat" :class="`seat--${side}`">
-      <Transition name="pop" mode="out-in">
-        <PlayerBadge :key="seats[index]?.name ?? 'empty'" :name="seats[index]?.name" :note="seats[index]?.note" />
-      </Transition>
+      <component
+        :is="pickable ? 'button' : 'div'"
+        class="seat-pick"
+        :class="{ pickable, picked: picked === index }"
+        :aria-pressed="pickable ? picked === index : undefined"
+        :aria-label="pickable ? `Seat of ${seats[index]?.name ?? 'nobody (empty)'}` : undefined"
+        @click="pickable && emit('pick', index)"
+      >
+        <Transition name="pop" mode="out-in">
+          <PlayerBadge :key="seats[index]?.name ?? 'empty'" :name="seats[index]?.name" :note="seats[index]?.note" />
+        </Transition>
+      </component>
     </div>
     <div class="table-top felt">
       <slot />
@@ -57,6 +68,34 @@ const SIDES = ["bottom", "right", "top", "left"] as const;
 .seat {
   min-width: 0;
   max-width: 100%;
+}
+
+.seat-pick {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  color: inherit;
+  background: none;
+}
+
+/* The host's seats: a dashed ring on hover, a solid light-blue ring once picked. */
+.pickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.pickable:hover,
+.pickable:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.55);
+}
+
+.pickable.picked {
+  box-shadow: 0 0 0 3px var(--color-accent);
+  transform: translateY(-2px);
 }
 
 .table-top {

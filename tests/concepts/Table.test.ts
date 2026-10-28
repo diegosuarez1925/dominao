@@ -4,6 +4,7 @@ import {
   CodeInUse,
   NoSuchTable,
   NotSeated,
+  SameSeat,
   TableConcept,
   TableFull,
 } from "../../src/concepts/Table.ts";
@@ -36,8 +37,18 @@ test("principle: four sit by code, a fifth is refused, the host passes on, and t
   expect(await tables._isFull({ table })).toEqual({ full: true });
   await expect(tables.join({ table, player: "stranger" })).rejects.toThrow(TableFull);
 
+  // Abuelo wants Papo as his partner, across from him: he swaps seats 1 and 2.
+  expect(await tables.swap({ table, first: 1, second: 2 })).toEqual({ table });
+  expect(await tables._seats({ table })).toEqual([
+    { position: 0, player: "abuelo" },
+    { position: 1, player: "nando" },
+    { position: 2, player: "papo" },
+    { position: 3, player: "cheo" },
+  ]);
+
+  // Abuelo leaves; Nando, now in the lowest seat, becomes host.
   await tables.leave({ table, player: "abuelo" });
-  expect(await tables._get({ table })).toEqual([{ host: "papo", code: "K7QF2M", rules: "LONG" }]);
+  expect(await tables._get({ table })).toEqual([{ host: "nando", code: "K7QF2M", rules: "LONG" }]);
 
   for (const player of ["papo", "nando", "cheo"]) await tables.leave({ table, player });
   expect(await tables._seats({ table })).toEqual([]);
@@ -86,6 +97,38 @@ test("unknown tables and players who are not seated are refused", async () => {
   await expect(tables.close({ table: "nope" })).rejects.toThrow(NoSuchTable);
   const { table } = await tables.open({ host: "abuelo", code: "AAAAAA", rules: "DEFAULT" });
   await expect(tables.leave({ table, player: "papo" })).rejects.toThrow(NotSeated);
+});
+
+test("swapping moves a player to an empty seat, keeps the host, and refuses the same seat or an unknown table", async () => {
+  const { table } = await tables.open({ host: "abuelo", code: "K7QF2M", rules: "LONG" });
+  await tables.join({ table, player: "papo" });
+  // An empty seat on either side: the one player just moves.
+  await tables.swap({ table, first: 1, second: 3 });
+  expect(await tables._seats({ table })).toEqual([
+    { position: 0, player: "abuelo" },
+    { position: 3, player: "papo" },
+  ]);
+  await tables.swap({ table, first: 2, second: 0 });
+  expect(await tables._seats({ table })).toEqual([
+    { position: 2, player: "abuelo" },
+    { position: 3, player: "papo" },
+  ]);
+  // Two empty seats: nothing to move, nothing changes.
+  await tables.swap({ table, first: 0, second: 1 });
+  expect(await tables._seats({ table })).toEqual([
+    { position: 2, player: "abuelo" },
+    { position: 3, player: "papo" },
+  ]);
+  // The host is still the host wherever he sits, and the next to join takes the lowest free seat.
+  expect((await tables._get({ table }))[0].host).toBe("abuelo");
+  expect(await tables.join({ table, player: "nando" })).toEqual({ position: 0 });
+  await expect(tables.swap({ table, first: 2, second: 2 })).rejects.toThrow(SameSeat);
+  await expect(tables.swap({ table: "no-such-table", first: 0, second: 1 })).rejects.toThrow(NoSuchTable);
+  expect(await tables._seats({ table })).toEqual([
+    { position: 0, player: "nando" },
+    { position: 2, player: "abuelo" },
+    { position: 3, player: "papo" },
+  ]);
 });
 
 test("closing a table unseats everyone still there", async () => {

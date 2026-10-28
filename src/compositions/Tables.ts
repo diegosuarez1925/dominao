@@ -1,6 +1,6 @@
 /**
- * Private tables: opening one under a fresh join code, joining by that code, and
- * leaving or closing it. Every endpoint resolves the guest's token first, so the
+ * Private tables: opening one under a fresh join code, joining by that code, the host
+ * arranging who sits where, and leaving or closing it. Every endpoint resolves the guest's token first, so the
  * player at the table is always the guest who asked, never someone they name.
  *
  * Table knows nothing about the game; it only seats people.
@@ -8,7 +8,7 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
-import { strings } from "./validators.ts";
+import { seats, strings } from "./validators.ts";
 
 const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
 
@@ -133,6 +133,55 @@ const Close = endpoint(
   { input: { required: ["token", "table"] }, validators: { input: strings("token", "table") } },
 );
 
+/**
+ * Seats are joined in order, and partners sit across from each other, so the host of
+ * a private table may swap any two seats (or move someone to an empty one) to choose
+ * the teams. Only while no game is being played there: once one starts, seats are its
+ * turn order. Tables Matchmaking seated strangers at keep their drawn seats.
+ */
+const SwapSeats = endpoint(
+  "/tables/swap",
+  ({ token, session, displayName, table, first, second }) =>
+    receive({ token, first, second })
+      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(
+        where(
+          Table._tableOf({ player: session }).is({ table }),
+          Table._get({ table }).is({ host: session }),
+          no(DominoPlaying._activeAt({ place: table })),
+          no(Matchmaking._placeRules({ place: table })),
+        )
+          .then(Table.swap({ table, first, second }).responds({ table }))
+          .then(respond({ table }))
+          .named("host-before-game"),
+        where(
+          Table._tableOf({ player: session }).is({ table }),
+          Table._get({ table }).is({ host: session }),
+          DominoPlaying._activeAt({ place: table }),
+        )
+          .then(respond({ error: "GAME_IN_PROGRESS" }))
+          .named("game-running"),
+        where(
+          Table._tableOf({ player: session }).is({ table }),
+          Table._get({ table }).is({ host: session }),
+          no(DominoPlaying._activeAt({ place: table })),
+          Matchmaking._placeRules({ place: table }),
+        )
+          .then(respond({ error: "PUBLIC_TABLE" }))
+          .named("public-table"),
+        where(Table._tableOf({ player: session }).is({ table }), no(Table._get({ table }).is({ host: session })))
+          .then(respond({ error: "NOT_HOST" }))
+          .named("not-host"),
+        where(no(Table._tableOf({ player: session })))
+          .then(respond({ error: "NOT_SEATED" }))
+          .named("not-seated"),
+      ),
+  {
+    input: { required: ["token", "first", "second"] },
+    validators: { input: seats(["first", "second"], strings("token")) },
+  },
+);
+
 // When the last player leaves, nobody is left to close the table, so the app does.
 const CloseEmptyTable = reaction(({ table }) =>
   when(Table.leave({}).responds({ table }))
@@ -164,6 +213,7 @@ export const composition = {
   ShowLobby,
   Open,
   JoinByCode,
+  SwapSeats,
   Leave,
   Close,
   CloseEmptyTable,

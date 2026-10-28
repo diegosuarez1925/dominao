@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type { Table } from "../api.ts";
 import { confirmAction } from "../dialog.ts";
-import { closeTable, leaveTable, rulesDescription, rulesName, startGame, state } from "../session.ts";
+import { closeTable, leaveTable, rulesDescription, rulesName, startGame, state, swapSeats } from "../session.ts";
 import LobbyTable, { type LobbySeat } from "./LobbyTable.vue";
 
 const props = defineProps<{ table: Table }>();
@@ -22,11 +22,31 @@ const seats = computed<LobbySeat[]>(() =>
   }),
 );
 const full = computed(() => props.table.seats.length === 4);
+
+// The host picks a seat, then another, and the two swap (either may be empty).
+// Seats are only arranged before a game: once it starts they are its turn order.
+const running = computed(() => state.game?.status === "ACTIVE" || state.game?.status === "PAUSED");
+const canArrange = computed(() => isHost.value && !running.value && props.table.seats.length > 1);
+const picked = ref<number | null>(null);
+watch(canArrange, (can) => {
+  if (!can) picked.value = null;
+});
+async function pick(index: number) {
+  if (picked.value === null) {
+    picked.value = index;
+    return;
+  }
+  const [from, to] = [picked.value, index];
+  picked.value = null;
+  if (from === to) return;
+  await swapSeats((mine.value + from) % 4, (mine.value + to) % 4);
+}
 const canStart = computed(() => isHost.value && full.value && state.game?.status !== "ACTIVE");
 const hostName = computed(() => props.table.seats.find((s) => s.player === props.table.host)?.displayName ?? "the host");
 const open = computed(() => 4 - props.table.seats.length);
 /** What the guest is waiting for, in one line. */
 const hint = computed(() => {
+  if (picked.value !== null) return "Now pick the seat to swap with. Pick the same seat again to cancel.";
   if (!full.value) return `Share the code with your friends. ${open.value === 1 ? "1 more player" : `${open.value} more players`} needed. You sit across from your partner.`;
   return isHost.value ? "Everyone's here. Start when you're ready." : `Everyone's here. Waiting for ${hostName.value} to start.`;
 });
@@ -49,7 +69,7 @@ async function close() {
         <strong>{{ rulesName(table.rules || "DEFAULT") }} rules.</strong> {{ rulesDescription(table.rules || "DEFAULT") }}
       </p>
     </header>
-    <LobbyTable :seats="seats">
+    <LobbyTable :seats="seats" :pickable="canArrange && !state.busy" :picked="picked" @pick="pick">
       <div class="stack center">
         <span class="table-label">Invite code</span>
         <span class="join-code">{{ table.code }}</span>
@@ -57,6 +77,10 @@ async function close() {
       </div>
     </LobbyTable>
     <p class="lobby-hint" role="status">{{ hint }}</p>
+    <p v-if="canArrange && picked === null" class="lobby-hint">
+      Partners sit across from each other. Tap two seats to swap them and choose the teams.
+    </p>
+    <p v-else-if="!isHost && !running" class="lobby-hint">Partners sit across from each other. The host can swap seats to choose the teams.</p>
     <div class="lobby-actions">
       <button v-if="isHost" class="btn" :disabled="!canStart || state.busy" @click="startGame">
         {{ full ? "Start game" : "Waiting for players…" }}

@@ -304,6 +304,17 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "ALREADY_SEATED" | "CODE_IN_USE" | "INVALID_INPUT" | "INVALID_LENGTH" | "IN_QUEUE" | "UNKNOWN_RULES" | "UNKNOWN_SESSION" };
   };
+  "/tables/swap": {
+    input: {
+      "first": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["first"]>>;
+      "second": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["second"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>>, ["table"]>]>>;
+    };
+    error: { error: AppWideError | "GAME_IN_PROGRESS" | "INVALID_INPUT" | "NOT_HOST" | "NOT_SEATED" | "NO_SUCH_TABLE" | "PUBLIC_TABLE" | "SAME_SEAT" | "UNKNOWN_SESSION" };
+  };
 };
 
 export type HttpAppWideError = never;
@@ -598,5 +609,16 @@ export type DominaoWireHttp = {
       "table": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>>, ["table"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/tables/swap": {
+    input: {
+      "first": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["first"]>>;
+      "second": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["second"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>>, ["table"]>]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
 };

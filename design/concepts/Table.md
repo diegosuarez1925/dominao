@@ -10,7 +10,9 @@ code, to play by the rules its host chose.
 Abuelo opens a table with the code "K7QF2M" and the rules he wants to play by, and
 sits in seat 0 as its host. His three
 brothers join the table they found by that code and fill seats 1, 2 and 3; a fifth
-person who tries to join is refused because the table is full. When Abuelo leaves,
+person who tries to join is refused because the table is full. Abuelo wants the
+brother in seat 1 as his partner, so he swaps seats 1 and 2, putting that brother
+across from him. When Abuelo leaves,
 the brother in the lowest seat becomes host. Once everyone has left, the table can
 be closed, which deletes it and hands back its code.
 
@@ -81,6 +83,19 @@ leave(table: Table, player: Player) : returns (table: Table)
   then
     remove player's seat
     if player was the host and others remain, make the remaining player with the lowest position the host
+    returns table
+
+swap(table: Table, first: Number, second: Number) : returns (table: Table)
+  where table is not in Tables
+  then
+    refuses NO_SUCH_TABLE "There is no such table."
+  where first and second are the same position
+  then
+    refuses SAME_SEAT "Pick two different seats."
+  where table is in Tables and first and second differ
+  then
+    the player seated at first, if any, moves to second
+    the player seated at second, if any, moves to first
     returns table
 
 close(table: Table) : returns (code: String)
