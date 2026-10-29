@@ -833,3 +833,19 @@ whose sections open over the home screen. Only the home screen changes.
   list (each tab kept its own rules), creating a private table, the code hint, the
   menu, account settings over the home screen, and Escape closing it. No horizontal
   scrolling on the phone.
+
+### Joining a private table from a button
+
+Asked for: the join form under the Private tab didn't fit; replace it with a "Join
+private table" button that pops up the code box, with a clear "OR" line between the
+create and join buttons.
+
+- Under Create private table: a "—— OR ——" line in white on the red background, then
+  a white **Join private table** button as wide as the bar, so creating and joining
+  read as a pair.
+- The button opens a small pop-up with the invite code box (cursor already in it), the
+  same hint for impossible codes, and Join table. Enter joins; Escape, the × or a tap
+  outside closes it.
+- Checked in a browser at 1200 and 390 px: the pop-up opens focused, the hint shows
+  for IIIIII, Escape closes it, and a real code lands in that table's lobby. No
+  horizontal scrolling.

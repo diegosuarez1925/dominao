@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The home screen: pick public or private games, each with its picture front and
 // centre, the rules beside one big button, and (for an account) a side menu.
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { CODE_PATTERN, findGame, joinTable, openTable, rulesName, state } from "../session.ts";
 import HowToPlay from "./HowToPlay.vue";
 import PrivateArt from "./PrivateArt.vue";
@@ -32,6 +32,14 @@ const tableRules = ref("DEFAULT");
 const target = (rules: string) => state.rulesets.find((row) => row.rules === rules)?.target;
 const code = ref("");
 const howOpen = ref(false);
+// Joining by code happens in a pop-up, with the cursor already in the code box.
+const joinOpen = ref(false);
+const codeInput = ref<HTMLInputElement | null>(null);
+watch(joinOpen, async (now) => {
+  if (!now) return;
+  await nextTick();
+  codeInput.value?.focus();
+});
 const menuOpen = ref(false);
 // Whether the player is happy to be dropped into a game of strangers already going on,
 // remembered on this device.
@@ -122,30 +130,43 @@ const codeHint = computed(() =>
         </span>
       </label>
 
-      <form v-else class="extra join" @submit.prevent="joinTable(code)">
-        <div class="divider">or join one</div>
-        <div class="row">
-          <div class="field">
-            <label class="field-label" for="join-code">Invite code</label>
-            <input
-              id="join-code"
-              v-model="code"
-              class="input input--code"
-              placeholder="ABC123"
-              maxlength="6"
-              autocomplete="off"
-              aria-describedby="join-code-hint"
-              required
-            />
-            <span id="join-code-hint" class="field-hint" :class="{ 'field-hint--error': codeHint }">
-              {{ codeHint || "6 characters, from the host's lobby screen." }}
-            </span>
-          </div>
-          <button class="btn btn--secondary" :disabled="state.busy || cleanCode.length !== 6">Join table</button>
-        </div>
-      </form>
+      <template v-else>
+        <div class="or-line" aria-hidden="true">or</div>
+        <button class="big-btn big-btn--light" :disabled="state.busy" @click="joinOpen = true">
+          <span class="big-btn-title big-btn-title--long">Join private table</span>
+          <span class="big-btn-sub">With the code from the host</span>
+        </button>
+      </template>
     </section>
   </div>
+  <Transition name="pop">
+    <div v-if="joinOpen" class="backdrop" @click.self="joinOpen = false" @keydown.esc="joinOpen = false">
+      <form class="panel join" role="dialog" aria-modal="true" aria-labelledby="join-title" @submit.prevent="joinTable(code)">
+        <header class="join-head">
+          <h2 id="join-title" class="panel-title">Join private table</h2>
+          <button type="button" class="join-close" aria-label="Close" @click="joinOpen = false">×</button>
+        </header>
+        <div class="field">
+          <label class="field-label" for="join-code">Invite code</label>
+          <input
+            id="join-code"
+            ref="codeInput"
+            v-model="code"
+            class="input input--code"
+            placeholder="ABC123"
+            maxlength="6"
+            autocomplete="off"
+            aria-describedby="join-code-hint"
+            required
+          />
+          <span id="join-code-hint" class="field-hint" :class="{ 'field-hint--error': codeHint }">
+            {{ codeHint || "6 characters, from the host's lobby screen." }}
+          </span>
+        </div>
+        <button class="btn btn--block" :disabled="state.busy || cleanCode.length !== 6">Join table</button>
+      </form>
+    </div>
+  </Transition>
   <HowToPlay v-model:open="howOpen" />
   <SideMenu v-if="state.me?.username" v-model:open="menuOpen" />
 </template>
@@ -336,7 +357,7 @@ const codeHint = computed(() =>
   opacity: 0.9;
 }
 
-/* The line under the bar: a switch, or joining by code, on a light card. */
+/* The line under the bar on Public: the switch, on a light card. */
 .extra {
   padding: var(--space-4);
   border-radius: var(--radius-md);
@@ -344,10 +365,72 @@ const codeHint = computed(() =>
   box-shadow: var(--shadow-sm);
 }
 
-.join {
+/* "—— OR ——" between creating and joining, on the red background. */
+.or-line {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-3);
+  font: 400 1rem/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+
+.or-line::before,
+.or-line::after {
+  content: "";
+  flex: 1;
+  border-top: 2px solid rgb(255 255 255 / 0.55);
+}
+
+/* The join button: as big as Create, but white, so the two read as a pair. */
+.big-btn--light {
+  min-height: 4.5rem;
+  border-color: var(--red-600);
+  color: var(--red-700);
+  background: linear-gradient(180deg, var(--white), var(--color-surface) 60%, #efe1d6);
+  box-shadow:
+    0 4px 0 var(--red-800),
+    var(--shadow-md);
+}
+
+.big-btn--light:active {
+  box-shadow: 0 1px 0 var(--red-800);
+}
+
+.big-btn--light .big-btn-title {
+  text-shadow: none;
+}
+
+.backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgb(40 8 10 / 0.55);
+}
+
+.join {
+  width: min(24rem, 100%);
+}
+
+.join-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.join-close {
+  padding: 0 var(--space-2);
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  cursor: pointer;
 }
 
 /* A switch: the checkbox stays in the page for keyboards and screen readers, drawn as a track. */
