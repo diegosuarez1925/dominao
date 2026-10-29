@@ -17,6 +17,7 @@ export default {
       new URL("./design/compositions/Seats.md", import.meta.url),
       new URL("./design/compositions/Matchmaking.md", import.meta.url),
       new URL("./design/compositions/Friends.md", import.meta.url),
+      new URL("./design/compositions/Stats.md", import.meta.url),
     ],
   },
   projections: [httpWire({ policy, name: "DominaoWireHttp" })],

@@ -84,6 +84,7 @@ const guestEndpoints = (table: string, game: string, code: string): [string, Rec
   ["/invites/send", { friend: "some-player" }],
   ["/invites/accept", { invite: "some-invite" }],
   ["/invites/decline", { invite: "some-invite" }],
+  ["/stats/view", {}],
 ];
 
 test("every guest endpoint turns away an invented token, a signed-out token, and a player id", async () => {

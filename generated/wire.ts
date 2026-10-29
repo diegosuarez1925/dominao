@@ -195,7 +195,7 @@ export type DominaoWire = {
     output: {
       "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["autoplay"]>[0], ["game"]>>;
     };
-    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "GAME_PAUSED" | "INVALID_INPUT" | "NOT_A_BOT" | "NOT_YOUR_TURN" | "NO_SUCH_GAME" | "TOO_SOON" };
+    error: { error: AppWideError | "ALREADY_COUNTED" | "GAME_NOT_ACTIVE" | "GAME_PAUSED" | "INVALID_INPUT" | "NOT_A_BOT" | "NOT_YOUR_TURN" | "NO_SUCH_GAME" | "TOO_SOON" };
   };
   "/games/drop-absent": {
     input: {
@@ -217,7 +217,7 @@ export type DominaoWire = {
     output: {
       "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>>, ["game"]>]>>;
     };
-    error: { error: AppWideError | "GAME_NOT_ACTIVE" | "GAME_PAUSED" | "ILLEGAL_PLAY" | "INVALID_INPUT" | "NOT_IN_HAND" | "NOT_YOUR_TURN" | "NO_SUCH_GAME" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ALREADY_COUNTED" | "GAME_NOT_ACTIVE" | "GAME_PAUSED" | "ILLEGAL_PLAY" | "INVALID_INPUT" | "NOT_IN_HAND" | "NOT_YOUR_TURN" | "NO_SUCH_GAME" | "UNKNOWN_SESSION" };
   };
   "/games/rulesets": {
     input: Record<string, never>;
@@ -461,6 +461,38 @@ export type DominaoWire = {
       "player": Jsonify<AllOf<[AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>>, ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>]>>;
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/stats/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "stats": {
+        "overall": {
+          "gameWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gameWinrate"]>>;
+          "gamesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesLost"]>>;
+          "gamesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesPlayed"]>>;
+          "gamesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesWon"]>>;
+          "matchWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchWinrate"]>>;
+          "matchesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesLost"]>>;
+          "matchesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesPlayed"]>>;
+          "matchesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesWon"]>>;
+        }[];
+        "records": {
+          "bestMatchPoints": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["bestMatchPoints"]>>;
+          "gameWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gameWinrate"]>>;
+          "gamesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesLost"]>>;
+          "gamesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesPlayed"]>>;
+          "gamesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesWon"]>>;
+          "matchWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchWinrate"]>>;
+          "matchesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesLost"]>>;
+          "matchesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesPlayed"]>>;
+          "matchesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesWon"]>>;
+          "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["rules"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_AN_ACCOUNT" | "UNKNOWN_SESSION" };
   };
   "/tables/close": {
     input: {
@@ -1000,6 +1032,38 @@ export type DominaoWireHttp = {
       "player": Jsonify<AllOf<[AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>>, ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>]>>;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/stats/view": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "stats": {
+        "overall": {
+          "gameWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gameWinrate"]>>;
+          "gamesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesLost"]>>;
+          "gamesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesPlayed"]>>;
+          "gamesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["gamesWon"]>>;
+          "matchWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchWinrate"]>>;
+          "matchesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesLost"]>>;
+          "matchesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesPlayed"]>>;
+          "matchesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_overall"]>>>, ["matchesWon"]>>;
+        }[];
+        "records": {
+          "bestMatchPoints": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["bestMatchPoints"]>>;
+          "gameWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gameWinrate"]>>;
+          "gamesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesLost"]>>;
+          "gamesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesPlayed"]>>;
+          "gamesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["gamesWon"]>>;
+          "matchWinrate": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchWinrate"]>>;
+          "matchesLost": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesLost"]>>;
+          "matchesPlayed": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesPlayed"]>>;
+          "matchesWon": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["matchesWon"]>>;
+          "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tallying"]["_records"]>>>, ["rules"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/tables/close": {
     input: {

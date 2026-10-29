@@ -623,6 +623,38 @@ Former "the rule sets" — inputs (); bindings (rules, target, description); pro
         target
 ```
 
+### the statistics of (me)
+
+Authored path: `Stats.StatsView`.
+- Covered by [Stats](../design/compositions/Stats.md), line 22.
+
+```former
+Former "the statistics of (me)" — inputs (me); bindings (rules, matchesWon, matchesLost, matchesPlayed, matchWinrate, gamesWon, gamesLost, gamesPlayed, gameWinrate, bestMatchPoints, allMatchesWon, allMatchesLost, allMatchesPlayed, allMatchWinrate, allGamesWon, allGamesLost, allGamesPlayed, allGameWinrate); promises exactly one record — forms:
+  a record of
+    overall: each Tallying._overall (player: me) has (gameWinrate: allGameWinrate, gamesLost: allGamesLost, gamesPlayed: allGamesPlayed, gamesWon: allGamesWon, matchWinrate: allMatchWinrate, matchesLost: allMatchesLost, matchesPlayed: allMatchesPlayed, matchesWon: allMatchesWon)
+      form a record of
+        gameWinrate: allGameWinrate
+        gamesLost: allGamesLost
+        gamesPlayed: allGamesPlayed
+        gamesWon: allGamesWon
+        matchWinrate: allMatchWinrate
+        matchesLost: allMatchesLost
+        matchesPlayed: allMatchesPlayed
+        matchesWon: allMatchesWon
+    records: each Tallying._records (player: me) has (bestMatchPoints, gameWinrate, gamesLost, gamesPlayed, gamesWon, matchWinrate, matchesLost, matchesPlayed, matchesWon, rules)
+      form a record of
+        bestMatchPoints
+        gameWinrate
+        gamesLost
+        gamesPlayed
+        gamesWon
+        matchWinrate
+        matchesLost
+        matchesPlayed
+        matchesWon
+        rules
+```
+
 ### the weaknesses of (password) for (username)
 
 Authored path: `Accounts.Weaknesses`.
@@ -2754,6 +2786,119 @@ then
   DominoPlaying.vacate (game, player)
 ```
 
+### Stats.ForgetStatsOfDeletedAccount
+
+Authored path: `Stats.ForgetStatsOfDeletedAccount`.
+- Covered by [Stats](../design/compositions/Stats.md), line 31.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+then
+  Tallying.forget (player: user)
+```
+
+### Stats.ShowStats
+
+Authored path: `Stats.ShowStats`.
+- Covered by [Stats](../design/compositions/Stats.md), line 21.
+- Covered by [Stats](../design/compositions/Stats.md), line 28.
+
+```reaction
+when RequestBoundary.request (path: "/stats/view", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Stats.ShowStats:account#2
+
+Authored path: `Stats.ShowStats`.
+- Covered by [Stats](../design/compositions/Stats.md), line 21.
+- Covered by [Stats](../design/compositions/Stats.md), line 28.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Stats.ShowStats
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/stats/view", requestId, token)
+then
+  RequestBoundary.respond (requestId, stats: former "the statistics of (me)" with (me))
+```
+
+### Stats.ShowStats:guest#2
+
+Authored path: `Stats.ShowStats`.
+- Covered by [Stats](../design/compositions/Stats.md), line 21.
+- Covered by [Stats](../design/compositions/Stats.md), line 28.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Stats.ShowStats
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/stats/view", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Stats.TallyGameAfterAutoplay
+
+Authored path: `Stats.TallyGameAfterAutoplay`.
+- Covered by [Stats](../design/compositions/Stats.md), line 16.
+
+```reaction
+when DominoPlaying.autoplay (game)
+where
+  DominoPlaying._gameOutcomes (game) has (player, rules, won)
+  PasswordAuthenticating._username (user: player)
+  Tallying._gameCounted (game, player) has (counted: false)
+then
+  Tallying.recordGame (game, player, rules, won)
+```
+
+### Stats.TallyGameAfterPlay
+
+Authored path: `Stats.TallyGameAfterPlay`.
+- Covered by [Stats](../design/compositions/Stats.md), line 15.
+
+```reaction
+when DominoPlaying.play (game)
+where
+  DominoPlaying._gameOutcomes (game) has (player, rules, won)
+  PasswordAuthenticating._username (user: player)
+  Tallying._gameCounted (game, player) has (counted: false)
+then
+  Tallying.recordGame (game, player, rules, won)
+```
+
+### Stats.TallyMatchAfterAutoplay
+
+Authored path: `Stats.TallyMatchAfterAutoplay`.
+- Covered by [Stats](../design/compositions/Stats.md), line 9.
+
+```reaction
+when DominoPlaying.autoplay (game)
+where
+  DominoPlaying._matchOutcomes (game) has (matchNumber, player, points, rules, won)
+  PasswordAuthenticating._username (user: player)
+  Tallying._matchCounted (game, match: matchNumber, player) has (counted: false)
+then
+  Tallying.recordMatch (game, match: matchNumber, player, points, rules, won)
+```
+
+### Stats.TallyMatchAfterPlay
+
+Authored path: `Stats.TallyMatchAfterPlay`.
+- Covered by [Stats](../design/compositions/Stats.md), line 8.
+
+```reaction
+when DominoPlaying.play (game)
+where
+  DominoPlaying._matchOutcomes (game) has (matchNumber, player, points, rules, won)
+  PasswordAuthenticating._username (user: player)
+  Tallying._matchCounted (game, match: matchNumber, player) has (counted: false)
+then
+  Tallying.recordMatch (game, match: matchNumber, player, points, rules, won)
+```
+
 ### Tables.Close
 
 Authored path: `Tables.Close`.
@@ -3361,6 +3506,7 @@ not listed here have no explicit input contract.
 - `/sessions/end` — requires `token`
 - `/sessions/expire` — requires `session`
 - `/sessions/me` — requires `token`
+- `/stats/view` — requires `token`
 - `/tables/close` — requires `token`, `table`
 - `/tables/drop-absent` — requires `player`
 - `/tables/join` — requires `token`, `code`

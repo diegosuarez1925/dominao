@@ -981,3 +981,32 @@ P1 has no concept for this, so it is new rather than a change to a P1 concept:
 - No reaction uses them yet (part 2). Concept tests: 9 for Tallying, 2 for the
   outcome queries (a whole game played by autoplay, checking every match end, and
   a game with an empty seat that is then abandoned).
+
+### Statistics, part 2: counting results, and the stats endpoint
+
+- **New composition, Stats** (`src/compositions/Stats.ts`, `design/compositions/Stats.md`):
+  - Four reactions, after `DominoPlaying.play` (a person's move) and after
+    `DominoPlaying.autoplay` (a bot's move): one counts the latest match for every
+    account seated, the other counts the game once it is finished. Each asks
+    PasswordAuthenticating whether the player is an account (guests and bots are
+    skipped) and Tallying whether that match or game was already counted for them, so
+    the many moves after a match ended change nothing. Two reactions per action
+    because the sync engine cannot match "play or autoplay" in one `when`.
+  - Ties are not counted (the outcome query answers nothing for them). An abandoned
+    game never counts as a game, but matches it finished do.
+  - The players counted are the ones seated when the match or game ends: a person who
+    took a bot's seat gets the result, and one who got up before the end does not.
+  - `ForgetStatsOfDeletedAccount`: deleting an account calls `Tallying.forget`.
+  - **`/stats/view {token}`** answers `{ stats: { records, overall } }`: a row per rule
+    set played (`rules`, `matchesWon`, `matchesLost`, `matchesPlayed`, `matchWinrate`,
+    `gamesWon`, `gamesLost`, `gamesPlayed`, `gameWinrate`, `bestMatchPoints`) and one
+    `overall` row (the same without `rules` and best points). A guest is answered
+    `NOT_AN_ACCOUNT`.
+  - `ALREADY_COUNTED` maps to 409, though no endpoint can reach it.
+- Tests (`tests/compositions/Stats.test.ts`, 5): whole games through the API with two
+  accounts and two guests (each account's record checked against the game's own score
+  table), two games under different rules adding up overall, a game played mostly by
+  bots after three players got up (the account who left gets nothing, the bots
+  nothing), and a deleted account. Taking the autoplay reactions out makes the bot test
+  fail, so it really checks them. `/stats/view` is in the access-control test.
+  293 tests pass.

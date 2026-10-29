@@ -6,6 +6,7 @@ import { composition as games } from "./compositions/Games.ts";
 import { composition as guests } from "./compositions/Guests.ts";
 import { composition as matchmaking } from "./compositions/Matchmaking.ts";
 import { composition as seats } from "./compositions/Seats.ts";
+import { composition as stats } from "./compositions/Stats.ts";
 import { composition as tables } from "./compositions/Tables.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import { CodeGeneratingConcept } from "./concepts/CodeGenerating.ts";
@@ -50,7 +51,7 @@ export function assembleApplication(
       Throttling: new ThrottlingConcept(database, clock),
       Table: new TableConcept(database),
     },
-    composition: { Guests: guests, Accounts: accounts, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking, Friends: friends },
+    composition: { Guests: guests, Accounts: accounts, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking, Friends: friends, Stats: stats },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.
     rawFaultReporter: ({ error }) => console.error(error),
   });
