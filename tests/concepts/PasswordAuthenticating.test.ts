@@ -244,3 +244,25 @@ test("unregister needs the password, and frees the username", async () => {
   await expect(accounts.unregister({ user, password: STRONG })).rejects.toThrow(NoSuchUser);
   await expect(accounts.changePassword({ user, current: STRONG, password: OTHER })).rejects.toThrow(NoSuchUser);
 });
+
+test("_search answers up to ten usernames starting with the text, ignoring case, alphabetically", async () => {
+  const abuela = await accounts.register({ username: "Abuela.PR", password: STRONG });
+  const abuelo = await accounts.register({ username: "abuelo_pr", password: STRONG });
+  await accounts.register({ username: "papo-1957", password: STRONG });
+  expect(await accounts._search({ text: "ABUEL" })).toEqual([
+    { user: abuela.user, username: "Abuela.PR" },
+    { user: abuelo.user, username: "abuelo_pr" },
+  ]);
+  expect(await accounts._search({ text: " abuelo " })).toEqual([{ user: abuelo.user, username: "abuelo_pr" }]);
+  expect(await accounts._search({ text: "" })).toEqual([]);
+  expect(await accounts._search({ text: "   " })).toEqual([]);
+  expect(await accounts._search({ text: "pr" })).toEqual([]);
+  // "." and "-" in the text match only themselves.
+  expect(await accounts._search({ text: "abuela." })).toEqual([{ user: abuela.user, username: "Abuela.PR" }]);
+  expect(await accounts._search({ text: "abuela-" })).toEqual([]);
+  expect(await accounts._search({ text: "papo-" })).toHaveLength(1);
+  expect(await accounts._search({ text: ".*" })).toEqual([]);
+  for (let i = 0; i < 12; i++) await accounts.register({ username: `tio${String(i).padStart(2, "0")}`, password: STRONG });
+  const many = await accounts._search({ text: "tio" });
+  expect(many.map((row) => row.username)).toEqual(["tio00", "tio01", "tio02", "tio03", "tio04", "tio05", "tio06", "tio07", "tio08", "tio09"]);
+});

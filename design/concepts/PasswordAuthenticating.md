@@ -97,6 +97,10 @@ _byUsername(username: String) : optional (user: User)
 _username(user: User) : optional (username: String)
   Answers the username as its owner typed it, and no row when there is no such user.
 
+_search(text: String) : many (user: User, username: String)
+  Answers up to 10 users whose username starts with the text, ignoring case, in
+  alphabetical order; no rows for empty text.
+
 _weaknesses(username: String, password: String) : many (rule: String)
   Answers each password rule (LENGTH, VARIETY, CONTAINS_USERNAME, COMMON) the password
   breaks for this username, and no rows when it is strong enough.

@@ -849,3 +849,33 @@ create and join buttons.
 - Checked in a browser at 1200 and 390 px: the pop-up opens focused, the hint shows
   for IIIIII, Escape closes it, and a real code lands in that table's lobby. No
   horizontal scrolling.
+
+### Friends and game invites, part 1: three new concepts
+
+Asked for: friends for logged-in users (friend list with who is online, friend
+requests that run out after a week, and invites to private tables from their host),
+with notification bubbles and pop-ups. P1 has no concept for any of this, so these
+are new, not changes to P1 concepts. Each keeps to one job:
+
+- **Friending [User]:** requests and friendships. `request` refuses asking yourself
+  (`SELF`), a friend (`ALREADY_FRIENDS`), asking twice (`ALREADY_REQUESTED`), and
+  asking someone who already asked you (`REQUEST_WAITING`: accept theirs instead, so
+  two crossed requests never pile up). `accept` and `reject` both delete the request;
+  `accept` adds the friendship and remembers who asked (for the "accepted your
+  request" pop-up). A request runs out a week after it was sent: from then on it counts
+  as never sent, and the system action `expire` clears it away. `forget` drops
+  everything of a deleted account.
+- **Inviting [User, Place]:** invites to a place. `invite` refuses inviting yourself
+  and inviting someone to a place twice at once. `accept` and `decline` delete the
+  invite; `withdraw(place)` deletes every invite to a place at once (used when its game
+  starts or it closes). Inviting knows nothing about tables or hosts; who may invite
+  is decided by the app.
+- **Seeing [User]:** when a user last looked at each part of what they have (their
+  requests, their invites, their friends). The app points out as new only what is newer
+  than that, which is how the bubbles go away once seen. Keeping this apart means
+  Friending and Inviting never store anything about the screen.
+- **PasswordAuthenticating** gets one new query, `_search(text)`: up to 10 usernames
+  starting with the text, ignoring case, for finding someone to befriend.
+- No endpoint uses them yet (part 2). Concept tests: 14 for Friending (including the
+  week running out, and two requests sent at the same moment), 10 for Inviting, 3 for
+  Seeing, 1 for the search.

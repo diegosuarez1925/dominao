@@ -7,6 +7,9 @@ import passwordAuthenticatingSpec from "@design/concepts/PasswordAuthenticating.
 import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" };
 import throttlingSpec from "@design/concepts/Throttling.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
+import friendingSpec from "@design/concepts/Friending.md" with { type: "text" };
+import invitingSpec from "@design/concepts/Inviting.md" with { type: "text" };
+import seeingSpec from "@design/concepts/Seeing.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import botSpec from "@design/concepts/Botting.md" with { type: "text" };
@@ -25,6 +28,17 @@ import {
   SeatTaken,
   UnknownRules,
 } from "./concepts/DominoPlaying.ts";
+import {
+  AlreadyFriends,
+  AlreadyRequested,
+  FriendingConcept,
+  NoSuchRequest,
+  NotExpired,
+  RequestWaiting,
+  SelfRequest,
+} from "./concepts/Friending.ts";
+import { AlreadyInvited, InvitingConcept, NoSuchInvite, SelfInvite } from "./concepts/Inviting.ts";
+import { SeeingConcept } from "./concepts/Seeing.ts";
 import { GuestingConcept, InvalidName, NoSuchGuest } from "./concepts/Guesting.ts";
 import {
   InvalidUsername,
@@ -149,13 +163,41 @@ const table = registerConcept({
   },
 });
 
+const friending = registerConcept({
+  class: FriendingConcept,
+  spec: friendingSpec,
+  refusals: {
+    SELF: SelfRequest,
+    ALREADY_FRIENDS: AlreadyFriends,
+    ALREADY_REQUESTED: AlreadyRequested,
+    REQUEST_WAITING: RequestWaiting,
+    NO_SUCH_REQUEST: NoSuchRequest,
+    NOT_EXPIRED: NotExpired,
+  },
+});
+
+const inviting = registerConcept({
+  class: InvitingConcept,
+  spec: invitingSpec,
+  refusals: { SELF: SelfInvite, ALREADY_INVITED: AlreadyInvited, NO_SUCH_INVITE: NoSuchInvite },
+});
+
+const seeing = registerConcept({
+  class: SeeingConcept,
+  spec: seeingSpec,
+  refusals: {},
+});
+
 export const applicationConceptSet = conceptSet({
   Botting: botting,
   CodeGenerating: codeGenerating,
   DominoPlaying: dominoPlaying,
+  Friending: friending,
   Guesting: guesting,
+  Inviting: inviting,
   Matchmaking: matchmaking,
   PasswordAuthenticating: passwordAuthenticating,
+  Seeing: seeing,
   Sessioning: sessioning,
   Throttling: throttling,
   Table: table,

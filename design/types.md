@@ -15,6 +15,12 @@ down, so DominoPlaying's players are seat holders: a guest's session or a bot.
 Matchmaking remembers the tables where the games it launched are played, so its
 places are tables too.
 
+Only accounts have friends: Friending keeps friend requests and friendships between
+accounts, and Inviting keeps the invites an account sends a friend to its private
+table, so its places are tables. Seeing remembers when an account last looked at its
+friend requests, its game invites and its friends, so only what is newer is pointed
+out as new.
+
 Games are played by rule sets that DominoPlaying defines (DEFAULT, LONG and SHORT).
 A table keeps the rule set its host chose, and Matchmaking only puts strangers who
 chose the same rule set in a lobby together. Neither interprets the rules; they only
@@ -46,12 +52,22 @@ instantiate DominoPlaying with
   Player is SeatHolder
   Place is Table.Table
 
+instantiate Friending with
+  User is PasswordAuthenticating.User
+
 instantiate Guesting
+
+instantiate Inviting with
+  User is PasswordAuthenticating.User
+  Place is Table.Table
 
 instantiate PasswordAuthenticating
 
 instantiate Throttling with
   Key is PasswordAuthenticating.User
+
+instantiate Seeing with
+  User is PasswordAuthenticating.User
 
 instantiate Sessioning with
   Player is Person

@@ -22,7 +22,7 @@ Defined in [Botting](../design/concepts/Botting.md), line 1.
 
 #### Instances
 
-- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 43.
+- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 49.
 
 ### CodeGenerating
 
@@ -41,8 +41,8 @@ Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
 
 #### Instances
 
-- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 40.
-  - `Context` is `CodeContext` — [Application types](../design/types.md), line 41.
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 46.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 47.
 
 ### DominoPlaying
 
@@ -99,9 +99,42 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 
 #### Instances
 
-- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 45.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 47.
-  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 46.
+- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 51.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 53.
+  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 52.
+
+### Friending
+
+Defined in [Friending](../design/concepts/Friending.md), line 1.
+
+#### Actions
+
+- `request(from: User, to: User) : returns (request: Request)`
+  - Refuses `SELF`: You can't send a friend request to yourself.
+  - Refuses `ALREADY_FRIENDS`: You're already friends.
+  - Refuses `ALREADY_REQUESTED`: You already sent them a friend request.
+  - Refuses `REQUEST_WAITING`: They already sent you a friend request. Accept it instead.
+- `accept(request: Request, to: User) : returns (request: Request, from: User, to: User)`
+  - Refuses `NO_SUCH_REQUEST`: That friend request is no longer there.
+- `reject(request: Request, to: User) : returns (request: Request, from: User)`
+  - Refuses `NO_SUCH_REQUEST`: That friend request is no longer there.
+- `expire(request: Request) : returns (request: Request)`
+  - Refuses `NO_SUCH_REQUEST`: That friend request is no longer there.
+  - Refuses `NOT_EXPIRED`: That friend request is still waiting for an answer.
+- `forget(user: User) : returns (user: User)`
+
+#### Queries
+
+- `_friends(user: User) : many (friend: User, asker: User, since: Number)`
+- `_areFriends(user: User, other: User) : one (friends: Flag)`
+- `_incoming(user: User) : many (request: Request, from: User, sentAt: Number)`
+- `_outgoing(user: User) : many (request: Request, to: User, sentAt: Number)`
+- `_expired() : many (request: Request)`
+
+#### Instances
+
+- `Friending` — instance of `Friending` — [Application types](../design/types.md), line 55.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 56.
 
 ### Guesting
 
@@ -120,7 +153,36 @@ Defined in [Guesting](../design/concepts/Guesting.md), line 1.
 
 #### Instances
 
-- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 49.
+- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 58.
+
+### Inviting
+
+Defined in [Inviting](../design/concepts/Inviting.md), line 1.
+
+#### Actions
+
+- `invite(from: User, to: User, place: Place) : returns (invite: Invite)`
+  - Refuses `SELF`: You can't invite yourself.
+  - Refuses `ALREADY_INVITED`: They're already invited.
+- `accept(invite: Invite, to: User) : returns (invite: Invite, place: Place)`
+  - Refuses `NO_SUCH_INVITE`: That invite is no longer there.
+- `decline(invite: Invite, to: User) : returns (invite: Invite, place: Place)`
+  - Refuses `NO_SUCH_INVITE`: That invite is no longer there.
+- `withdraw(place: Place) : returns (place: Place)`
+- `forget(user: User) : returns (user: User)`
+
+#### Queries
+
+- `_invitesFor(to: User) : many (invite: Invite, from: User, place: Place, sentAt: Number)`
+- `_sentBy(from: User) : many (invite: Invite, to: User, place: Place)`
+- `_inviteTo(to: User, place: Place) : optional (invite: Invite)`
+- `_invite(invite: Invite) : optional (from: User, to: User, place: Place)`
+
+#### Instances
+
+- `Inviting` — instance of `Inviting` — [Application types](../design/types.md), line 60.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 62.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 61.
 
 ### Matchmaking
 
@@ -154,10 +216,10 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
 
 #### Instances
 
-- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 59.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 62.
-  - `Player` is `Person` — [Application types](../design/types.md), line 60.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 61.
+- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 75.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 78.
+  - `Player` is `Person` — [Application types](../design/types.md), line 76.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 77.
 
 ### PasswordAuthenticating
 
@@ -182,11 +244,30 @@ Defined in [PasswordAuthenticating](../design/concepts/PasswordAuthenticating.md
 - `_verify(username: String, password: String) : optional (user: User)`
 - `_byUsername(username: String) : optional (user: User)`
 - `_username(user: User) : optional (username: String)`
+- `_search(text: String) : many (user: User, username: String)`
 - `_weaknesses(username: String, password: String) : many (rule: String)`
 
 #### Instances
 
-- `PasswordAuthenticating` — instance of `PasswordAuthenticating` — [Application types](../design/types.md), line 51.
+- `PasswordAuthenticating` — instance of `PasswordAuthenticating` — [Application types](../design/types.md), line 64.
+
+### Seeing
+
+Defined in [Seeing](../design/concepts/Seeing.md), line 1.
+
+#### Actions
+
+- `see(user: User, part: String) : returns (user: User, part: String)`
+- `forget(user: User) : returns (user: User)`
+
+#### Queries
+
+- `_seenAt(user: User, part: String) : one (seenAt: Number)`
+
+#### Instances
+
+- `Seeing` — instance of `Seeing` — [Application types](../design/types.md), line 69.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 70.
 
 ### Sessioning
 
@@ -214,8 +295,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 56.
-  - `Player` is `Person` — [Application types](../design/types.md), line 57.
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 72.
+  - `Player` is `Person` — [Application types](../design/types.md), line 73.
 
 ### Table
 
@@ -249,9 +330,9 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Instances
 
-- `Table` — instance of `Table` — [Application types](../design/types.md), line 64.
-  - `Player` is `Person` — [Application types](../design/types.md), line 65.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 66.
+- `Table` — instance of `Table` — [Application types](../design/types.md), line 80.
+  - `Player` is `Person` — [Application types](../design/types.md), line 81.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 82.
 
 ### Throttling
 
@@ -268,17 +349,17 @@ Defined in [Throttling](../design/concepts/Throttling.md), line 1.
 
 #### Instances
 
-- `Throttling` — instance of `Throttling` — [Application types](../design/types.md), line 53.
-  - `Key` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 54.
+- `Throttling` — instance of `Throttling` — [Application types](../design/types.md), line 66.
+  - `Key` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 67.
 
 ## Application types
 
 Concrete types:
 
-- `CodeContext` — [Application types](../design/types.md), line 27.
-- `Person` — [Application types](../design/types.md), line 31.
-- `RuleSet` — [Application types](../design/types.md), line 24.
-- `SeatHolder` — [Application types](../design/types.md), line 34.
+- `CodeContext` — [Application types](../design/types.md), line 33.
+- `Person` — [Application types](../design/types.md), line 37.
+- `RuleSet` — [Application types](../design/types.md), line 30.
+- `SeatHolder` — [Application types](../design/types.md), line 40.
 
 ## Formers
 

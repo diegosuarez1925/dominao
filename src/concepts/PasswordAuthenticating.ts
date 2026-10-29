@@ -21,6 +21,8 @@ interface User {
 const USERNAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,19}$/;
 export const PASSWORD_MIN = 10;
 export const PASSWORD_MAX = 128;
+/** The most users one search answers. */
+export const SEARCH_LIMIT = 10;
 
 /**
  * Passwords people pick first, lower case. A password is COMMON when, ignoring case, it
@@ -147,6 +149,16 @@ export class PasswordAuthenticatingConcept {
   async _username({ user }: { user: string }) {
     const found = await this.users.findOne({ _id: user });
     return found === null ? [] : [{ username: found.username }];
+  }
+
+  /** Up to SEARCH_LIMIT users whose username starts with the text, ignoring case. */
+  async _search({ text }: { text: string }) {
+    const key = text.trim().toLowerCase();
+    if (key.length === 0) return [];
+    // The username rule allows "." and "-", which mean something in a pattern.
+    const prefix = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}`);
+    const found = await this.users.find({ usernameKey: prefix }).sort({ usernameKey: 1 }).limit(SEARCH_LIMIT).toArray();
+    return found.map((row) => ({ user: row._id, username: row.username }));
   }
 
   async _weaknesses({ username, password }: { username: string; password: string }) {
