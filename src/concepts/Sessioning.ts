@@ -85,6 +85,12 @@ export class SessioningConcept {
     return found.map(({ token }) => ({ token }));
   }
 
+  /** The tokens of the player's other sessions: every one but `keep`. */
+  async _others({ player, keep }: { player: string; keep: string }) {
+    const found = await this.sessions.find({ player, token: { $ne: keep } }).sort({ startedAt: 1, _id: 1 }).toArray();
+    return found.map(({ token }) => ({ token }));
+  }
+
   #idleFilter(now: Date) {
     return { $expr: { $lt: ["$lastSeen", { $subtract: [now, "$lifetimeMs"] }] } };
   }

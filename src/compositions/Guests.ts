@@ -11,7 +11,7 @@ import { concepts } from "../concepts.ts";
 import { GUEST_SESSION_MS } from "../timing.ts";
 import { strings } from "./validators.ts";
 
-const { CodeGenerating, Guesting, Sessioning } = concepts;
+const { CodeGenerating, Guesting, PasswordAuthenticating, Sessioning } = concepts;
 
 // 32 characters from a 32-symbol alphabet is 160 random bits: far too many to guess.
 const SESSION_TOKENS = "SESSION_TOKENS";
@@ -28,16 +28,27 @@ const Start = endpoint(
   { input: { required: ["displayName"] }, validators: { input: strings("displayName") } },
 );
 
-/** Who a returning browser is. This also counts as activity, so the session lasts. */
+/**
+ * Who a returning browser is: a guest, with their display name, or an account, with its
+ * username. This also counts as activity, so the session lasts.
+ */
 const Me = endpoint(
   "/sessions/me",
-  ({ token, player, displayName }) =>
+  ({ token, player, displayName, username }) =>
     receive({ token })
       .then(Sessioning.resume({ token }).responds({ player }))
       .then(
         where(Guesting._name({ guest: player }).is({ displayName }))
           .then(respond({ player, displayName }))
           .named("guest"),
+        // An account is shown by its username wherever a guest's name would be.
+        where(PasswordAuthenticating._username({ user: player }).is({ username }))
+          .then(respond({ player, displayName: username, username }))
+          .named("account"),
+        // A session whose guest or account is gone (an account deleted elsewhere).
+        where(no(Guesting._name({ guest: player })), no(PasswordAuthenticating._username({ user: player })))
+          .then(respond({ error: "UNKNOWN_SESSION" }))
+          .named("nobody"),
       ),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );

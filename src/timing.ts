@@ -30,5 +30,8 @@ export const AWAY_BEFORE_GAME_MS = 2 * 60_000;
 /** How long a guest's session lasts unused before the guest must start again. */
 export const GUEST_SESSION_MS = 12 * 60 * 60 * 1000;
 
+/** How long an account's session lasts unused before its owner must sign in again. */
+export const ACCOUNT_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+
 /** How often the server looks for empty seats, bots' turns and absent players. */
 export const TICK_MS = 1_000;

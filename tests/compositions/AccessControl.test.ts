@@ -73,9 +73,11 @@ const guestEndpoints = (table: string, game: string, code: string): [string, Rec
   ["/matchmaking/view", {}],
   ["/matchmaking/enqueue", { rules: "DEFAULT", midway: false }],
   ["/matchmaking/leave", {}],
+  ["/accounts/password", { current: "Fichas-de-1957", password: "Otra-Clave-2026" }],
+  ["/accounts/delete", { password: "Fichas-de-1957" }],
 ];
 
-test("every guest endpoint turns away an invented token, a signed-out token, and a session id", async () => {
+test("every guest endpoint turns away an invented token, a signed-out token, and a player id", async () => {
   const { guests, table, code } = await playing();
   const { game } = await view(guests[0].token);
   const gone = await guest("Tío");
@@ -83,7 +85,7 @@ test("every guest endpoint turns away an invented token, a signed-out token, and
   const before = await view(guests[0].token);
 
   for (const [path, body] of guestEndpoints(table, game, code)) {
-    // Made up, ended, or another guest's session id (which views do show) in place of a token.
+    // Made up, ended, or another player's id (which views do show) in place of a token.
     for (const token of ["made-up", gone.token, guests[0].player]) {
       expect({ path, ...(await call(path, { ...body, token })) }).toEqual({
         path,

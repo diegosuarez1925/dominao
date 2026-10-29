@@ -1,5 +1,6 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
+import { composition as accounts } from "./compositions/Accounts.ts";
 import { composition as games } from "./compositions/Games.ts";
 import { composition as guests } from "./compositions/Guests.ts";
 import { composition as matchmaking } from "./compositions/Matchmaking.ts";
@@ -10,7 +11,9 @@ import { CodeGeneratingConcept } from "./concepts/CodeGenerating.ts";
 import { DominoPlayingConcept, randomMove, randomShuffle, type MoveChooser } from "./concepts/DominoPlaying.ts";
 import { GuestingConcept } from "./concepts/Guesting.ts";
 import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
+import { PasswordAuthenticatingConcept } from "./concepts/PasswordAuthenticating.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
+import { ThrottlingConcept } from "./concepts/Throttling.ts";
 import { TableConcept } from "./concepts/Table.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { db } from "./db.ts";
@@ -33,10 +36,12 @@ export function assembleApplication(
       DominoPlaying: new DominoPlayingConcept(database, randomShuffle, clock, options.chooseMove ?? randomMove),
       Guesting: new GuestingConcept(database),
       Matchmaking: new MatchmakingConcept(database, clock, undefined, options.matchmakingCountdownMs),
+      PasswordAuthenticating: new PasswordAuthenticatingConcept(database, clock),
       Sessioning: new SessioningConcept(database, clock),
+      Throttling: new ThrottlingConcept(database, clock),
       Table: new TableConcept(database),
     },
-    composition: { Guests: guests, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking },
+    composition: { Guests: guests, Accounts: accounts, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.
     rawFaultReporter: ({ error }) => console.error(error),
   });

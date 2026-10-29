@@ -3,7 +3,9 @@ import codeGeneratingSpec from "@design/concepts/CodeGenerating.md" with { type:
 import dominoPlayingSpec from "@design/concepts/DominoPlaying.md" with { type: "text" };
 import matchmakingSpec from "@design/concepts/Matchmaking.md" with { type: "text" };
 import guestingSpec from "@design/concepts/Guesting.md" with { type: "text" };
+import passwordAuthenticatingSpec from "@design/concepts/PasswordAuthenticating.md" with { type: "text" };
 import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" };
+import throttlingSpec from "@design/concepts/Throttling.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
@@ -24,7 +26,16 @@ import {
   UnknownRules,
 } from "./concepts/DominoPlaying.ts";
 import { GuestingConcept, InvalidName, NoSuchGuest } from "./concepts/Guesting.ts";
+import {
+  InvalidUsername,
+  NoSuchUser,
+  PasswordAuthenticatingConcept,
+  UsernameTaken,
+  WeakPassword,
+  WrongPassword,
+} from "./concepts/PasswordAuthenticating.ts";
 import { InvalidLifetime, NotIdle, SessioningConcept, TokenInUse, UnknownSession } from "./concepts/Sessioning.ts";
+import { ThrottlingConcept } from "./concepts/Throttling.ts";
 import {
   AlreadyQueued,
   CountdownRunning,
@@ -82,6 +93,24 @@ const guesting = registerConcept({
   refusals: { INVALID_NAME: InvalidName, NO_SUCH_GUEST: NoSuchGuest },
 });
 
+const passwordAuthenticating = registerConcept({
+  class: PasswordAuthenticatingConcept,
+  spec: passwordAuthenticatingSpec,
+  refusals: {
+    INVALID_USERNAME: InvalidUsername,
+    USERNAME_TAKEN: UsernameTaken,
+    WEAK_PASSWORD: WeakPassword,
+    NO_SUCH_USER: NoSuchUser,
+    WRONG_PASSWORD: WrongPassword,
+  },
+});
+
+const throttling = registerConcept({
+  class: ThrottlingConcept,
+  spec: throttlingSpec,
+  refusals: {},
+});
+
 const sessioning = registerConcept({
   class: SessioningConcept,
   spec: sessioningSpec,
@@ -126,7 +155,9 @@ export const applicationConceptSet = conceptSet({
   DominoPlaying: dominoPlaying,
   Guesting: guesting,
   Matchmaking: matchmaking,
+  PasswordAuthenticating: passwordAuthenticating,
   Sessioning: sessioning,
+  Throttling: throttling,
   Table: table,
 });
 export const { concepts } = applicationConceptSet;

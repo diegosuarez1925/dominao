@@ -95,4 +95,8 @@ _idleFor(player: Player) : optional (idleMs: Number)
 _tokens(player: Player) : many (token: String)
   Answers the token of every session the player has, oldest first, and no rows when
   they have none.
+
+_others(player: Player, keep: String) : many (token: String)
+  Answers the token of every session the player has except the one whose token is
+  keep, oldest first.
 ```

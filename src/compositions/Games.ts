@@ -11,7 +11,7 @@ import { concepts } from "../concepts.ts";
 import { ABSENT_MS, BOT_AFTER_MS } from "../timing.ts";
 import { sides, strings } from "./validators.ts";
 
-const { Botting, DominoPlaying, Guesting, Matchmaking, Sessioning, Table } = concepts;
+const { Botting, DominoPlaying, Guesting, Matchmaking, PasswordAuthenticating, Sessioning, Table } = concepts;
 
 /**
  * The game at the guest's table as that guest sees it: the scores, the board, whose
@@ -108,6 +108,7 @@ const GameView = former(
           players: each(DominoPlaying._players({ game }).is({ position, player, tileCount }))
             .where(
               whether(Guesting._name({ guest: player }).is({ displayName })),
+              whether(PasswordAuthenticating._username({ user: player }).is({ username: displayName })),
               whether(Botting._name({ bot: player }).is({ name: botName })),
               whether(Sessioning._idleFor({ player }).is({ idleMs })),
             )
@@ -115,12 +116,14 @@ const GameView = former(
           vacancies: each(DominoPlaying._vacancies({ game }).is({ position: vacantPosition, player: leaver, vacantMs }))
             .where(
               whether(Guesting._name({ guest: leaver }).is({ displayName: leaverName })),
+              whether(PasswordAuthenticating._username({ user: leaver }).is({ username: leaverName })),
               whether(Botting._name({ bot: leaver }).is({ name: leaverBot })),
             )
             .form({ position: vacantPosition, player: leaver, displayName: leaverName, botName: leaverBot, vacantMs }),
           log: each(DominoPlaying._log({ game }).is({ turn: turnNumber, matchNumber: turnMatch, player: mover, move, tile: movedTile }))
             .where(
               whether(Guesting._name({ guest: mover }).is({ displayName: moverName })),
+              whether(PasswordAuthenticating._username({ user: mover }).is({ username: moverName })),
               whether(Botting._name({ bot: mover }).is({ name: moverBot })),
             )
             .form({

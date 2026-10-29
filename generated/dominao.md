@@ -22,7 +22,7 @@ Defined in [Botting](../design/concepts/Botting.md), line 1.
 
 #### Instances
 
-- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 41.
+- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 43.
 
 ### CodeGenerating
 
@@ -41,8 +41,8 @@ Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
 
 #### Instances
 
-- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 38.
-  - `Context` is `CodeContext` — [Application types](../design/types.md), line 39.
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 40.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 41.
 
 ### DominoPlaying
 
@@ -99,9 +99,9 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 
 #### Instances
 
-- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 43.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 45.
-  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 44.
+- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 45.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 47.
+  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 46.
 
 ### Guesting
 
@@ -120,7 +120,7 @@ Defined in [Guesting](../design/concepts/Guesting.md), line 1.
 
 #### Instances
 
-- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 47.
+- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 49.
 
 ### Matchmaking
 
@@ -154,10 +154,39 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
 
 #### Instances
 
-- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 52.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 55.
-  - `Player` is `Person` — [Application types](../design/types.md), line 53.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 54.
+- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 59.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 62.
+  - `Player` is `Person` — [Application types](../design/types.md), line 60.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 61.
+
+### PasswordAuthenticating
+
+Defined in [PasswordAuthenticating](../design/concepts/PasswordAuthenticating.md), line 1.
+
+#### Actions
+
+- `register(username: String, password: String) : returns (user: User)`
+  - Refuses `INVALID_USERNAME`: A username is 3 to 20 letters, digits, _ . or -, starting with a letter or digit.
+  - Refuses `USERNAME_TAKEN`: That username is taken.
+  - Refuses `WEAK_PASSWORD`: That password is too easy to guess.
+- `changePassword(user: User, current: String, password: String) : returns (user: User)`
+  - Refuses `NO_SUCH_USER`: There is no such account.
+  - Refuses `WRONG_PASSWORD`: That is not the current password.
+  - Refuses `WEAK_PASSWORD`: That password is too easy to guess.
+- `unregister(user: User, password: String) : returns (user: User)`
+  - Refuses `NO_SUCH_USER`: There is no such account.
+  - Refuses `WRONG_PASSWORD`: That is not the current password.
+
+#### Queries
+
+- `_verify(username: String, password: String) : optional (user: User)`
+- `_byUsername(username: String) : optional (user: User)`
+- `_username(user: User) : optional (username: String)`
+- `_weaknesses(username: String, password: String) : many (rule: String)`
+
+#### Instances
+
+- `PasswordAuthenticating` — instance of `PasswordAuthenticating` — [Application types](../design/types.md), line 51.
 
 ### Sessioning
 
@@ -181,11 +210,12 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 - `_idle() : many (session: Session, player: Player)`
 - `_idleFor(player: Player) : optional (idleMs: Number)`
 - `_tokens(player: Player) : many (token: String)`
+- `_others(player: Player, keep: String) : many (token: String)`
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 49.
-  - `Player` is `Person` — [Application types](../design/types.md), line 50.
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 56.
+  - `Player` is `Person` — [Application types](../design/types.md), line 57.
 
 ### Table
 
@@ -219,18 +249,36 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Instances
 
-- `Table` — instance of `Table` — [Application types](../design/types.md), line 57.
-  - `Player` is `Person` — [Application types](../design/types.md), line 58.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 59.
+- `Table` — instance of `Table` — [Application types](../design/types.md), line 64.
+  - `Player` is `Person` — [Application types](../design/types.md), line 65.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 66.
+
+### Throttling
+
+Defined in [Throttling](../design/concepts/Throttling.md), line 1.
+
+#### Actions
+
+- `fail(key: Key) : returns (key: Key, locked: Flag)`
+- `reset(key: Key) : returns (key: Key)`
+
+#### Queries
+
+- `_locked(key: Key) : one (locked: Flag, secondsLeft: Number)`
+
+#### Instances
+
+- `Throttling` — instance of `Throttling` — [Application types](../design/types.md), line 53.
+  - `Key` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 54.
 
 ## Application types
 
 Concrete types:
 
-- `CodeContext` — [Application types](../design/types.md), line 25.
-- `Person` — [Application types](../design/types.md), line 29.
-- `RuleSet` — [Application types](../design/types.md), line 22.
-- `SeatHolder` — [Application types](../design/types.md), line 32.
+- `CodeContext` — [Application types](../design/types.md), line 27.
+- `Person` — [Application types](../design/types.md), line 31.
+- `RuleSet` — [Application types](../design/types.md), line 24.
+- `SeatHolder` — [Application types](../design/types.md), line 34.
 
 ## Formers
 
@@ -275,6 +323,7 @@ Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, ru
             winner
         log: each DominoPlaying._log (game) has (matchNumber: turnMatch, move, player: mover, tile: movedTile, turn: turnNumber)
           where whether Guesting._name (guest: mover) has (displayName: moverName)
+          where whether PasswordAuthenticating._username (user: mover) has (username: moverName)
           where whether Botting._name (bot: mover) has (name: moverBot)
           form a record of
             botName: moverBot
@@ -287,6 +336,7 @@ Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, ru
         matchNumber
         players: each DominoPlaying._players (game) has (player, position, tileCount)
           where whether Guesting._name (guest: player) has (displayName)
+          where whether PasswordAuthenticating._username (user: player) has (username: displayName)
           where whether Botting._name (bot: player) has (name: botName)
           where whether Sessioning._idleFor (player) has (idleMs)
           form a record of
@@ -314,6 +364,7 @@ Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, ru
         turnPlayer
         vacancies: each DominoPlaying._vacancies (game) has (player: leaver, position: vacantPosition, vacantMs)
           where whether Guesting._name (guest: leaver) has (displayName: leaverName)
+          where whether PasswordAuthenticating._username (user: leaver) has (username: leaverName)
           where whether Botting._name (bot: leaver) has (name: leaverBot)
           form a record of
             botName: leaverBot
@@ -338,7 +389,8 @@ Former "the lobby of (me)" — inputs (me); bindings (table, host, code, rules, 
         host
         rules
         seats: each Table._seats (table) has (player, position)
-          where Guesting._name (guest: player) has (displayName)
+          where whether Guesting._name (guest: player) has (displayName)
+          where whether PasswordAuthenticating._username (user: player) has (username: displayName)
           form a record of
             displayName
             player
@@ -360,7 +412,8 @@ Former "the matchmaking lobby of (me)" — inputs (me); bindings (lobby, rules, 
         full
         lobby
         players: each Matchmaking._entries (lobby) has (midway, player)
-          where Guesting._name (guest: player) has (displayName)
+          where whether Guesting._name (guest: player) has (displayName)
+          where whether PasswordAuthenticating._username (user: player) has (username: displayName)
           form a record of
             displayName
             midway
@@ -384,7 +437,348 @@ Former "the rule sets" — inputs (); bindings (rules, target, description); pro
         target
 ```
 
+### the weaknesses of (password) for (username)
+
+Authored path: `Accounts.Weaknesses`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 13.
+
+```former
+Former "the weaknesses of (password) for (username)" — inputs (username, password); bindings (rule); promises exactly one record — forms:
+  a record of
+    weaknesses: each PasswordAuthenticating._weaknesses (password, username) has (rule)
+      form a record of
+        rule
+```
+
 ## Reactions
+
+### Accounts.ChangePassword
+
+Authored path: `Accounts.ChangePassword`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 36.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 47.
+
+```reaction
+when RequestBoundary.request (current, password, path: "/accounts/password", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Accounts.ChangePassword:account#2
+
+Authored path: `Accounts.ChangePassword`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 36.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 47.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Accounts.ChangePassword
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (current, password, path: "/accounts/password", requestId, token)
+then
+  PasswordAuthenticating.changePassword (current, password, user: me)
+```
+
+### Accounts.ChangePassword:account#3
+
+Authored path: `Accounts.ChangePassword`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 36.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 47.
+
+```reaction
+when PasswordAuthenticating.changePassword (current, password, user: me), asked by Accounts.ChangePassword:account#2
+where
+  earlier, RequestBoundary.request (current, password, path: "/accounts/password", requestId, token)
+then
+  RequestBoundary.respond (player: me, requestId)
+```
+
+### Accounts.ChangePassword:guest#2
+
+Authored path: `Accounts.ChangePassword`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 36.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 47.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Accounts.ChangePassword
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (current, password, path: "/accounts/password", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Accounts.CheckPassword
+
+Authored path: `Accounts.CheckPassword`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 12.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 17.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/password-check", requestId, username)
+then
+  RequestBoundary.respond (check: former "the weaknesses of (password) for (username)" with (password, username), requestId)
+```
+
+### Accounts.DeleteAccount
+
+Authored path: `Accounts.DeleteAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 40.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 48.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/delete", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Accounts.DeleteAccount:account#2
+
+Authored path: `Accounts.DeleteAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 40.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 48.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Accounts.DeleteAccount
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (password, path: "/accounts/delete", requestId, token)
+then
+  PasswordAuthenticating.unregister (password, user: me)
+```
+
+### Accounts.DeleteAccount:account#3
+
+Authored path: `Accounts.DeleteAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 40.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 48.
+
+```reaction
+when PasswordAuthenticating.unregister (password, user: me), asked by Accounts.DeleteAccount:account#2
+where
+  earlier, RequestBoundary.request (password, path: "/accounts/delete", requestId, token)
+then
+  RequestBoundary.respond (player: me, requestId)
+```
+
+### Accounts.DeleteAccount:guest#2
+
+Authored path: `Accounts.DeleteAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 40.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 48.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Accounts.DeleteAccount
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (password, path: "/accounts/delete", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Accounts.ForgetThrottleOfDeletedAccount
+
+Authored path: `Accounts.ForgetThrottleOfDeletedAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 43.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+then
+  Throttling.reset (key: user)
+```
+
+### Accounts.Register
+
+Authored path: `Accounts.Register`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 7.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 16.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/register", requestId, username)
+then
+  PasswordAuthenticating.register (password, username)
+```
+
+### Accounts.Register#2
+
+Authored path: `Accounts.Register`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 7.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 16.
+
+```reaction
+when PasswordAuthenticating.register (password, username, user), asked by Accounts.Register
+then
+  CodeGenerating.generate (context: "SESSION_TOKENS", size: 32)
+```
+
+### Accounts.Register#3
+
+Authored path: `Accounts.Register`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 7.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 16.
+
+```reaction
+when CodeGenerating.generate (context: "SESSION_TOKENS", size: 32, code), asked by Accounts.Register#2
+where
+  earlier, PasswordAuthenticating.register (password, username, user), asked by Accounts.Register
+then
+  Sessioning.start (lifetime: 2592000000, player: user, token: code)
+```
+
+### Accounts.Register#4
+
+Authored path: `Accounts.Register`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 7.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 16.
+
+```reaction
+when Sessioning.start (lifetime: 2592000000, player: user, token: code, session), asked by Accounts.Register#3
+where
+  earlier, RequestBoundary.request (password, path: "/accounts/register", requestId, username)
+then
+  RequestBoundary.respond (player: user, requestId, token: code)
+```
+
+### Accounts.SignIn:locked
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+where
+  PasswordAuthenticating._byUsername (username) has (user)
+  Throttling._locked (key: user) has (locked: true)
+then
+  RequestBoundary.respond (error: "TOO_MANY_ATTEMPTS", requestId)
+```
+
+### Accounts.SignIn:signed-in
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+where
+  PasswordAuthenticating._verify (password, username) has (user)
+  Throttling._locked (key: user) has (locked: false)
+then
+  Throttling.reset (key: user)
+```
+
+### Accounts.SignIn:signed-in#2
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when Throttling.reset (key: user), asked by Accounts.SignIn:signed-in
+then
+  CodeGenerating.generate (context: "SESSION_TOKENS", size: 32)
+```
+
+### Accounts.SignIn:signed-in#3
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when CodeGenerating.generate (context: "SESSION_TOKENS", size: 32, code), asked by Accounts.SignIn:signed-in#2
+where
+  earlier, Throttling.reset (key: user), asked by Accounts.SignIn:signed-in
+then
+  Sessioning.start (lifetime: 2592000000, player: user, token: code)
+```
+
+### Accounts.SignIn:signed-in#4
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when Sessioning.start (lifetime: 2592000000, player: user, token: code, session), asked by Accounts.SignIn:signed-in#3
+where
+  earlier, RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+then
+  RequestBoundary.respond (player: user, requestId, token: code)
+```
+
+### Accounts.SignIn:unknown-username
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+where
+  no PasswordAuthenticating._byUsername (username)
+then
+  RequestBoundary.respond (error: "WRONG_CREDENTIALS", requestId)
+```
+
+### Accounts.SignIn:wrong-password
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+where
+  PasswordAuthenticating._byUsername (username) has (user)
+  no PasswordAuthenticating._verify (password, username)
+  Throttling._locked (key: user) has (locked: false)
+then
+  Throttling.fail (key: user)
+```
+
+### Accounts.SignIn:wrong-password#2
+
+Authored path: `Accounts.SignIn`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 20.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 29.
+
+```reaction
+when Throttling.fail (key: user), asked by Accounts.SignIn:wrong-password
+where
+  earlier, RequestBoundary.request (password, path: "/accounts/signin", requestId, username)
+then
+  RequestBoundary.respond (error: "WRONG_CREDENTIALS", requestId)
+```
+
+### Accounts.SignOutDeletedAccount
+
+Authored path: `Accounts.SignOutDeletedAccount`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 41.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+where
+  Sessioning._tokens (player: user) has (token)
+then
+  Sessioning.end (token)
+```
+
+### Accounts.SignOutOtherSessionsOnPasswordChange
+
+Authored path: `Accounts.SignOutOtherSessionsOnPasswordChange`.
+- Covered by [Accounts](../design/compositions/Accounts.md), line 38.
+
+```reaction
+when PasswordAuthenticating.changePassword (user)
+where
+  earlier, Sessioning.resume (token: keep, player: user)
+  Sessioning._others (keep, player: user) has (token)
+then
+  Sessioning.end (token)
+```
 
 ### DeliverFaultToAsker
 
@@ -705,7 +1099,22 @@ then
   Sessioning.resume (token)
 ```
 
-### Guests.Me#2
+### Guests.Me:account#2
+
+Authored path: `Guests.Me`.
+- Covered by [Guests](../design/compositions/Guests.md), line 15.
+- Covered by [Guests](../design/compositions/Guests.md), line 20.
+
+```reaction
+when Sessioning.resume (token, player), asked by Guests.Me
+where
+  PasswordAuthenticating._username (user: player) has (username)
+  earlier, RequestBoundary.request (path: "/sessions/me", requestId, token)
+then
+  RequestBoundary.respond (displayName: username, player, requestId, username)
+```
+
+### Guests.Me:guest#2
 
 Authored path: `Guests.Me`.
 - Covered by [Guests](../design/compositions/Guests.md), line 15.
@@ -718,6 +1127,22 @@ where
   earlier, RequestBoundary.request (path: "/sessions/me", requestId, token)
 then
   RequestBoundary.respond (displayName, player, requestId)
+```
+
+### Guests.Me:nobody#2
+
+Authored path: `Guests.Me`.
+- Covered by [Guests](../design/compositions/Guests.md), line 15.
+- Covered by [Guests](../design/compositions/Guests.md), line 20.
+
+```reaction
+when Sessioning.resume (token, player), asked by Guests.Me
+where
+  no Guesting._name (guest: player)
+  no PasswordAuthenticating._username (user: player)
+  earlier, RequestBoundary.request (path: "/sessions/me", requestId, token)
+then
+  RequestBoundary.respond (error: "UNKNOWN_SESSION", requestId)
 ```
 
 ### Guests.Start
@@ -2069,6 +2494,11 @@ object or lacks a required key. The response uses `INVALID_INPUT` and names
 the path or missing key. A declared default fills an absent key. Endpoints
 not listed here have no explicit input contract.
 
+- `/accounts/delete` — requires `token`, `password`
+- `/accounts/password` — requires `token`, `current`, `password`
+- `/accounts/password-check` — requires `username`, `password`
+- `/accounts/register` — requires `username`, `password`
+- `/accounts/signin` — requires `username`, `password`
 - `/games/bot-move` — requires `game`
 - `/games/drop-absent` — requires `game`, `player`
 - `/games/play` — requires `token`, `game`, `tile`, `side`

@@ -1,8 +1,10 @@
 # Application types
 
-A person playing DOMINAO is a guest, kept by Guesting. Sessioning recognizes their
-browser by its token and answers which person it acts as, so the players of
-Sessioning, Table and Matchmaking are those people.
+A person playing DOMINAO is either a guest, kept by Guesting, or the owner of an
+account, kept by PasswordAuthenticating. Sessioning recognizes their browser by its
+token and answers which person it acts as, so the players of Sessioning, Table and
+Matchmaking are those people. Throttling counts failed sign-ins per account, so its
+keys are accounts.
 
 CodeGenerating keeps codes unique within a context. The app uses two contexts: one
 for session tokens and one for table join codes.
@@ -27,7 +29,7 @@ concrete CodeContext
   TABLE_CODES for the join codes of private tables.
 
 concrete Person
-  A person playing: a guest from Guesting.
+  A person playing: a guest from Guesting, or an account from PasswordAuthenticating.
 
 concrete SeatHolder
   Whoever holds a seat in a game: a person, or a bot standing in for a person who
@@ -45,6 +47,11 @@ instantiate DominoPlaying with
   Place is Table.Table
 
 instantiate Guesting
+
+instantiate PasswordAuthenticating
+
+instantiate Throttling with
+  Key is PasswordAuthenticating.User
 
 instantiate Sessioning with
   Player is Person

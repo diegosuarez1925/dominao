@@ -180,6 +180,26 @@ console.log("\nSessions");
 check("a player id cannot be used to expire their session (401)", (await call("/sessions/expire", { session: host.player })).status === 401);
 check("an invented session cannot be expired (401)", (await call("/sessions/expire", { session: "made-up" })).status === 401);
 
+console.log("\nAccounts");
+// A throwaway account, deleted again at the end.
+const username = `check_${crypto.randomUUID().slice(0, 8)}`;
+const password = "Check-Fichas-1957";
+const weak = await call("/accounts/password-check", { username, password: "password1" });
+check("the password check explains a weak password", weak.status === 200 && weak.body.check.weaknesses.length > 0, weak);
+check("a weak password is refused (400)", (await call("/accounts/register", { username, password: "password1" })).status === 400);
+const account = await call("/accounts/register", { username, password });
+check("registering signs the account in", account.status === 200 && typeof account.body.token === "string", account);
+const who = await call("/sessions/me", { token: account.body.token });
+check("the account is recognized by its username", who.body.username === username, who);
+check("a taken username is refused (409)", (await call("/accounts/register", { username: username.toUpperCase(), password })).status === 409);
+check("a wrong password is refused (401)", (await call("/accounts/signin", { username, password: "Wrong-Fichas-1957" })).status === 401);
+check("an unknown username gets the same answer (401)", (await call("/accounts/signin", { username: `${username}_x`, password })).status === 401);
+const again = await call("/accounts/signin", { username, password });
+check("signing in again is the same player", again.status === 200 && again.body.player === account.body.player, again);
+const deleted = await call("/accounts/delete", { token: account.body.token, password });
+check("the account can be deleted, which signs it out everywhere", deleted.status === 200 && (await call("/sessions/me", { token: again.body.token })).status === 401, deleted);
+check("a deleted account cannot sign in (401)", (await call("/accounts/signin", { username, password })).status === 401);
+
 if (keep) {
   const now = await view(host);
   await Bun.write(stateFile, JSON.stringify({ guests: players, table, game: now.game, log: now.log }, null, 2));

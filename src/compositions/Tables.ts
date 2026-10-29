@@ -6,12 +6,12 @@
  * Table knows nothing about the game; it only seats people.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, is, no, reaction, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, reaction, when, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 import { AWAY_BEFORE_GAME_MS } from "../timing.ts";
 import { seats, strings } from "./validators.ts";
 
-const { CodeGenerating, DominoPlaying, Guesting, Matchmaking, Sessioning, Table } = concepts;
+const { CodeGenerating, DominoPlaying, Guesting, Matchmaking, PasswordAuthenticating, Sessioning, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
@@ -29,7 +29,10 @@ const Lobby = former(
           host,
           rules,
           seats: each(Table._seats({ table }).is({ position, player }))
-            .where(Guesting._name({ guest: player }).is({ displayName }))
+            .where(
+              whether(Guesting._name({ guest: player }).is({ displayName })),
+              whether(PasswordAuthenticating._username({ user: player }).is({ username: displayName })),
+            )
             .form({ position, player, displayName }),
         }),
     }),

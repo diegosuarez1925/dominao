@@ -696,3 +696,52 @@ to an account as well as to a guest.
   edge cases, and players with no session being taken out. Every earlier test was
   kept and moved to the new names. 161 pass. Checked in a browser: start as a guest,
   open a table, play, sign out.
+
+### Accounts: usernames, passwords and sign-in limits
+
+Asked for: permanent accounts with unique usernames and passwords that are not
+simple, no email verification, built on the split from the step before. Stats and
+friends come later. This step is the server side; the page comes next.
+
+- **Two new concepts** (as designed and approved before this step):
+  - **PasswordAuthenticating** keeps accounts: `register`, `changePassword`,
+    `unregister`, and the queries `_verify`, `_byUsername`, `_username` and
+    `_weaknesses`. Usernames are 3 to 20 letters, digits, `_ . -`, start with a letter
+    or digit, and are unique whatever their case. Passwords are hashed with argon2id
+    (`Bun.password`) and never stored or returned.
+  - **Throttling [Key]** counts failures per key: five in fifteen minutes lock the key
+    for fifteen minutes. The key is the account, so changing the username's case does
+    not get around it.
+- **"Not simple" means** all of: 10 to 128 characters; three of lowercase, uppercase,
+  digit and symbol; not containing the username; and not a common password, also when
+  dressed up ("Password123!", "P@ssw0rd2026" and "D0m1n0es-2026" are all refused).
+  `/accounts/password-check` lists the rules a password breaks, for the sign-up page.
+- **Endpoints** (Accounts composition): `/accounts/register`, `/accounts/signin`,
+  `/accounts/password-check`, `/accounts/password` and `/accounts/delete`. Signing out
+  and "who am I" are the shared `/sessions/end` and `/sessions/me`; for an account,
+  `me` also answers `username`.
+- **Sign-in answers:** the right pair starts a session (30 days) and starts the
+  failure count over. A wrong password counts a failure. A wrong password and an
+  unknown username both answer `WRONG_CREDENTIALS` (401), and take as long, so nobody
+  can learn which usernames exist. A locked account answers `TOO_MANY_ATTEMPTS` (403),
+  even for the right password; guesses while locked are not counted.
+- **The account is the player**, so two browsers signed in to one account are one
+  player at one table. Signing out of one browser keeps the seat; signing out of the
+  last one gets the account up from its table and out of the queue, as for a guest.
+  (The design had suggested keeping the seat even then, but a player with no session
+  left could never be timed out of a game, so the game would wait forever.)
+- **Changing the password** signs out every other browser
+  (`SignOutOtherSessionsOnPasswordChange`, which uses a new `Sessioning._others`
+  query), but not the one that changed it. **Deleting an account** needs its password,
+  frees the username, signs it out everywhere (which gets it up from its table and out
+  of the queue, and pauses its game) and forgets its failed sign-ins.
+- **Names:** wherever a guest's display name shows (lobby, queue, game, move log), an
+  account's username shows instead, so the page needs no change for that.
+- Tests: PasswordAuthenticating (24: every username and password rule and its edges,
+  case, hashing, racing registrations), Throttling (12: windows, locks, reset,
+  failures at once), and Accounts end to end (31: registering, the four sign-in
+  answers, locking and unlocking, two browsers, lifetimes and the expiry timer,
+  changing the password, deleting, and that no response carries a password or hash).
+  The access-control sweep covers the new endpoints. The deployment check gained an
+  accounts section that registers, signs in and deletes a throwaway account.
+  228 pass.
