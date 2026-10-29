@@ -17,6 +17,7 @@ import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
 import { PasswordAuthenticatingConcept } from "./concepts/PasswordAuthenticating.ts";
 import { SeeingConcept } from "./concepts/Seeing.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
+import { TallyingConcept } from "./concepts/Tallying.ts";
 import { ThrottlingConcept } from "./concepts/Throttling.ts";
 import { TableConcept } from "./concepts/Table.ts";
 import { applicationConceptSet } from "./concepts.ts";
@@ -45,6 +46,7 @@ export function assembleApplication(
       PasswordAuthenticating: new PasswordAuthenticatingConcept(database, clock),
       Seeing: new SeeingConcept(database, clock),
       Sessioning: new SessioningConcept(database, clock),
+      Tallying: new TallyingConcept(database),
       Throttling: new ThrottlingConcept(database, clock),
       Table: new TableConcept(database),
     },

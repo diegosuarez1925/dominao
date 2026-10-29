@@ -22,7 +22,7 @@ Defined in [Botting](../design/concepts/Botting.md), line 1.
 
 #### Instances
 
-- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 49.
+- `Botting` — instance of `Botting` — [Application types](../design/types.md), line 52.
 
 ### CodeGenerating
 
@@ -41,8 +41,8 @@ Defined in [CodeGenerating](../design/concepts/CodeGenerating.md), line 1.
 
 #### Instances
 
-- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 46.
-  - `Context` is `CodeContext` — [Application types](../design/types.md), line 47.
+- `CodeGenerating` — instance of `CodeGenerating` — [Application types](../design/types.md), line 49.
+  - `Context` is `CodeContext` — [Application types](../design/types.md), line 50.
 
 ### DominoPlaying
 
@@ -94,14 +94,16 @@ Defined in [DominoPlaying](../design/concepts/DominoPlaying.md), line 1.
 - `_log(game: Game) : many (turn: Number, matchNumber: Number, player: Player, move: Move, tile: String)`
 - `_lastResult(game: Game) : optional (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)`
 - `_results(game: Game) : many (matchNumber: Number, winner: Player, team: Number, points: Number, prize: Number, special: Special, bonus: Number, ending: Ending)`
+- `_matchOutcomes(game: Game) : many (player: Player, rules: RuleSet, matchNumber: Number, won: Flag, points: Number)`
+- `_gameOutcomes(game: Game) : many (player: Player, rules: RuleSet, won: Flag)`
 - `_ruleset(rules: RuleSet) : optional (target: Number, description: String)`
 - `_rulesets() : many (rules: RuleSet, target: Number, description: String)`
 
 #### Instances
 
-- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 51.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 53.
-  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 52.
+- `DominoPlaying` — instance of `DominoPlaying` — [Application types](../design/types.md), line 54.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 56.
+  - `Player` is `SeatHolder` — [Application types](../design/types.md), line 55.
 
 ### Friending
 
@@ -133,8 +135,8 @@ Defined in [Friending](../design/concepts/Friending.md), line 1.
 
 #### Instances
 
-- `Friending` — instance of `Friending` — [Application types](../design/types.md), line 55.
-  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 56.
+- `Friending` — instance of `Friending` — [Application types](../design/types.md), line 58.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 59.
 
 ### Guesting
 
@@ -153,7 +155,7 @@ Defined in [Guesting](../design/concepts/Guesting.md), line 1.
 
 #### Instances
 
-- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 58.
+- `Guesting` — instance of `Guesting` — [Application types](../design/types.md), line 61.
 
 ### Inviting
 
@@ -180,9 +182,9 @@ Defined in [Inviting](../design/concepts/Inviting.md), line 1.
 
 #### Instances
 
-- `Inviting` — instance of `Inviting` — [Application types](../design/types.md), line 60.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 62.
-  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 61.
+- `Inviting` — instance of `Inviting` — [Application types](../design/types.md), line 63.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 65.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 64.
 
 ### Matchmaking
 
@@ -216,10 +218,10 @@ Defined in [Matchmaking](../design/concepts/Matchmaking.md), line 1.
 
 #### Instances
 
-- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 75.
-  - `Place` is `Table.Table` — [Application types](../design/types.md), line 78.
-  - `Player` is `Person` — [Application types](../design/types.md), line 76.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 77.
+- `Matchmaking` — instance of `Matchmaking` — [Application types](../design/types.md), line 83.
+  - `Place` is `Table.Table` — [Application types](../design/types.md), line 86.
+  - `Player` is `Person` — [Application types](../design/types.md), line 84.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 85.
 
 ### PasswordAuthenticating
 
@@ -249,7 +251,7 @@ Defined in [PasswordAuthenticating](../design/concepts/PasswordAuthenticating.md
 
 #### Instances
 
-- `PasswordAuthenticating` — instance of `PasswordAuthenticating` — [Application types](../design/types.md), line 64.
+- `PasswordAuthenticating` — instance of `PasswordAuthenticating` — [Application types](../design/types.md), line 67.
 
 ### Seeing
 
@@ -266,8 +268,8 @@ Defined in [Seeing](../design/concepts/Seeing.md), line 1.
 
 #### Instances
 
-- `Seeing` — instance of `Seeing` — [Application types](../design/types.md), line 69.
-  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 70.
+- `Seeing` — instance of `Seeing` — [Application types](../design/types.md), line 77.
+  - `User` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 78.
 
 ### Sessioning
 
@@ -295,8 +297,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 72.
-  - `Player` is `Person` — [Application types](../design/types.md), line 73.
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 80.
+  - `Player` is `Person` — [Application types](../design/types.md), line 81.
 
 ### Table
 
@@ -330,9 +332,35 @@ Defined in [Table](../design/concepts/Table.md), line 1.
 
 #### Instances
 
-- `Table` — instance of `Table` — [Application types](../design/types.md), line 80.
-  - `Player` is `Person` — [Application types](../design/types.md), line 81.
-  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 82.
+- `Table` — instance of `Table` — [Application types](../design/types.md), line 88.
+  - `Player` is `Person` — [Application types](../design/types.md), line 89.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 90.
+
+### Tallying
+
+Defined in [Tallying](../design/concepts/Tallying.md), line 1.
+
+#### Actions
+
+- `recordMatch(player: Player, rules: Rules, game: Game, match: Number, won: Flag, points: Number) : returns (player: Player)`
+  - Refuses `ALREADY_COUNTED`: That was already counted.
+- `recordGame(player: Player, rules: Rules, game: Game, won: Flag) : returns (player: Player)`
+  - Refuses `ALREADY_COUNTED`: That was already counted.
+- `forget(player: Player) : returns (player: Player)`
+
+#### Queries
+
+- `_records(player: Player) : many (rules: Rules, matchesWon: Number, matchesLost: Number, matchesPlayed: Number, matchWinrate: Number, gamesWon: Number, gamesLost: Number, gamesPlayed: Number, gameWinrate: Number, bestMatchPoints: Number)`
+- `_overall(player: Player) : one (matchesWon: Number, matchesLost: Number, matchesPlayed: Number, matchWinrate: Number, gamesWon: Number, gamesLost: Number, gamesPlayed: Number, gameWinrate: Number)`
+- `_matchCounted(player: Player, game: Game, match: Number) : one (counted: Flag)`
+- `_gameCounted(player: Player, game: Game) : one (counted: Flag)`
+
+#### Instances
+
+- `Tallying` — instance of `Tallying` — [Application types](../design/types.md), line 69.
+  - `Game` is `DominoPlaying.Game` — [Application types](../design/types.md), line 72.
+  - `Player` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 70.
+  - `Rules` is `RuleSet` — [Application types](../design/types.md), line 71.
 
 ### Throttling
 
@@ -349,17 +377,17 @@ Defined in [Throttling](../design/concepts/Throttling.md), line 1.
 
 #### Instances
 
-- `Throttling` — instance of `Throttling` — [Application types](../design/types.md), line 66.
-  - `Key` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 67.
+- `Throttling` — instance of `Throttling` — [Application types](../design/types.md), line 74.
+  - `Key` is `PasswordAuthenticating.User` — [Application types](../design/types.md), line 75.
 
 ## Application types
 
 Concrete types:
 
-- `CodeContext` — [Application types](../design/types.md), line 33.
-- `Person` — [Application types](../design/types.md), line 37.
-- `RuleSet` — [Application types](../design/types.md), line 30.
-- `SeatHolder` — [Application types](../design/types.md), line 40.
+- `CodeContext` — [Application types](../design/types.md), line 36.
+- `Person` — [Application types](../design/types.md), line 40.
+- `RuleSet` — [Application types](../design/types.md), line 33.
+- `SeatHolder` — [Application types](../design/types.md), line 43.
 
 ## Formers
 

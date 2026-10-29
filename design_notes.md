@@ -951,3 +951,33 @@ guest is answered `NOT_AN_ACCOUNT`):
   lobby, joining from the invite pop-up, the guest's menu and tag, swapping from the
   menu, and sending a request from an opponent's seat mid-game. No errors and no
   horizontal scrolling.
+
+### Statistics, part 1: a Tallying concept and two game queries
+
+Asked for: per-ruleset and overall statistics for logged-in players (matches and
+games won, lost and played, their winrates, and the most points won in one match).
+P1 has no concept for this, so it is new rather than a change to a P1 concept:
+
+- **Tallying [Player, Rules, Game]:** a running record per player and rules
+  (`matchesWon`, `matchesLost`, `gamesWon`, `gamesLost`, `bestMatchPoints`).
+  `recordMatch(player, rules, game, match, won, points)` and
+  `recordGame(player, rules, game, won)` each add one result, and remember that it was
+  counted, so the same match or game reported twice is refused (`ALREADY_COUNTED`) and
+  never counted twice, even when both reports arrive at the same moment. Only a won
+  match can raise the best points. `_records(player)` answers one row per rules played,
+  with totals and winrates; `_overall(player)` adds every rules together. A winrate is
+  a whole percentage, rounded (2 of 3 is 67), and 0 when nothing was played.
+  `forget(player)` drops everything of a deleted account. Tallying knows nothing about
+  dominoes, accounts or guests: who gets a record is decided by the app.
+- **DominoPlaying** gets two queries, so the app can read results without knowing how
+  the game keeps them:
+  - `_matchOutcomes(game)`: for the latest finished match, each seated player, the
+    rules, the match number, whether their team won, and the points won (prize and any
+    bonus; 0 for the losers). A tied (tranque) match answers nothing, since ties are
+    not counted, and an empty seat is left out.
+  - `_gameOutcomes(game)`: each seated player and whether their team won, only once
+    the game is finished. An abandoned game answers nothing, so it never counts as a
+    game, though its matches that already ended still count.
+- No reaction uses them yet (part 2). Concept tests: 9 for Tallying, 2 for the
+  outcome queries (a whole game played by autoplay, checking every match end, and
+  a game with an empty seat that is then abandoned).

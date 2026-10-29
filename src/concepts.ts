@@ -10,6 +10,7 @@ import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import friendingSpec from "@design/concepts/Friending.md" with { type: "text" };
 import invitingSpec from "@design/concepts/Inviting.md" with { type: "text" };
 import seeingSpec from "@design/concepts/Seeing.md" with { type: "text" };
+import tallyingSpec from "@design/concepts/Tallying.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import botSpec from "@design/concepts/Botting.md" with { type: "text" };
@@ -39,6 +40,7 @@ import {
 } from "./concepts/Friending.ts";
 import { AlreadyInvited, InvitingConcept, NoSuchInvite, SelfInvite } from "./concepts/Inviting.ts";
 import { SeeingConcept } from "./concepts/Seeing.ts";
+import { AlreadyCounted, TallyingConcept } from "./concepts/Tallying.ts";
 import { GuestingConcept, InvalidName, NoSuchGuest } from "./concepts/Guesting.ts";
 import {
   InvalidUsername,
@@ -188,6 +190,12 @@ const seeing = registerConcept({
   refusals: {},
 });
 
+const tallying = registerConcept({
+  class: TallyingConcept,
+  spec: tallyingSpec,
+  refusals: { ALREADY_COUNTED: AlreadyCounted },
+});
+
 export const applicationConceptSet = conceptSet({
   Botting: botting,
   CodeGenerating: codeGenerating,
@@ -199,6 +207,7 @@ export const applicationConceptSet = conceptSet({
   PasswordAuthenticating: passwordAuthenticating,
   Seeing: seeing,
   Sessioning: sessioning,
+  Tallying: tallying,
   Throttling: throttling,
   Table: table,
 });

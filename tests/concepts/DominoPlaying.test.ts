@@ -618,3 +618,62 @@ test("a chuchazo: winning with the double blank; long games pay 100 for it", asy
     points: allPips(ending.handsAfter) + ending.result.prize + 100,
   });
 });
+
+// Outcomes, for keeping players' records
+
+test("_matchOutcomes answers each seated player's result of the latest match, and _gameOutcomes the game's once finished", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(7));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "SHORT" });
+  expect(await dominoes._matchOutcomes({ game })).toEqual([]);
+  let checkedMatches = 0;
+  for (let moves = 0; moves < 2000; moves++) {
+    const [turn] = await dominoes._turn({ game });
+    if (turn === undefined) break;
+    await dominoes.autoplay({ game, player: turn.player });
+    const results = await dominoes._results({ game });
+    const last = results.at(-1);
+    if (last === undefined || last.matchNumber === checkedMatches) continue;
+    checkedMatches = last.matchNumber;
+    const outcomes = await dominoes._matchOutcomes({ game });
+    if (last.team === -1) {
+      expect(outcomes).toEqual([]);
+      continue;
+    }
+    expect(outcomes).toEqual(
+      seats.map((player, position) => ({
+        player,
+        rules: "SHORT",
+        matchNumber: last.matchNumber,
+        won: position % 2 === last.team,
+        points: position % 2 === last.team ? last.points : 0,
+      })),
+    );
+    // Until the game ends, it has no outcome.
+    const [summary] = await dominoes._summary({ game });
+    if (summary.status !== "FINISHED") expect(await dominoes._gameOutcomes({ game })).toEqual([]);
+  }
+  const [summary] = await dominoes._summary({ game });
+  expect(summary.status).toBe("FINISHED");
+  const winners = summary.scoreA > summary.scoreB ? 0 : 1;
+  expect(await dominoes._gameOutcomes({ game })).toEqual(
+    seats.map((player, position) => ({ player, rules: "SHORT", won: position % 2 === winners })),
+  );
+  expect(checkedMatches).toBeGreaterThan(1);
+});
+
+test("outcomes leave out an empty seat, and an abandoned game has no game outcome", async () => {
+  const dominoes = new DominoPlayingConcept(testDb.db, seededShuffle(7));
+  const { game } = await dominoes.start({ place: "t", ...players, rules: "DEFAULT" });
+  for (let moves = 0; moves < 2000 && (await dominoes._results({ game })).filter((r) => r.team !== -1).length === 0; moves++) {
+    const [turn] = await dominoes._turn({ game });
+    await dominoes.autoplay({ game, player: turn.player });
+    // A tied match is skipped past; only a won one is looked at.
+    if ((await dominoes._lastResult({ game }))[0]?.team === -1) expect(await dominoes._matchOutcomes({ game })).toEqual([]);
+  }
+  await dominoes.vacate({ game, player: "papo" });
+  const outcomes = await dominoes._matchOutcomes({ game });
+  expect(outcomes.map((row) => row.player)).toEqual(["abuelo", "nando", "cheo"]);
+  await dominoes.abandon({ game });
+  expect(await dominoes._gameOutcomes({ game })).toEqual([]);
+  expect(await dominoes._matchOutcomes({ game: "made-up" })).toEqual([]);
+});

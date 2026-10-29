@@ -21,6 +21,9 @@ table, so its places are tables. Seeing remembers when an account last looked at
 friend requests, its game invites and its friends, so only what is newer is pointed
 out as new.
 
+Tallying keeps each account's wins and losses under each rule set, counting the
+matches and games of DominoPlaying; guests and bots have no record.
+
 Games are played by rule sets that DominoPlaying defines (DEFAULT, LONG and SHORT).
 A table keeps the rule set its host chose, and Matchmaking only puts strangers who
 chose the same rule set in a lobby together. Neither interprets the rules; they only
@@ -62,6 +65,11 @@ instantiate Inviting with
   Place is Table.Table
 
 instantiate PasswordAuthenticating
+
+instantiate Tallying with
+  Player is PasswordAuthenticating.User
+  Rules is RuleSet
+  Game is DominoPlaying.Game
 
 instantiate Throttling with
   Key is PasswordAuthenticating.User

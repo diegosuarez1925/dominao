@@ -307,6 +307,17 @@ _results(game: Game) : many (matchNumber: Number, winner: Player, team: Number, 
   played, as _lastResult describes each one; no rows before any match has ended or
   when the game does not exist.
 
+_matchOutcomes(game: Game) : many (player: Player, rules: RuleSet, matchNumber: Number, won: Flag, points: Number)
+  Answers, for the most recent finished match of the game, each player seated now
+  (not an empty seat) with the game's rules, the match's number, whether their team
+  won it, and the points their team scored for it (0 for the losers); no rows before
+  any match has ended, or when that match was a tied tranque.
+
+_gameOutcomes(game: Game) : many (player: Player, rules: RuleSet, won: Flag)
+  Answers, for a FINISHED game, each player seated at its end (not an empty seat) with
+  the game's rules and whether their team won the game; no rows for a game that is not
+  FINISHED.
+
 _ruleset(rules: RuleSet) : optional (target: Number, description: String)
   Answers the target of a rule set and a sentence describing it, and no row when the
   rule set is not known.

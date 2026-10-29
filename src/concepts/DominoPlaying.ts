@@ -507,6 +507,34 @@ export class DominoPlayingConcept {
     return (found?.results ?? []).map((r) => ({ ...r, prize: r.prize ?? 0, special: r.special ?? "NONE", bonus: r.bonus ?? 0 }));
   }
 
+  async _matchOutcomes({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    const last = found?.results.at(-1);
+    if (found === null || last === undefined || last.team === -1) return [];
+    return found.players.flatMap((player, position) =>
+      player === ""
+        ? []
+        : [
+            {
+              player,
+              rules: found.rules ?? DEFAULT_RULES,
+              matchNumber: last.matchNumber,
+              won: teamOf(position) === last.team,
+              points: teamOf(position) === last.team ? last.points : 0,
+            },
+          ],
+    );
+  }
+
+  async _gameOutcomes({ game }: { game: string }) {
+    const found = await this.games.findOne({ _id: game });
+    const last = found?.results.at(-1);
+    if (found === null || found.status !== "FINISHED" || last === undefined) return [];
+    return found.players.flatMap((player, position) =>
+      player === "" ? [] : [{ player, rules: found.rules ?? DEFAULT_RULES, won: teamOf(position) === last.team }],
+    );
+  }
+
   async _ruleset({ rules }: { rules: string }) {
     if (!Object.hasOwn(RULESETS, rules)) return [];
     const { target, description } = RULESETS[rules];
