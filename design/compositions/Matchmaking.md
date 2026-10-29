@@ -27,8 +27,8 @@ Matchmaking.ShowQueue at /matchmaking/view
 ```
 
 A guest can [stop waiting](reaction:Matchmaking.LeaveQueue) at any time before the
-game starts, which also stops a running countdown. A guest who ends their session
-[stops waiting too](reaction:Matchmaking.LeaveQueueOnSessionEnd), as does one whose session
+game starts, which also stops a running countdown. A player whose last session ends
+[stops waiting too](reaction:Matchmaking.LeaveQueueOnSessionEnd), as does one whose last session
 [expires](reaction:Matchmaking.LeaveQueueOnSessionExpire).
 
 ```endpoints

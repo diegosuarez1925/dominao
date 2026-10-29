@@ -11,17 +11,17 @@ import { concepts } from "../concepts.ts";
 import { AWAY_BEFORE_GAME_MS } from "../timing.ts";
 import { seats, strings } from "./validators.ts";
 
-const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
+const { CodeGenerating, DominoPlaying, Guesting, Matchmaking, Sessioning, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
 
 /** The table the guest sits at, if any, with every seat and the name of who sits there. */
 const Lobby = former(
-  "the lobby of (session)",
-  ({ session }, { table, host, code, rules, position, player, displayName }) =>
+  "the lobby of (me)",
+  ({ me }, { table, host, code, rules, position, player, displayName }) =>
     form({
-      tables: each(Table._tableOf({ player: session }).is({ table }))
+      tables: each(Table._tableOf({ player: me }).is({ table }))
         .where(Table._get({ table }).is({ host, code, rules }))
         .form({
           table,
@@ -29,7 +29,7 @@ const Lobby = former(
           host,
           rules,
           seats: each(Table._seats({ table }).is({ position, player }))
-            .where(GuestSessioning._getName({ session: player }).is({ displayName }))
+            .where(Guesting._name({ guest: player }).is({ displayName }))
             .form({ position, player, displayName }),
         }),
     }),
@@ -37,10 +37,10 @@ const Lobby = former(
 
 const ShowLobby = endpoint(
   "/tables/lobby",
-  ({ token, session, displayName }) =>
+  ({ token, me }) =>
     receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(respond({ lobby: Lobby({ session }) })),
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(respond({ lobby: Lobby({ me }) })),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
@@ -50,19 +50,19 @@ const ShowLobby = endpoint(
  */
 const Open = endpoint(
   "/tables/open",
-  ({ token, session, displayName, rules, code, table }) =>
+  ({ token, me, rules, code, table }) =>
     receive({ token, rules })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
-        where(no(Matchmaking._lobbyOf({ player: session })), DominoPlaying._ruleset({ rules }))
+        where(no(Matchmaking._lobbyOf({ player: me })), DominoPlaying._ruleset({ rules }))
           .then(CodeGenerating.generate({ context: TABLE_CODES, size: CODE_SIZE }).responds({ code }))
-          .then(Table.open({ host: session, code, rules }).responds({ table }))
+          .then(Table.open({ host: me, code, rules }).responds({ table }))
           .then(respond({ table, code }))
           .named("not-queued"),
-        where(no(Matchmaking._lobbyOf({ player: session })), no(DominoPlaying._ruleset({ rules })))
+        where(no(Matchmaking._lobbyOf({ player: me })), no(DominoPlaying._ruleset({ rules })))
           .then(respond({ error: "UNKNOWN_RULES" }))
           .named("unknown-rules"),
-        where(Matchmaking._lobbyOf({ player: session }))
+        where(Matchmaking._lobbyOf({ player: me }))
           .then(respond({ error: "IN_QUEUE" }))
           .named("queued"),
       ),
@@ -77,29 +77,29 @@ const Open = endpoint(
  */
 const JoinByCode = endpoint(
   "/tables/join",
-  ({ token, session, displayName, code, table, position }) =>
+  ({ token, me, code, table, position }) =>
     receive({ token, code })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
         where(
-          no(Matchmaking._lobbyOf({ player: session })),
+          no(Matchmaking._lobbyOf({ player: me })),
           Table._getByCode({ code }).is({ table }),
           no(Matchmaking._placeRules({ place: table })),
         )
-          .then(Table.join({ table, player: session }).responds({ position }))
+          .then(Table.join({ table, player: me }).responds({ position }))
           .then(respond({ table, position }))
           .named("code-found"),
         where(
-          no(Matchmaking._lobbyOf({ player: session })),
+          no(Matchmaking._lobbyOf({ player: me })),
           Table._getByCode({ code }).is({ table }),
           Matchmaking._placeRules({ place: table }),
         )
           .then(respond({ error: "PUBLIC_TABLE" }))
           .named("public-table"),
-        where(no(Matchmaking._lobbyOf({ player: session })), no(Table._getByCode({ code })))
+        where(no(Matchmaking._lobbyOf({ player: me })), no(Table._getByCode({ code })))
           .then(respond({ error: "NO_SUCH_TABLE" }))
           .named("code-unknown"),
-        where(Matchmaking._lobbyOf({ player: session }))
+        where(Matchmaking._lobbyOf({ player: me }))
           .then(respond({ error: "IN_QUEUE" }))
           .named("queued"),
       ),
@@ -108,10 +108,10 @@ const JoinByCode = endpoint(
 
 const Leave = endpoint(
   "/tables/leave",
-  ({ token, session, displayName, table }) =>
+  ({ token, me, table }) =>
     receive({ token, table })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(Table.leave({ table, player: session }).responds({ table }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(Table.leave({ table, player: me }).responds({ table }))
       .then(respond({ table })),
   { input: { required: ["token", "table"] }, validators: { input: strings("token", "table") } },
 );
@@ -119,15 +119,15 @@ const Leave = endpoint(
 /** Only the host may close a table that still has people at it. */
 const Close = endpoint(
   "/tables/close",
-  ({ token, session, displayName, table, code }) =>
+  ({ token, me, table, code }) =>
     receive({ token, table })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
-        where(Table._get({ table }).is({ host: session }))
+        where(Table._get({ table }).is({ host: me }))
           .then(Table.close({ table }).responds({ code }))
           .then(respond({ table }))
           .named("host"),
-        where(no(Table._get({ table }).is({ host: session })))
+        where(no(Table._get({ table }).is({ host: me })))
           .then(respond({ error: "NOT_HOST" }))
           .named("not-host"),
       ),
@@ -142,13 +142,13 @@ const Close = endpoint(
  */
 const SwapSeats = endpoint(
   "/tables/swap",
-  ({ token, session, displayName, table, first, second }) =>
+  ({ token, me, table, first, second }) =>
     receive({ token, first, second })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
         where(
-          Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session }),
+          Table._tableOf({ player: me }).is({ table }),
+          Table._get({ table }).is({ host: me }),
           no(DominoPlaying._activeAt({ place: table })),
           no(Matchmaking._placeRules({ place: table })),
         )
@@ -156,24 +156,24 @@ const SwapSeats = endpoint(
           .then(respond({ table }))
           .named("host-before-game"),
         where(
-          Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session }),
+          Table._tableOf({ player: me }).is({ table }),
+          Table._get({ table }).is({ host: me }),
           DominoPlaying._activeAt({ place: table }),
         )
           .then(respond({ error: "GAME_IN_PROGRESS" }))
           .named("game-running"),
         where(
-          Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session }),
+          Table._tableOf({ player: me }).is({ table }),
+          Table._get({ table }).is({ host: me }),
           no(DominoPlaying._activeAt({ place: table })),
           Matchmaking._placeRules({ place: table }),
         )
           .then(respond({ error: "PUBLIC_TABLE" }))
           .named("public-table"),
-        where(Table._tableOf({ player: session }).is({ table }), no(Table._get({ table }).is({ host: session })))
+        where(Table._tableOf({ player: me }).is({ table }), no(Table._get({ table }).is({ host: me })))
           .then(respond({ error: "NOT_HOST" }))
           .named("not-host"),
-        where(no(Table._tableOf({ player: session })))
+        where(no(Table._tableOf({ player: me })))
           .then(respond({ error: "NOT_SEATED" }))
           .named("not-seated"),
       ),
@@ -188,6 +188,8 @@ const SwapSeats = endpoint(
  * whose page has not checked in for a while (it was closed, or went offline) is taken
  * out as if they had left, so the table does not wait on them and, if they were the
  * host, hosting passes on. An open page checks in by itself, so an idle guest stays.
+ * Someone with no session left at all (such as one from before sessions were kept
+ * where they are now) is gone for good, and taken out too.
  * In a game the shorter wait in Seats applies instead (GAME_IN_PROGRESS here).
  */
 const DropAbsentSitter = endpoint(
@@ -197,7 +199,7 @@ const DropAbsentSitter = endpoint(
       where(
         Table._tableOf({ player }).is({ table }),
         no(DominoPlaying._activeAt({ place: table })),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.ge(idleMs, AWAY_BEFORE_GAME_MS),
       )
         .then(Table.leave({ table, player }))
@@ -206,7 +208,7 @@ const DropAbsentSitter = endpoint(
       where(
         Table._tableOf({ player }).is({ table }),
         no(DominoPlaying._activeAt({ place: table })),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.lt(idleMs, AWAY_BEFORE_GAME_MS),
       )
         .then(respond({ error: "STILL_HERE" }))
@@ -217,10 +219,11 @@ const DropAbsentSitter = endpoint(
       where(
         Table._tableOf({ player }).is({ table }),
         no(DominoPlaying._activeAt({ place: table })),
-        no(GuestSessioning._idleFor({ session: player })),
+        no(Sessioning._idleFor({ player })),
       )
-        .then(respond({ error: "NOT_SEATED" }))
-        .named("not-a-guest"),
+        .then(Table.leave({ table, player }))
+        .then(respond({ table }))
+        .named("no-session"),
       where(no(Table._tableOf({ player })))
         .then(respond({ error: "NOT_SEATED" }))
         .named("not-seated"),
@@ -235,18 +238,18 @@ const CloseEmptyTable = reaction(({ table }) =>
     .then(Table.close({ table })),
 );
 
-// A guest who ends their session also gets up from their table.
-const LeaveTableOnSessionEnd = reaction(({ session, table }) =>
-  when(GuestSessioning.end({}).responds({ session }))
-    .where(Table._tableOf({ player: session }).is({ table }))
-    .then(Table.leave({ table, player: session })),
+// A player whose last session ends (they signed out) also gets up from their table.
+const LeaveTableOnSessionEnd = reaction(({ player, table }) =>
+  when(Sessioning.end({}).responds({ player }))
+    .where(no(Sessioning._idleFor({ player })), Table._tableOf({ player }).is({ table }))
+    .then(Table.leave({ table, player })),
 );
 
-// So does a guest whose session expired, so an idle guest never holds a seat.
-const LeaveTableOnSessionExpire = reaction(({ session, table }) =>
-  when(GuestSessioning.expire({}).responds({ session }))
-    .where(Table._tableOf({ player: session }).is({ table }))
-    .then(Table.leave({ table, player: session })),
+// So does one whose last session expired, so a player away for good never holds a seat.
+const LeaveTableOnSessionExpire = reaction(({ player, table }) =>
+  when(Sessioning.expire({}).responds({ player }))
+    .where(no(Sessioning._idleFor({ player })), Table._tableOf({ player }).is({ table }))
+    .then(Table.leave({ table, player })),
 );
 
 // A closed table's code goes back to CodeGenerating, so it can be handed out again.

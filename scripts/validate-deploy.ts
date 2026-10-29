@@ -54,7 +54,7 @@ async function call(path: string, body: unknown) {
   return { status: response.status, body: json };
 }
 
-type Guest = { session: string; token: string; name: string };
+type Guest = { player: string; token: string; name: string };
 async function guest(name: string): Promise<Guest> {
   const { body } = await call("/guests/start", { displayName: name });
   return { ...body, name };
@@ -62,7 +62,7 @@ async function guest(name: string): Promise<Guest> {
 const view = async (g: Guest) => (await call("/games/view", { token: g.token })).body.view.games[0];
 const lobby = async (g: Guest) => (await call("/tables/lobby", { token: g.token })).body.lobby.tables[0];
 const signOut = async (guests: Guest[]) => {
-  for (const g of guests) await call("/guests/leave", { token: g.token });
+  for (const g of guests) await call("/sessions/end", { token: g.token });
 };
 
 console.log(`Checking ${address} at ${new Date().toISOString()}\n`);
@@ -76,8 +76,8 @@ if (afterRedeploy) {
   };
   console.log("Persistence (data saved by --keep before the redeploy)");
   for (const g of guests) {
-    const me = await call("/guests/me", { token: g.token });
-    check(`${g.name} is still signed in with the same token`, me.status === 200 && me.body.session === g.session, me);
+    const me = await call("/sessions/me", { token: g.token });
+    check(`${g.name} is still signed in with the same token`, me.status === 200 && me.body.player === g.player, me);
   }
   const seats = (await lobby(guests[0]))?.seats ?? [];
   check("the table is still there with all four seats", (await lobby(guests[0]))?.table === table && seats.length === 4, seats);
@@ -111,9 +111,9 @@ check("five guests started sessions", [...players, outsider].every((g) => typeof
 
 console.log("\nTokens");
 const signedOut = await guest("Check Gone");
-await call("/guests/leave", { token: signedOut.token });
+await call("/sessions/end", { token: signedOut.token });
 for (const [path, body] of [
-  ["/guests/me", {}],
+  ["/sessions/me", {}],
   ["/tables/lobby", {}],
   ["/tables/open", { rules: "DEFAULT" }],
   ["/games/view", {}],
@@ -121,8 +121,8 @@ for (const [path, body] of [
   ["/matchmaking/enqueue", { rules: "DEFAULT", midway: false }],
 ] as const) {
   const statuses = [];
-  for (const token of ["made-up", signedOut.token, host.session]) statuses.push((await call(path, { ...body, token })).status);
-  check(`${path} refuses an invented token, a signed-out token and a session id (401)`, statuses.every((s) => s === 401), statuses);
+  for (const token of ["made-up", signedOut.token, host.player]) statuses.push((await call(path, { ...body, token })).status);
+  check(`${path} refuses an invented token, a signed-out token and a player id (401)`, statuses.every((s) => s === 401), statuses);
 }
 
 console.log("\nPrivate table");
@@ -138,7 +138,7 @@ check("a seated guest cannot open a second table (409)", (await call("/tables/op
 
 console.log("\nWho may start, close and see the game");
 check("a guest who is not host cannot start (403)", (await call("/games/start", { token: papo.token })).status === 403);
-check("naming the host in the request changes nothing (403)", (await call("/games/start", { token: papo.token, session: host.session })).status === 403);
+check("naming the host in the request changes nothing (403)", (await call("/games/start", { token: papo.token, session: host.player })).status === 403);
 check("the host starts the game", (await call("/games/start", { token: host.token })).status === 200);
 check("starting again while it runs is 409", (await call("/games/start", { token: host.token })).status === 409);
 check("a guest who is not host cannot close the table (403)", (await call("/tables/close", { token: papo.token, table })).status === 403);
@@ -154,8 +154,8 @@ check("no game view carries anyone's token", players.every((g) => !responses.inc
 
 console.log("\nPlaying");
 const state = views[0];
-const turn = players.find((g) => g.session === state.turnPlayer)!;
-const notTurn = players.find((g) => g.session !== state.turnPlayer)!;
+const turn = players.find((g) => g.player === state.turnPlayer)!;
+const notTurn = players.find((g) => g.player !== state.turnPlayer)!;
 const turnHand = hands[players.indexOf(turn)];
 const someoneElsesTile = hands[players.indexOf(notTurn)][0];
 const outOfTurn = await call("/games/play", { token: notTurn.token, game: state.game, tile: hands[players.indexOf(notTurn)][0], side: "LEFT" });
@@ -177,7 +177,8 @@ if (fits) {
 }
 
 console.log("\nSessions");
-check("an active session cannot be expired by anyone (409)", (await call("/guests/expire", { session: host.session })).status === 409);
+check("a player id cannot be used to expire their session (401)", (await call("/sessions/expire", { session: host.player })).status === 401);
+check("an invented session cannot be expired (401)", (await call("/sessions/expire", { session: "made-up" })).status === 401);
 
 if (keep) {
   const now = await view(host);

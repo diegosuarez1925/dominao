@@ -15,7 +15,7 @@ export const NAME_MAX = 20;
 export const state = reactive({
   /** True until the first check of a saved token is done, so nothing flashes. */
   loading: true,
-  me: null as { session: string; token: string; displayName: string } | null,
+  me: null as { player: string; token: string; displayName: string } | null,
   table: null as Table | null,
   game: null as Game | null,
   /** The matchmaking lobby the guest waits in, if any. */
@@ -132,8 +132,8 @@ export async function resume() {
     if (listed !== undefined) state.rulesets = listed.view.rulesets;
   }
   if (token !== null) {
-    const result = await send(() => client.guests.me({ token }));
-    if (result !== undefined) state.me = { session: result.session, token, displayName: result.displayName };
+    const result = await send(() => client.sessions.me({ token }));
+    if (result !== undefined) state.me = { player: result.player, token, displayName: result.displayName };
   }
   state.loading = false;
   await refresh();
@@ -216,7 +216,7 @@ export async function endSession() {
   // Ending the session also gets the guest up from their table and out of the queue,
   // on the server.
   const me = state.me;
-  if (me !== null) await send(() => client.guests.leave({ token: me.token }));
+  if (me !== null) await send(() => client.sessions.end({ token: me.token }));
   sessionStorage.removeItem(TOKEN_KEY);
   state.dismissedGame = "";
   say("");

@@ -657,3 +657,42 @@ leave everyone stuck, but someone sitting idle with the page open must stay.
   waiting; early asks and asks during a game are refused. 125 pass. Checked live in a
   browser: the host closed his tab, the other guest's page sat idle for 2 min 15 s,
   and only the host was taken off.
+
+### Splitting guest sessions, to make room for accounts
+
+Asked for: permanent accounts with usernames and passwords. This first step changes
+nothing anyone can see; it only splits GuestSessioning so that a session can belong
+to an account as well as to a guest.
+
+- **Why split:** GuestSessioning did two jobs, keeping a guest's display name and
+  recognizing a browser by its token. Accounts need the second job but not the first,
+  so they get separate concepts (the design approved before this step):
+  - **Guesting** keeps a guest and their display name (`create`, `forget`, `_name`).
+  - **Sessioning [Player]** recognizes a browser by its token and answers which
+    player it acts as (`start`, `resume`, `end`, `expire`, `_idle`, `_idleFor`,
+    `_tokens`). It does not know whether that player is a guest or an account.
+- **Refinement during implementation:** each session gets its own `lifetime` in
+  `start`, instead of one inactivity limit for everyone. Guests keep 12 hours; accounts
+  will get 30 days. `resume`, `expire` and `_idle` honour each session's own lifetime.
+  A bad lifetime is refused `INVALID_LIFETIME`.
+- **A player can have several sessions** (a phone and a laptop, once there are
+  accounts). `_idleFor` counts the most recently used one, and the reactions that get
+  a player up from their table, out of the queue, or forget a guest now fire only when
+  their **last** session ends or expires.
+- **API:** `/guests/start` answers `{player, token}`. Signing out is `/sessions/end`,
+  "who am I" is `/sessions/me` (`{player, displayName}`), and the timer's expiry is
+  `/sessions/expire`. Responses say `player` where they said `session`, and session
+  ids are no longer handed out at all.
+- **New reactions:** a guest left with no session is forgotten
+  (`ForgetGuestOnSessionEnd`, `ForgetGuestOnSessionExpire`).
+- **Data from before this step:** sessions now live in a new collection, so everyone
+  signed in before the deploy is asked for their name again. Anyone left at a table
+  or in the queue with no session at all is now taken out by the ticker, which clears
+  the seats and queue places of those old sessions.
+- Tests: new concept tests for Sessioning (21: lifetimes, several sessions per player,
+  exact lifetime edges, refusals change nothing, racing starts) and Guesting (8);
+  composition tests for the new endpoints and reactions (signing out of one of two
+  sessions keeps the player seated, queued and named; the last one does not), expiry
+  edge cases, and players with no session being taken out. Every earlier test was
+  kept and moved to the new names. 161 pass. Checked in a browser: start as a guest,
+  open a table, play, sign out.

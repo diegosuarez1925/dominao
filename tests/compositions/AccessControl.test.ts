@@ -37,7 +37,7 @@ async function call(path: string, body: unknown) {
 }
 
 async function guest(displayName: string) {
-  return (await call("/guests/start", { displayName })).body as { session: string; token: string };
+  return (await call("/guests/start", { displayName })).body as { player: string; token: string };
 }
 
 /** Four guests at one table with a game started; the first is the host. */
@@ -59,8 +59,8 @@ const view = async (token: string) => {
 
 /** Every endpoint that acts for a guest, with a body that is otherwise well formed. */
 const guestEndpoints = (table: string, game: string, code: string): [string, Record<string, unknown>][] => [
-  ["/guests/me", {}],
-  ["/guests/leave", {}],
+  ["/sessions/me", {}],
+  ["/sessions/end", {}],
   ["/tables/lobby", {}],
   ["/tables/open", { rules: "DEFAULT" }],
   ["/tables/join", { code }],
@@ -79,12 +79,12 @@ test("every guest endpoint turns away an invented token, a signed-out token, and
   const { guests, table, code } = await playing();
   const { game } = await view(guests[0].token);
   const gone = await guest("Tío");
-  await call("/guests/leave", { token: gone.token });
+  await call("/sessions/end", { token: gone.token });
   const before = await view(guests[0].token);
 
   for (const [path, body] of guestEndpoints(table, game, code)) {
     // Made up, ended, or another guest's session id (which views do show) in place of a token.
-    for (const token of ["made-up", gone.token, guests[0].session]) {
+    for (const token of ["made-up", gone.token, guests[0].player]) {
       expect({ path, ...(await call(path, { ...body, token })) }).toEqual({
         path,
         status: 401,
@@ -101,17 +101,17 @@ test("naming another guest in the request does not act as them", async () => {
   const { guests, table } = await playing();
   const [abuelo, papo] = guests;
   const before = await view(abuelo.token);
-  const turnPlayer = guests.find((g) => g.session === before.turnPlayer)!;
-  const notTurn = guests.find((g) => g.session !== before.turnPlayer)!;
+  const turnPlayer = guests.find((g) => g.player === before.turnPlayer)!;
+  const notTurn = guests.find((g) => g.player !== before.turnPlayer)!;
   const tile = (await view(turnPlayer.token)).hand[0].tile;
 
   // Papo claims to be the host, or names the host as the session.
-  expect((await call("/tables/close", { token: papo.token, table, session: abuelo.session, host: papo.session })).status).toBe(403);
+  expect((await call("/tables/close", { token: papo.token, table, session: abuelo.player, host: papo.player })).status).toBe(403);
   // A player whose turn it is not names the one whose turn it is.
   const play = { token: notTurn.token, game: before.game, tile, side: "LEFT" };
-  expect((await call("/games/play", { ...play, player: turnPlayer.session, session: turnPlayer.session })).status).toBe(409);
+  expect((await call("/games/play", { ...play, player: turnPlayer.player, session: turnPlayer.player })).status).toBe(409);
   // A non-host starts again naming the host.
-  expect((await call("/games/start", { token: papo.token, session: abuelo.session })).status).toBe(403);
+  expect((await call("/games/start", { token: papo.token, session: abuelo.player })).status).toBe(403);
 
   expect(await view(abuelo.token)).toEqual(before);
   expect((await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0].seats).toHaveLength(4);
@@ -126,7 +126,7 @@ test("no response ever carries another guest's token", async () => {
   const everyone = [...guests, ...strangers];
   for (const me of everyone) {
     const responses = [
-      await call("/guests/me", { token: me.token }),
+      await call("/sessions/me", { token: me.token }),
       await call("/tables/lobby", { token: me.token }),
       await call("/games/view", { token: me.token }),
       await call("/matchmaking/view", { token: me.token }),
@@ -159,7 +159,7 @@ test("the host cannot start a second game while one is being played", async () =
 test("a paused game, and a stopped one, take no more moves", async () => {
   const { guests, table } = await playing();
   const state = await view(guests[0].token);
-  const turnPlayer = guests.find((g) => g.session === state.turnPlayer)!;
+  const turnPlayer = guests.find((g) => g.player === state.turnPlayer)!;
   const tile = (await view(turnPlayer.token)).hand[0].tile;
   const leaver = guests.find((g) => g !== turnPlayer && g !== guests[0])!;
   await call("/tables/leave", { token: leaver.token, table });
@@ -188,9 +188,9 @@ test("a stranger matched into a game can only act as themself there", async () =
   // Whoever Matchmaking made host cannot restart the strangers' game, and the others are not hosts.
   const { host } = (await call("/tables/lobby", { token: strangers[0].token })).body.lobby.tables[0];
   for (const s of strangers) {
-    expect((await call("/games/start", { token: s.token })).status).toBe(s.session === host ? 409 : 403);
+    expect((await call("/games/start", { token: s.token })).status).toBe(s.player === host ? 409 : 403);
     // Nor can anyone rearrange the drawn seats.
-    expect((await call("/tables/swap", { token: s.token, first: 0, second: 1 })).status).toBe(s.session === host ? 409 : 403);
+    expect((await call("/tables/swap", { token: s.token, first: 0, second: 1 })).status).toBe(s.player === host ? 409 : 403);
   }
   // The outsider sees nothing of it.
   expect((await call("/games/view", { token: outsider.token })).body.view.games).toEqual([]);

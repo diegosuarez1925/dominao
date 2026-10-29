@@ -27,12 +27,12 @@ import ScoreCard from "./ScoreCard.vue";
 
 const props = defineProps<{ game: Game }>();
 
-const me = computed(() => props.game.players.find((p) => p.player === state.me?.session));
+const me = computed(() => props.game.players.find((p) => p.player === state.me?.player));
 const myPosition = computed(() => me.value?.position ?? 0);
 const myTeam = computed(() => myPosition.value % 2);
 const active = computed(() => props.game.status === "ACTIVE");
 const paused = computed(() => props.game.status === "PAUSED");
-const myTurn = computed(() => active.value && props.game.turnPlayer === state.me?.session);
+const myTurn = computed(() => active.value && props.game.turnPlayer === state.me?.player);
 
 // The server's times (how long a seat has been empty, how long since someone checked
 // in) are as of the last refresh; between refreshes the page keeps counting.
@@ -167,19 +167,19 @@ function note(text: string, kind: (typeof notes.value)[number]["kind"]) {
   setTimeout(() => (notes.value = notes.value.filter((n) => n.id !== id)), 5000);
 }
 const ordered = () => [...props.game.log].sort((a, b) => a.turn - b.turn);
-const who = (turn: Game["log"][number]) => (turn.player === state.me?.session ? "You" : (turn.displayName ?? turn.botName ?? "Someone"));
+const who = (turn: Game["log"][number]) => (turn.player === state.me?.player ? "You" : (turn.displayName ?? turn.botName ?? "Someone"));
 watch(
   () => props.game.log.length,
   (length, before) => {
     if (before === undefined || length <= before) return;
     const log = ordered();
     for (const [index, turn] of log.entries()) {
-      if (index < before || turn.player === state.me?.session) continue;
+      if (index < before || turn.player === state.me?.player) continue;
       if (turn.move === "LEFT" && turn.botName === null) note(`${who(turn)} left the table. The game is paused until someone takes the seat.`, "left");
       if (turn.move === "SAT") {
         const left = log.slice(0, index).reverse().find((t) => t.move === "LEFT");
         const seat =
-          left === undefined ? "the empty seat" : left.player === state.me?.session ? "your old seat" : `${who(left)}'s seat`;
+          left === undefined ? "the empty seat" : left.player === state.me?.player ? "your old seat" : `${who(left)}'s seat`;
         if (turn.botName !== null) note(`${turn.botName} (a bot) took ${seat} and plays for now.`, "bot");
         else if (left?.botName != null) note(`${who(turn)} took over from ${left.botName}.`, "sat");
         else note(`${who(turn)} sat down in ${seat}. Play goes on.`, "sat");
@@ -193,7 +193,7 @@ watch(
   () => props.game.players.map((p) => [p.player, isAway(p)] as const),
   (seats) => {
     for (const [player, gone] of seats) {
-      if (player === "" || player === state.me?.session) continue;
+      if (player === "" || player === state.me?.player) continue;
       if (gone) away.add(player);
       else if (away.delete(player)) note(`${name(player)} is back.`, "back");
     }
@@ -203,7 +203,7 @@ watch(
 // Arriving in a game already being played: say whose seat this is.
 onMounted(() => {
   const log = ordered();
-  const mine = log.findLastIndex((t) => t.move === "SAT" && t.player === state.me?.session);
+  const mine = log.findLastIndex((t) => t.move === "SAT" && t.player === state.me?.player);
   if (mine === -1 || welcomed.has(props.game.game)) return;
   welcomed.add(props.game.game);
   const left = log.slice(0, mine).reverse().find((t) => t.move === "LEFT");
@@ -217,7 +217,7 @@ const ending = computed(() => {
   const won = (myTeam.value === 0 ? props.game.scoreA : props.game.scoreB) >= props.game.target;
   return { title: won ? "¡Ganamos!" : "They win this one", text: lastResult.value };
 });
-const isHost = computed(() => state.table?.host === state.me?.session);
+const isHost = computed(() => state.table?.host === state.me?.player);
 const turnName = computed(() => (active.value ? name(props.game.turnPlayer) : ""));
 const myNote = computed(() => {
   if (myTurn.value) return "your turn: pick a tile";
@@ -338,7 +338,7 @@ const logOpen = remembered("dominao.logOpen", false);
         :name="me?.displayName ?? state.me?.displayName"
         :note="myNote"
         :active="myTurn"
-        :passed="passing.has(state.me?.session ?? '')"
+        :passed="passing.has(state.me?.player ?? '')"
       />
       <PlayerHand :hand="game.hand" :board="game.board" :my-turn="myTurn" />
     </div>

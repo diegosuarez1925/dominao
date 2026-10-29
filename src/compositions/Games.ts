@@ -11,7 +11,7 @@ import { concepts } from "../concepts.ts";
 import { ABSENT_MS, BOT_AFTER_MS } from "../timing.ts";
 import { sides, strings } from "./validators.ts";
 
-const { Botting, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
+const { Botting, DominoPlaying, Guesting, Matchmaking, Sessioning, Table } = concepts;
 
 /**
  * The game at the guest's table as that guest sees it: the scores, the board, whose
@@ -23,9 +23,9 @@ const { Botting, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts
  * the bot taking over. `publicRules` is set when strangers were matched into the game.
  */
 const GameView = former(
-  "the game seen by (session)",
+  "the game seen by (me)",
   (
-    { session },
+    { me },
     {
       table,
       game,
@@ -78,7 +78,7 @@ const GameView = former(
     },
   ) =>
     form({
-      games: each(Table._tableOf({ player: session }).is({ table }))
+      games: each(Table._tableOf({ player: me }).is({ table }))
         .where(
           DominoPlaying._latestAt({ place: table }).is({ game }),
           DominoPlaying._summary({ game }).is({ rules, status, target, matchNumber, scoreA, scoreB, turnPlayer }),
@@ -104,23 +104,23 @@ const GameView = former(
             right,
             fromFirst,
           }),
-          hand: each(DominoPlaying._hand({ game, player: session }).is({ tile })).form({ tile }),
+          hand: each(DominoPlaying._hand({ game, player: me }).is({ tile })).form({ tile }),
           players: each(DominoPlaying._players({ game }).is({ position, player, tileCount }))
             .where(
-              whether(GuestSessioning._getName({ session: player }).is({ displayName })),
+              whether(Guesting._name({ guest: player }).is({ displayName })),
               whether(Botting._name({ bot: player }).is({ name: botName })),
-              whether(GuestSessioning._idleFor({ session: player }).is({ idleMs })),
+              whether(Sessioning._idleFor({ player }).is({ idleMs })),
             )
             .form({ position, player, displayName, botName, idleMs, tileCount }),
           vacancies: each(DominoPlaying._vacancies({ game }).is({ position: vacantPosition, player: leaver, vacantMs }))
             .where(
-              whether(GuestSessioning._getName({ session: leaver }).is({ displayName: leaverName })),
+              whether(Guesting._name({ guest: leaver }).is({ displayName: leaverName })),
               whether(Botting._name({ bot: leaver }).is({ name: leaverBot })),
             )
             .form({ position: vacantPosition, player: leaver, displayName: leaverName, botName: leaverBot, vacantMs }),
           log: each(DominoPlaying._log({ game }).is({ turn: turnNumber, matchNumber: turnMatch, player: mover, move, tile: movedTile }))
             .where(
-              whether(GuestSessioning._getName({ session: mover }).is({ displayName: moverName })),
+              whether(Guesting._name({ guest: mover }).is({ displayName: moverName })),
               whether(Botting._name({ bot: mover }).is({ name: moverBot })),
             )
             .form({
@@ -151,10 +151,10 @@ const GameView = former(
 
 const ViewGame = endpoint(
   "/games/view",
-  ({ token, session, displayName }) =>
+  ({ token, me }) =>
     receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(respond({ view: GameView({ session }) })),
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(respond({ view: GameView({ me }) })),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
@@ -173,13 +173,13 @@ const ShowRulesets = endpoint("/games/rulesets", () => receive({}).then(respond(
  */
 const StartGame = endpoint(
   "/games/start",
-  ({ token, session, displayName, table, first, second, third, fourth, rules, game }) =>
+  ({ token, me, table, first, second, third, fourth, rules, game }) =>
     receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
         where(
-          Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session, rules }),
+          Table._tableOf({ player: me }).is({ table }),
+          Table._get({ table }).is({ host: me, rules }),
           Table._isFull({ table }).is({ full: true }),
           Table._seats({ table }).is({ position: 0, player: first }),
           Table._seats({ table }).is({ position: 1, player: second }),
@@ -190,16 +190,16 @@ const StartGame = endpoint(
           .then(respond({ game }))
           .named("host-of-full-table"),
         where(
-          Table._tableOf({ player: session }).is({ table }),
-          Table._get({ table }).is({ host: session }),
+          Table._tableOf({ player: me }).is({ table }),
+          Table._get({ table }).is({ host: me }),
           Table._isFull({ table }).is({ full: false }),
         )
           .then(respond({ error: "TABLE_NOT_FULL" }))
           .named("table-not-full"),
-        where(Table._tableOf({ player: session }).is({ table }), no(Table._get({ table }).is({ host: session })))
+        where(Table._tableOf({ player: me }).is({ table }), no(Table._get({ table }).is({ host: me })))
           .then(respond({ error: "NOT_HOST" }))
           .named("not-host"),
-        where(no(Table._tableOf({ player: session })))
+        where(no(Table._tableOf({ player: me })))
           .then(respond({ error: "NOT_SEATED" }))
           .named("not-seated"),
       ),
@@ -209,10 +209,10 @@ const StartGame = endpoint(
 /** The player is always the guest who asked; DominoPlaying checks it is their turn. */
 const Play = endpoint(
   "/games/play",
-  ({ token, session, displayName, game, tile, side }) =>
+  ({ token, me, game, tile, side }) =>
     receive({ token, game, tile, side })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(DominoPlaying.play({ game, player: session, tile, side }).responds({ game }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(DominoPlaying.play({ game, player: me, tile, side }).responds({ game }))
       .then(respond({ game })),
   {
     input: { required: ["token", "game", "tile", "side"] },

@@ -4,7 +4,7 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "../../src/assembly.ts";
 import { BottingConcept } from "../../src/concepts/Botting.ts";
 import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
-import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
+import { SessioningConcept } from "../../src/concepts/Sessioning.ts";
 import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
 import { TableConcept } from "../../src/concepts/Table.ts";
 import { policy } from "../../src/http.ts";
@@ -51,7 +51,7 @@ async function call(path: string, body: unknown) {
   return { status: response.status, body: await response.json() };
 }
 
-type Guest = { session: string; token: string; name: string };
+type Guest = { player: string; token: string; name: string };
 async function guest(name: string): Promise<Guest> {
   return { ...(await call("/guests/start", { displayName: name })).body, name };
 }
@@ -60,7 +60,7 @@ async function guest(name: string): Promise<Guest> {
 const runTicker = () =>
   tick(gateway, {
     games: new DominoPlayingConcept(testDb.db, undefined, clock),
-    sessions: new GuestSessioningConcept(testDb.db, clock),
+    sessions: new SessioningConcept(testDb.db, clock),
     bots: new BottingConcept(testDb.db),
     matchmaking: new MatchmakingConcept(testDb.db, clock, undefined, 0),
     tables: new TableConcept(testDb.db),
@@ -95,7 +95,7 @@ const enqueue = (g: Guest, rules: string, midway: boolean) => call("/matchmaking
 
 /** Keeps the given guests' pages checking in, as an open page does every two seconds. */
 const checkIn = async (...guests: Guest[]) => {
-  for (const g of guests) await call("/guests/me", { token: g.token });
+  for (const g of guests) await call("/sessions/me", { token: g.token });
 };
 
 // Private tables
@@ -113,7 +113,7 @@ test("principle: a leaver's seat waits 30 seconds, then a bot plays it, until a 
   let game = await view(abuelo);
   expect(game.status).toBe("PAUSED");
   expect(game.vacancies).toEqual([
-    { position: 1, player: papo.session, displayName: "Papo", botName: null, vacantMs: BOT_AFTER_MS - 1000 },
+    { position: 1, player: papo.player, displayName: "Papo", botName: null, vacantMs: BOT_AFTER_MS - 1000 },
   ]);
   expect(game.botAfterMs).toBe(BOT_AFTER_MS);
 
@@ -139,7 +139,7 @@ test("principle: a leaver's seat waits 30 seconds, then a bot plays it, until a 
   const after = await view(tio);
   expect(after).toMatchObject({ game: game.game, status: "ACTIVE", vacancies: [] });
   expect(after.hand.map((h: { tile: string }) => h.tile)).toEqual(botHand);
-  expect(after.players[1]).toMatchObject({ player: tio.session, displayName: "Tío", botName: null });
+  expect(after.players[1]).toMatchObject({ player: tio.player, displayName: "Tío", botName: null });
   expect(after.log.slice(-2).map((t: { move: string; displayName: string | null; botName: string | null }) => [t.move, t.displayName ?? t.botName])).toEqual([
     ["LEFT", seat.botName],
     ["SAT", "Tío"],
@@ -165,7 +165,7 @@ test("a bot takes its turn after a moment to think, with a legal move", async ()
   const { guests, table } = await privateGame();
   // Whoever's turn it is gets up, so the bot that replaces them moves first.
   const first = await view(guests[0]);
-  const leaver = guests.find((g) => g.session === first.turnPlayer)!;
+  const leaver = guests.find((g) => g.player === first.turnPlayer)!;
   const stay = guests.filter((g) => g !== leaver);
   await call("/tables/leave", { token: leaver.token, table });
   pass(BOT_AFTER_MS);
@@ -201,7 +201,7 @@ test("one guest and three bots play a whole game to its end", async () => {
   for (let step = 0; step < 3000; step++) {
     const game = await view(abuelo);
     if (game.status !== "ACTIVE") break;
-    if (game.turnPlayer === abuelo.session) {
+    if (game.turnPlayer === abuelo.player) {
       const ends = game.board.length === 0 ? undefined : { left: game.board[0].left, right: game.board.at(-1).right };
       const fits = (tile: string, end: number) => tile.split("-").map(Number).includes(end);
       const move = game.hand
@@ -252,7 +252,7 @@ test("a player whose page stops checking in is taken out of the game, which paus
   await runTicker();
   const after = await view(abuelo);
   expect(after.status).toBe("PAUSED");
-  expect(after.vacancies).toMatchObject([{ position: 3, player: cheo.session, displayName: "Cheo" }]);
+  expect(after.vacancies).toMatchObject([{ position: 3, player: cheo.player, displayName: "Cheo" }]);
   expect((await tableOf(abuelo)).seats).toHaveLength(3);
   // Back again, Cheo can sit down with the code like anyone else, and gets his seat back.
   expect((await call("/tables/join", { token: cheo.token, code })).body.position).toBe(3);
@@ -314,7 +314,7 @@ test("a stranger happy to join midway takes over a bot at a table of strangers",
   const midway = await guest("Medio");
   await enqueue(midway, "DEFAULT", true);
   const game = await view(midway);
-  expect(game.players[bot.position]).toMatchObject({ player: midway.session, displayName: "Medio", botName: null });
+  expect(game.players[bot.position]).toMatchObject({ player: midway.player, displayName: "Medio", botName: null });
   expect(game.status).toBe("ACTIVE");
 });
 
@@ -342,12 +342,12 @@ test("the ticker's endpoints change nothing when asked early, or about the wrong
   const [abuelo] = guests;
   const { game, turnPlayer } = await view(abuelo);
   // Someone other than the host and whoever's turn it is, so the turn is still theirs after.
-  const papo = guests.find((g) => g !== abuelo && g.session !== turnPlayer)!;
+  const papo = guests.find((g) => g !== abuelo && g.player !== turnPlayer)!;
   const conflict = { status: 409, body: { error: "CONFLICT" } };
   // A seat nobody left, a player who is here, and a person's turn.
   const seat = guests.indexOf(papo);
   expect(await call("/games/seat-bot", { game, position: seat })).toEqual(conflict);
-  expect(await call("/games/drop-absent", { game, player: papo.session })).toEqual(conflict);
+  expect(await call("/games/drop-absent", { game, player: papo.player })).toEqual(conflict);
   expect(await call("/games/bot-move", { game })).toEqual(conflict);
   // A seat that has not waited long enough yet.
   await call("/tables/leave", { token: papo.token, table });
@@ -377,15 +377,15 @@ test("someone whose page closed is taken off a table with no game yet, and hosti
     await checkIn(papo, nando);
   }
   await runTicker();
-  expect(await seated()).toEqual([abuelo.session, papo.session, nando.session]);
+  expect(await seated()).toEqual([abuelo.player, papo.player, nando.player]);
   // Asking early changes nothing.
-  expect(await call("/tables/drop-absent", { player: abuelo.session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect(await call("/tables/drop-absent", { player: abuelo.player })).toEqual({ status: 409, body: { error: "CONFLICT" } });
 
   pass(2_000);
   await checkIn(papo, nando);
   await runTicker();
-  expect(await seated()).toEqual([papo.session, nando.session]);
-  expect((await tableOf(papo)).host).toBe(papo.session);
+  expect(await seated()).toEqual([papo.player, nando.player]);
+  expect((await tableOf(papo)).host).toBe(papo.player);
   expect(await tableOf(abuelo)).toBeUndefined();
   // His code still works for someone else, and the table keeps going.
   expect((await tableOf(nando)).table).toBe(table);
@@ -410,16 +410,37 @@ test("a guest whose page closed stops waiting for strangers, which stops a count
   expect((await queueOf(dos)).players).toHaveLength(3);
   pass(1);
   await runTicker();
-  expect((await queueOf(dos)).players.map((p: { player: string }) => p.player)).toEqual([dos.session, tres.session]);
+  expect((await queueOf(dos)).players.map((p: { player: string }) => p.player)).toEqual([dos.player, tres.player]);
   expect(await queueOf(uno)).toBeUndefined();
-  expect(await call("/matchmaking/drop-absent", { player: dos.session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
-  expect(await call("/matchmaking/drop-absent", { player: uno.session })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
+  expect(await call("/matchmaking/drop-absent", { player: dos.player })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect(await call("/matchmaking/drop-absent", { player: uno.player })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
   expect((await call("/matchmaking/drop-absent", {})).status).toBe(400);
 });
 
 test("in a game the table sweep leaves seats to the game's own, shorter rule", async () => {
   const { guests } = await privateGame();
-  expect(await call("/tables/drop-absent", { player: guests[1].session })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+  expect(await call("/tables/drop-absent", { player: guests[1].player })).toEqual({ status: 409, body: { error: "CONFLICT" } });
   expect(await call("/tables/drop-absent", { player: "nobody" })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
   expect((await call("/tables/drop-absent", { player: 7 })).status).toBe(400);
+});
+
+test("someone left at a table or in the queue with no session at all is taken out on the next tick", async () => {
+  // As after this app moved its sessions: a seat and a queue place held by players
+  // the app no longer has a session for.
+  const tables = new TableConcept(testDb.db);
+  const { table } = await tables.open({ host: "ghost-host", code: "GHOST1", rules: "DEFAULT" });
+  const abuelo = await guest("Abuelo");
+  await tables.join({ table, player: abuelo.player });
+  await new MatchmakingConcept(testDb.db, clock, undefined, 0).enqueue({ player: "ghost-waiter", rules: "LONG", midway: false });
+  const dos = await guest("Dos");
+  await enqueue(dos, "LONG", false);
+
+  await runTicker();
+  const lobby = await tableOf(abuelo);
+  expect(lobby.host).toBe(abuelo.player);
+  expect(lobby.seats.map((s: { player: string }) => s.player)).toEqual([abuelo.player]);
+  expect((await queueOf(dos)).players.map((p: { player: string }) => p.player)).toEqual([dos.player]);
+  // Asked directly, with nobody left to take out, both say so.
+  expect((await call("/tables/drop-absent", { player: "ghost-host" })).status).toBe(404);
+  expect((await call("/matchmaking/drop-absent", { player: "ghost-waiter" })).status).toBe(404);
 });

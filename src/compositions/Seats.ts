@@ -17,7 +17,7 @@ import { concepts } from "../concepts.ts";
 import { ABSENT_MS, BOT_AFTER_MS, BOT_MOVE_MS } from "../timing.ts";
 import { seats, strings } from "./validators.ts";
 
-const { Botting, DominoPlaying, GuestSessioning, Table } = concepts;
+const { Botting, DominoPlaying, Sessioning, Table } = concepts;
 
 // A player who gets up mid-game leaves their seat empty, which pauses the game.
 const VacateSeatWhenPlayerLeaves = reaction(({ table, player, game }) =>
@@ -97,30 +97,30 @@ const DropAbsentPlayer = endpoint(
     receive({ game, player }).then(
       where(
         DominoPlaying._players({ game }).is({ player }),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.ge(idleMs, ABSENT_MS),
         Table._tableOf({ player }).is({ table }),
       )
         .then(Table.leave({ table, player }))
         .then(respond({ table }))
         .named("absent"),
-      where(GuestSessioning._idleFor({ session: player }).is({ idleMs }), is.lt(idleMs, ABSENT_MS))
+      where(Sessioning._idleFor({ player }).is({ idleMs }), is.lt(idleMs, ABSENT_MS))
         .then(respond({ error: "STILL_HERE" }))
         .named("present"),
-      where(GuestSessioning._idleFor({ session: player }).is({ idleMs }), is.ge(idleMs, ABSENT_MS), no(DominoPlaying._players({ game }).is({ player })))
+      where(Sessioning._idleFor({ player }).is({ idleMs }), is.ge(idleMs, ABSENT_MS), no(DominoPlaying._players({ game }).is({ player })))
         .then(respond({ error: "NOT_IN_GAME" }))
         .named("not-playing"),
       where(
         DominoPlaying._players({ game }).is({ player }),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.ge(idleMs, ABSENT_MS),
         no(Table._tableOf({ player })),
       )
         .then(respond({ error: "NOT_SEATED" }))
         .named("not-seated"),
-      where(no(GuestSessioning._idleFor({ session: player })))
+      where(no(Sessioning._idleFor({ player })))
         .then(respond({ error: "NOT_A_GUEST" }))
-        .named("not-a-guest"),
+        .named("no-session"),
     ),
   { input: { required: ["game", "player"] }, validators: { input: strings("game", "player") } },
 );

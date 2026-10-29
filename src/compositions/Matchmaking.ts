@@ -12,7 +12,7 @@ import { concepts } from "../concepts.ts";
 import { AWAY_BEFORE_GAME_MS } from "../timing.ts";
 import { flags, strings } from "./validators.ts";
 
-const { CodeGenerating, DominoPlaying, GuestSessioning, Matchmaking, Table } = concepts;
+const { CodeGenerating, DominoPlaying, Guesting, Matchmaking, Sessioning, Table } = concepts;
 
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
@@ -22,10 +22,10 @@ const CODE_SIZE = 6;
  * name, with whether each would also take a seat in a game already being played.
  */
 const QueueLobby = former(
-  "the matchmaking lobby of (session)",
-  ({ session }, { lobby, rules, full, secondsLeft, player, midway, displayName }) =>
+  "the matchmaking lobby of (me)",
+  ({ me }, { lobby, rules, full, secondsLeft, player, midway, displayName }) =>
     form({
-      lobbies: each(Matchmaking._lobbyOf({ player: session }).is({ lobby }))
+      lobbies: each(Matchmaking._lobbyOf({ player: me }).is({ lobby }))
         .where(Matchmaking._status({ lobby }).is({ rules, full, secondsLeft }))
         .form({
           lobby,
@@ -33,7 +33,7 @@ const QueueLobby = former(
           full,
           secondsLeft,
           players: each(Matchmaking._entries({ lobby }).is({ player, midway }))
-            .where(GuestSessioning._getName({ session: player }).is({ displayName }))
+            .where(Guesting._name({ guest: player }).is({ displayName }))
             .form({ player, displayName, midway }),
         }),
     }),
@@ -41,10 +41,10 @@ const QueueLobby = former(
 
 const ShowQueue = endpoint(
   "/matchmaking/view",
-  ({ token, session, displayName }) =>
+  ({ token, me }) =>
     receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(respond({ queue: QueueLobby({ session }) })),
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(respond({ queue: QueueLobby({ me }) })),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
 
@@ -56,18 +56,18 @@ const ShowQueue = endpoint(
  */
 const Enqueue = endpoint(
   "/matchmaking/enqueue",
-  ({ token, session, displayName, rules, midway, lobby }) =>
+  ({ token, me, rules, midway, lobby }) =>
     receive({ token, rules, midway })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
       .then(
-        where(no(Table._tableOf({ player: session })), DominoPlaying._ruleset({ rules }))
-          .then(Matchmaking.enqueue({ player: session, rules, midway }).responds({ lobby }))
+        where(no(Table._tableOf({ player: me })), DominoPlaying._ruleset({ rules }))
+          .then(Matchmaking.enqueue({ player: me, rules, midway }).responds({ lobby }))
           .then(respond({ lobby }))
           .named("not-seated"),
-        where(no(Table._tableOf({ player: session })), no(DominoPlaying._ruleset({ rules })))
+        where(no(Table._tableOf({ player: me })), no(DominoPlaying._ruleset({ rules })))
           .then(respond({ error: "UNKNOWN_RULES" }))
           .named("unknown-rules"),
-        where(Table._tableOf({ player: session }))
+        where(Table._tableOf({ player: me }))
           .then(respond({ error: "AT_TABLE" }))
           .named("seated"),
       ),
@@ -79,10 +79,10 @@ const Enqueue = endpoint(
 
 const LeaveQueue = endpoint(
   "/matchmaking/leave",
-  ({ token, session, displayName, lobby }) =>
+  ({ token, me, lobby }) =>
     receive({ token })
-      .then(GuestSessioning.resume({ token }).responds({ session, displayName }))
-      .then(Matchmaking.cancel({ player: session }).responds({ lobby }))
+      .then(Sessioning.resume({ token }).responds({ player: me }))
+      .then(Matchmaking.cancel({ player: me }).responds({ lobby }))
       .then(respond({ lobby })),
   { input: { required: ["token"] }, validators: { input: strings("token") } },
 );
@@ -106,7 +106,8 @@ const Launch = endpoint(
  * Asked by the server's ticker: a guest waiting for strangers whose page has not
  * checked in for a while (it was closed, or went offline) stops waiting, as if they
  * had left the queue, so no game is started around someone who is gone. An open page
- * checks in by itself, so an idle guest keeps waiting.
+ * checks in by itself, so an idle guest keeps waiting. Someone with no session left
+ * at all is gone for good, and stops waiting too.
  */
 const DropAbsentWaiter = endpoint(
   "/matchmaking/drop-absent",
@@ -114,7 +115,7 @@ const DropAbsentWaiter = endpoint(
     receive({ player }).then(
       where(
         Matchmaking._lobbyOf({ player }),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.ge(idleMs, AWAY_BEFORE_GAME_MS),
       )
         .then(Matchmaking.cancel({ player }).responds({ lobby }))
@@ -122,14 +123,15 @@ const DropAbsentWaiter = endpoint(
         .named("away"),
       where(
         Matchmaking._lobbyOf({ player }),
-        GuestSessioning._idleFor({ session: player }).is({ idleMs }),
+        Sessioning._idleFor({ player }).is({ idleMs }),
         is.lt(idleMs, AWAY_BEFORE_GAME_MS),
       )
         .then(respond({ error: "STILL_HERE" }))
         .named("present"),
-      where(Matchmaking._lobbyOf({ player }), no(GuestSessioning._idleFor({ session: player })))
-        .then(respond({ error: "NOT_QUEUED" }))
-        .named("not-a-guest"),
+      where(Matchmaking._lobbyOf({ player }), no(Sessioning._idleFor({ player })))
+        .then(Matchmaking.cancel({ player }).responds({ lobby }))
+        .then(respond({ lobby }))
+        .named("no-session"),
       where(no(Matchmaking._lobbyOf({ player })))
         .then(respond({ error: "NOT_QUEUED" }))
         .named("not-queued"),
@@ -190,18 +192,18 @@ const ForgetClosedTable = reaction(({ table }) =>
     .then(Matchmaking.release({ place: table })),
 );
 
-// A guest who ends their session stops waiting for a game.
-const LeaveQueueOnSessionEnd = reaction(({ session }) =>
-  when(GuestSessioning.end({}).responds({ session }))
-    .where(Matchmaking._lobbyOf({ player: session }))
-    .then(Matchmaking.cancel({ player: session })),
+// A player whose last session ends (they signed out) stops waiting for a game.
+const LeaveQueueOnSessionEnd = reaction(({ player }) =>
+  when(Sessioning.end({}).responds({ player }))
+    .where(no(Sessioning._idleFor({ player })), Matchmaking._lobbyOf({ player }))
+    .then(Matchmaking.cancel({ player })),
 );
 
-// Nor does a guest whose session expired.
-const LeaveQueueOnSessionExpire = reaction(({ session }) =>
-  when(GuestSessioning.expire({}).responds({ session }))
-    .where(Matchmaking._lobbyOf({ player: session }))
-    .then(Matchmaking.cancel({ player: session })),
+// So does one whose last session expired, so nobody away for good holds a place.
+const LeaveQueueOnSessionExpire = reaction(({ player }) =>
+  when(Sessioning.expire({}).responds({ player }))
+    .where(no(Sessioning._idleFor({ player })), Matchmaking._lobbyOf({ player }))
+    .then(Matchmaking.cancel({ player })),
 );
 
 export const composition = {

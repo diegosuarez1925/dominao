@@ -3,8 +3,8 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import { DominoPlayingConcept } from "./concepts/DominoPlaying.ts";
-import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
 import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
+import { SessioningConcept } from "./concepts/Sessioning.ts";
 import { TableConcept } from "./concepts/Table.ts";
 import { EXPIRY_INTERVAL_MS, expireIdleSessions } from "./expiry.ts";
 import { startTicker } from "./ticker.ts";
@@ -27,7 +27,7 @@ const server = Bun.serve({
     "/api/*": api,
     "/health": async () => {
       try {
-        await db.collection("guestSessioning.sessions").findOne({}, { maxTimeMS: 2000, timeoutMS: 3000 });
+        await db.collection("sessioning.sessions").findOne({}, { maxTimeMS: 2000, timeoutMS: 3000 });
         return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
       } catch {
         return Response.json(
@@ -39,8 +39,8 @@ const server = Bun.serve({
   },
 });
 
-// Idle guests are expired on a timer, which frees their seats and queue places.
-const sessions = new GuestSessioningConcept(db);
+// Idle sessions are expired on a timer, which frees their seats and queue places.
+const sessions = new SessioningConcept(db);
 setInterval(() => {
   expireIdleSessions(gateway, sessions).catch((error) => console.error("Expiring idle sessions failed:", error));
 }, EXPIRY_INTERVAL_MS);

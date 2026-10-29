@@ -5,12 +5,12 @@ import { leaveQueue, rulesDescription, rulesName, state } from "../session.ts";
 import LobbyTable, { type LobbySeat } from "./LobbyTable.vue";
 
 const props = defineProps<{ queue: QueueLobby }>();
-const midway = computed(() => props.queue.players.find((p) => p.player === state.me?.session)?.midway === true);
+const midway = computed(() => props.queue.players.find((p) => p.player === state.me?.player)?.midway === true);
 
 /** The guest at the bottom, then the others in the order they arrived. */
 const seats = computed<LobbySeat[]>(() => {
   const players = props.queue.players;
-  const mine = Math.max(0, players.findIndex((p) => p.player === state.me?.session));
+  const mine = Math.max(0, players.findIndex((p) => p.player === state.me?.player));
   return [0, 1, 2, 3].map((offset) => {
     const entry = players[(mine + offset) % 4];
     if (entry === undefined) return null;

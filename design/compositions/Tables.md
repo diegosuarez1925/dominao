@@ -2,8 +2,8 @@
 
 Private tables let a group of friends play together. Table only seats people; it
 knows nothing about dominoes, so the game can change without touching it. Every
-endpoint here first resumes the guest's session from their token, and that session
-is the player at the table, so nobody can sit, leave or close in someone else's name.
+endpoint here first resumes a session from its token, and the player that session
+acts as is the player at the table, so nobody can sit, leave or close in someone else's name.
 
 A guest [opens a table](reaction:Tables.Open) under the rule set they choose. Rules
 DominoPlaying does not know are answered `UNKNOWN_RULES`. The app asks CodeGenerating
@@ -60,9 +60,9 @@ described for [seats](Seats.md) applies instead, and this answers `GAME_IN_PROGR
 Tables.DropAbsentSitter at /tables/drop-absent
 ```
 
-A player can [leave a table](reaction:Tables.Leave), and a guest who ends their
-session [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd), and so does one whose
-session [expires](reaction:Tables.LeaveTableOnSessionExpire). When the last one leaves, the
+A player can [leave a table](reaction:Tables.Leave), and a player whose last session
+ends [gets up from their table too](reaction:Tables.LeaveTableOnSessionEnd), and so does one whose
+last session [expires](reaction:Tables.LeaveTableOnSessionExpire). When the last one leaves, the
 app [closes the empty table](reaction:Tables.CloseEmptyTable), because nobody is
 left to do it. The host can also [close a table](reaction:Tables.Close) that still
 has people at it, which unseats everyone; anyone else who tries is answered

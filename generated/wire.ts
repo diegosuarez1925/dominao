@@ -26,7 +26,7 @@ export type DominaoWire = {
   "/games/drop-absent": {
     input: {
       "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>[0], ["game"]>>;
-      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>[0], ["session"]>]>>;
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>[0], ["player"]>]>>;
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
@@ -38,7 +38,7 @@ export type DominaoWire = {
       "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>>;
       "side": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["side"]>>;
       "tile": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["tile"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>>, ["game"]>]>>;
@@ -71,7 +71,7 @@ export type DominaoWire = {
   };
   "/games/start": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "game": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["start"]>>, ["game"]>>;
@@ -80,7 +80,7 @@ export type DominaoWire = {
   };
   "/games/view": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "view": {
@@ -109,19 +109,19 @@ export type DominaoWire = {
           }[];
           "log": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
             "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["matchNumber"]>>;
             "move": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["move"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
             "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["tile"]>>;
             "turn": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["turn"]>>;
           })[];
           "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
           "players": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
-            "idleMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>>>, ["idleMs"]>> | null;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
+            "idleMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>>>, ["idleMs"]>> | null;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>[0], ["player"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["position"]>>;
             "tileCount": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["tileCount"]>>;
           })[];
@@ -143,8 +143,8 @@ export type DominaoWire = {
           "turnPlayer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["turnPlayer"]>>;
           "vacancies": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["position"]>>;
             "vacantMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["vacantMs"]>>;
           })[];
@@ -153,49 +153,23 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/guests/expire": {
-    input: {
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>>;
-    };
-    output: {
-      "session": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>>, ["session"]>]>>;
-    };
-    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IDLE" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_SESSION" };
-  };
-  "/guests/leave": {
-    input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>[0], ["token"]>>;
-    };
-    output: {
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
-    };
-    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_SESSION" };
-  };
-  "/guests/me": {
-    input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
-    };
-    output: {
-      "displayName": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>>, ["displayName"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>>, ["session"]>>;
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
-  };
   "/guests/start": {
     input: {
-      "displayName": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["displayName"]>>;
+      "displayName": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["create"]>[0], ["displayName"]>>;
     };
     output: {
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["session"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
+      "player": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["player"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["token"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_NAME" | "TOKEN_IN_USE" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_LENGTH" | "INVALID_LIFETIME" | "INVALID_NAME" | "TOKEN_IN_USE" };
   };
   "/matchmaking/drop-absent": {
     input: {
       "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>[0], ["player"]>]>>;
     };
     output: {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    } | {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
     };
     error: { error: AppWideError | "INVALID_INPUT" | "NOT_QUEUED" | "STILL_HERE" };
@@ -204,7 +178,7 @@ export type DominaoWire = {
     input: {
       "midway": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["midway"]>>;
       "rules": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["rules"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_ruleset"]>[0], ["rules"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>>, ["lobby"]>>;
@@ -222,7 +196,7 @@ export type DominaoWire = {
   };
   "/matchmaking/leave": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
@@ -231,7 +205,7 @@ export type DominaoWire = {
   };
   "/matchmaking/view": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "queue": {
@@ -239,9 +213,9 @@ export type DominaoWire = {
           "full": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["full"]>>;
           "lobby": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>[0], ["lobby"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>>>, ["lobby"]>]>>;
           "players": {
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
             "midway": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["midway"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
           }[];
           "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["rules"]>>;
           "secondsLeft": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["secondsLeft"]>>;
@@ -250,10 +224,38 @@ export type DominaoWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/sessions/end": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>[0], ["token"]>>;
+    };
+    output: {
+      "player": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>>, ["player"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_GUEST" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_SESSION" };
+  };
+  "/sessions/expire": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["expire"]>[0], ["session"]>>;
+    };
+    output: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["expire"]>[0], ["session"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IDLE" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_GUEST" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "TABLE_FULL" | "UNKNOWN_SESSION" };
+  };
+  "/sessions/me": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
+      "player": Jsonify<AllOf<[AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>>, ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/tables/close": {
     input: {
       "table": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
@@ -266,13 +268,15 @@ export type DominaoWire = {
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+    } | {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
     };
     error: { error: AppWideError | "ALREADY_PLAYING" | "ALREADY_SEATED" | "GAME_IN_PROGRESS" | "GAME_NOT_ACTIVE" | "INVALID_INPUT" | "NOT_IN_GAME" | "NOT_QUEUED" | "NOT_SEATED" | "NO_SUCH_CODE" | "NO_SUCH_GAME" | "NO_SUCH_PLACE" | "NO_SUCH_TABLE" | "SEAT_TAKEN" | "STILL_HERE" | "TABLE_FULL" };
   };
   "/tables/join": {
     input: {
       "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_getByCode"]>[0], ["code"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "position": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>>, ["position"]>>;
@@ -283,7 +287,7 @@ export type DominaoWire = {
   "/tables/leave": {
     input: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
@@ -292,7 +296,7 @@ export type DominaoWire = {
   };
   "/tables/lobby": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": {
@@ -301,8 +305,8 @@ export type DominaoWire = {
           "host": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["host"]>>;
           "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["rules"]>>;
           "seats": {
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["position"]>>;
           }[];
           "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>>>, ["table"]>]>>;
@@ -314,7 +318,7 @@ export type DominaoWire = {
   "/tables/open": {
     input: {
       "rules": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_ruleset"]>[0], ["rules"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["rules"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["code"]>>;
@@ -326,7 +330,7 @@ export type DominaoWire = {
     input: {
       "first": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["first"]>>;
       "second": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["second"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>>, ["table"]>]>>;
@@ -350,7 +354,7 @@ export type DominaoWireHttp = {
   "/games/drop-absent": {
     input: {
       "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>[0], ["game"]>>;
-      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>[0], ["session"]>]>>;
+      "player": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>[0], ["player"]>]>>;
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
@@ -362,7 +366,7 @@ export type DominaoWireHttp = {
       "game": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>>;
       "side": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["side"]>>;
       "tile": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["tile"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "game": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>[0], ["game"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["play"]>>, ["game"]>]>>;
@@ -395,7 +399,7 @@ export type DominaoWireHttp = {
   };
   "/games/start": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "game": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["start"]>>, ["game"]>>;
@@ -404,7 +408,7 @@ export type DominaoWireHttp = {
   };
   "/games/view": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "view": {
@@ -433,19 +437,19 @@ export type DominaoWireHttp = {
           }[];
           "log": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
             "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["matchNumber"]>>;
             "move": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["move"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["player"]>]>>;
             "tile": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["tile"]>>;
             "turn": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_log"]>>>, ["turn"]>>;
           })[];
           "matchNumber": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["matchNumber"]>>;
           "players": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
-            "idleMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>>>, ["idleMs"]>> | null;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_idleFor"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
+            "idleMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>>>, ["idleMs"]>> | null;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["_idleFor"]>[0], ["player"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["position"]>>;
             "tileCount": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_players"]>>>, ["tileCount"]>>;
           })[];
@@ -467,8 +471,8 @@ export type DominaoWireHttp = {
           "turnPlayer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_summary"]>>>, ["turnPlayer"]>>;
           "vacancies": ({
             "botName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>>>, ["name"]>> | null;
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>> | null;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>> | null;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Botting"]["_name"]>[0], ["bot"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["position"]>>;
             "vacantMs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_vacancies"]>>>, ["vacantMs"]>>;
           })[];
@@ -477,41 +481,13 @@ export type DominaoWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/guests/expire": {
-    input: {
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>>;
-    };
-    output: {
-      "session": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>[0], ["session"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["expire"]>>, ["session"]>]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/guests/leave": {
-    input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>[0], ["token"]>>;
-    };
-    output: {
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["end"]>>, ["session"]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/guests/me": {
-    input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
-    };
-    output: {
-      "displayName": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>>, ["displayName"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>>, ["session"]>>;
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
-  };
   "/guests/start": {
     input: {
-      "displayName": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["displayName"]>>;
+      "displayName": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["create"]>[0], ["displayName"]>>;
     };
     output: {
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>>, ["session"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["start"]>[0], ["token"]>>;
+      "player": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["player"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["token"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" };
   };
@@ -521,6 +497,8 @@ export type DominaoWireHttp = {
     };
     output: {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
+    } | {
+      "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" };
   };
@@ -528,7 +506,7 @@ export type DominaoWireHttp = {
     input: {
       "midway": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["midway"]>>;
       "rules": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>[0], ["rules"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_ruleset"]>[0], ["rules"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["enqueue"]>>, ["lobby"]>>;
@@ -546,7 +524,7 @@ export type DominaoWireHttp = {
   };
   "/matchmaking/leave": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["cancel"]>>, ["lobby"]>>;
@@ -555,7 +533,7 @@ export type DominaoWireHttp = {
   };
   "/matchmaking/view": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "queue": {
@@ -563,9 +541,9 @@ export type DominaoWireHttp = {
           "full": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["full"]>>;
           "lobby": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>[0], ["lobby"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_lobbyOf"]>>>, ["lobby"]>]>>;
           "players": {
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
             "midway": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["midway"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_entries"]>>>, ["player"]>]>>;
           }[];
           "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["rules"]>>;
           "secondsLeft": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Matchmaking"]["_status"]>>>, ["secondsLeft"]>>;
@@ -574,10 +552,38 @@ export type DominaoWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/sessions/end": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>[0], ["token"]>>;
+    };
+    output: {
+      "player": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>>, ["player"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/sessions/expire": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["expire"]>[0], ["session"]>>;
+    };
+    output: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["expire"]>[0], ["session"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/sessions/me": {
+    input: {
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
+    };
+    output: {
+      "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
+      "player": Jsonify<AllOf<[AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>>, ["player"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/tables/close": {
     input: {
       "table": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["close"]>[0], ["table"]>>;
@@ -590,13 +596,15 @@ export type DominaoWireHttp = {
     };
     output: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
+    } | {
+      "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INTERNAL_ERROR" | "INVALID_REQUEST" | "NOT_FOUND" };
   };
   "/tables/join": {
     input: {
       "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_getByCode"]>[0], ["code"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "position": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["join"]>>, ["position"]>>;
@@ -607,7 +615,7 @@ export type DominaoWireHttp = {
   "/tables/leave": {
     input: {
       "table": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["leave"]>>, ["table"]>]>>;
@@ -616,7 +624,7 @@ export type DominaoWireHttp = {
   };
   "/tables/lobby": {
     input: {
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "lobby": {
@@ -625,8 +633,8 @@ export type DominaoWireHttp = {
           "host": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["host"]>>;
           "rules": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>>>, ["rules"]>>;
           "seats": {
-            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>>>, ["displayName"]>>;
-            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["_getName"]>[0], ["session"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
+            "displayName": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>>>, ["displayName"]>>;
+            "player": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Guesting"]["_name"]>[0], ["guest"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["player"]>]>>;
             "position": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_seats"]>>>, ["position"]>>;
           }[];
           "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["_get"]>[0], ["table"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["_tableOf"]>>>, ["table"]>]>>;
@@ -638,7 +646,7 @@ export type DominaoWireHttp = {
   "/tables/open": {
     input: {
       "rules": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["DominoPlaying"]["_ruleset"]>[0], ["rules"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["rules"]>]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "code": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["open"]>[0], ["code"]>>;
@@ -650,7 +658,7 @@ export type DominaoWireHttp = {
     input: {
       "first": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["first"]>>;
       "second": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["second"]>>;
-      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["GuestSessioning"]["resume"]>[0], ["token"]>>;
+      "token": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["resume"]>[0], ["token"]>>;
     };
     output: {
       "table": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>[0], ["table"]>, AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Table"]["swap"]>>, ["table"]>]>>;

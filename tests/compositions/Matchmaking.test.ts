@@ -4,7 +4,7 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "../../src/assembly.ts";
 import { BottingConcept } from "../../src/concepts/Botting.ts";
 import { DominoPlayingConcept } from "../../src/concepts/DominoPlaying.ts";
-import { GuestSessioningConcept } from "../../src/concepts/GuestSessioning.ts";
+import { SessioningConcept } from "../../src/concepts/Sessioning.ts";
 import { MatchmakingConcept } from "../../src/concepts/Matchmaking.ts";
 import { TableConcept } from "../../src/concepts/Table.ts";
 import { policy } from "../../src/http.ts";
@@ -43,7 +43,7 @@ async function call(path: string, body: unknown) {
   return { status: response.status, body: await response.json() };
 }
 
-type Guest = { session: string; token: string };
+type Guest = { player: string; token: string };
 
 async function guests(...names: string[]) {
   const result: Guest[] = [];
@@ -60,7 +60,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const runTicker = () =>
   tick(gateway, {
     games: new DominoPlayingConcept(testDb.db),
-    sessions: new GuestSessioningConcept(testDb.db),
+    sessions: new SessioningConcept(testDb.db),
     bots: new BottingConcept(testDb.db),
     matchmaking: new MatchmakingConcept(testDb.db, undefined, undefined, COUNTDOWN_MS),
     tables: new TableConcept(testDb.db),
@@ -90,7 +90,7 @@ test("four strangers fill a lobby, count down, and are seated at a new table wit
   // Nobody waits any more; all four sit at the same table, with a game being played.
   const table = await tableOf(players[0]);
   expect(table.seats).toHaveLength(4);
-  expect(table.seats.map((s: { player: string }) => s.player).sort()).toEqual(players.map((p) => p.session).sort());
+  expect(table.seats.map((s: { player: string }) => s.player).sort()).toEqual(players.map((p) => p.player).sort());
   for (const guest of players) {
     expect(await queueOf(guest)).toBeUndefined();
     expect((await tableOf(guest)).table).toBe(table.table);
@@ -132,9 +132,9 @@ test("ending a session leaves the queue", async () => {
   const [a, b] = await guests("A", "B");
   await call("/matchmaking/enqueue", { token: a.token, rules: "DEFAULT", midway: false });
   await call("/matchmaking/enqueue", { token: b.token, rules: "DEFAULT", midway: false });
-  await call("/guests/leave", { token: a.token });
+  await call("/sessions/end", { token: a.token });
   const waiting = await queueOf(b);
-  expect(waiting.players.map((p: { player: string }) => p.player)).toEqual([b.session]);
+  expect(waiting.players.map((p: { player: string }) => p.player)).toEqual([b.player]);
 });
 
 test("queueing and sitting at a table exclude each other", async () => {

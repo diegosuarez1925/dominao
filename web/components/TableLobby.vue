@@ -7,8 +7,8 @@ import LobbyTable, { type LobbySeat } from "./LobbyTable.vue";
 
 const props = defineProps<{ table: Table }>();
 
-const isHost = computed(() => props.table.host === state.me?.session);
-const mine = computed(() => props.table.seats.find((s) => s.player === state.me?.session)?.position ?? 0);
+const isHost = computed(() => props.table.host === state.me?.player);
+const mine = computed(() => props.table.seats.find((s) => s.player === state.me?.player)?.position ?? 0);
 /** Seats from the guest's own, counter-clockwise; partners face each other. */
 const seats = computed<LobbySeat[]>(() =>
   [0, 1, 2, 3].map((offset) => {

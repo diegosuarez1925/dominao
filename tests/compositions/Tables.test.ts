@@ -36,7 +36,7 @@ async function call(path: string, body: unknown) {
 
 async function guest(displayName: string) {
   const { body } = await call("/guests/start", { displayName });
-  return body as { session: string; token: string };
+  return body as { player: string; token: string };
 }
 
 /** Whether CodeGenerating still holds a table code, asked through its own query. */
@@ -62,13 +62,13 @@ test("the journey: Abuelo opens a table and his three brothers join by code", as
     {
       table,
       code,
-      host: abuelo.session,
+      host: abuelo.player,
       rules: "DEFAULT",
       seats: [
-        { position: 0, player: abuelo.session, displayName: "Abuelo" },
-        { position: 1, player: brothers[0].session, displayName: "Papo" },
-        { position: 2, player: brothers[1].session, displayName: "Nando" },
-        { position: 3, player: brothers[2].session, displayName: "Cheo" },
+        { position: 0, player: abuelo.player, displayName: "Abuelo" },
+        { position: 1, player: brothers[0].player, displayName: "Papo" },
+        { position: 2, player: brothers[1].player, displayName: "Nando" },
+        { position: 3, player: brothers[2].player, displayName: "Cheo" },
       ],
     },
   ]);
@@ -95,7 +95,7 @@ test("when the last player leaves, the table closes and its code is freed", asyn
 
   await call("/tables/leave", { token: abuelo.token, table });
   // Papo is host now, and the table is still open.
-  expect((await call("/tables/lobby", { token: papo.token })).body.lobby.tables[0].host).toBe(papo.session);
+  expect((await call("/tables/lobby", { token: papo.token })).body.lobby.tables[0].host).toBe(papo.player);
 
   await call("/tables/leave", { token: papo.token, table });
   expect((await call("/tables/join", { token: abuelo.token, code })).status).toBe(404);
@@ -123,12 +123,12 @@ test("a guest who leaves the app also leaves their table", async () => {
   const { code } = (await call("/tables/open", { token: abuelo.token, rules: "DEFAULT" })).body;
   await call("/tables/join", { token: papo.token, code });
 
-  await call("/guests/leave", { token: papo.token });
+  await call("/sessions/end", { token: papo.token });
   const seats = (await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0].seats;
   expect(seats.map((seat: { displayName: string }) => seat.displayName)).toEqual(["Abuelo"]);
 
   // The last guest leaving the app closes the table and frees its code.
-  await call("/guests/leave", { token: abuelo.token });
+  await call("/sessions/end", { token: abuelo.token });
   expect(await taken(code)).toBe(false);
 });
 
@@ -175,7 +175,7 @@ test("the host swaps seats to choose partners before the game, and the game foll
 
   // Papo joined second, so he would have been an opponent; Abuelo moves him across from himself.
   expect(await call("/tables/swap", { token: abuelo.token, first: 1, second: 2 })).toEqual({ status: 200, body: { table } });
-  expect(await seated()).toEqual([abuelo.session, nando.session, papo.session, cheo.session]);
+  expect(await seated()).toEqual([abuelo.player, nando.player, papo.player, cheo.player]);
 
   // Only the host arranges seats; a seat cannot be swapped with itself, and seats are 0 to 3.
   expect(await call("/tables/swap", { token: papo.token, first: 0, second: 1 })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
@@ -183,16 +183,16 @@ test("the host swaps seats to choose partners before the game, and the game foll
   for (const bad of [{ first: 1, second: 4 }, { first: -1, second: 0 }, { first: "1", second: 2 }, { first: 1 }]) {
     expect((await call("/tables/swap", { token: abuelo.token, ...bad })).status).toBe(400);
   }
-  expect(await seated()).toEqual([abuelo.session, nando.session, papo.session, cheo.session]);
+  expect(await seated()).toEqual([abuelo.player, nando.player, papo.player, cheo.player]);
 
   // The game is played in the new seat order: Abuelo and Papo are partners (seats 0 and 2).
   await call("/games/start", { token: abuelo.token });
   const game = (await call("/games/view", { token: abuelo.token })).body.view.games[0];
-  expect(game.players.map((p: { player: string }) => p.player)).toEqual([abuelo.session, nando.session, papo.session, cheo.session]);
+  expect(game.players.map((p: { player: string }) => p.player)).toEqual([abuelo.player, nando.player, papo.player, cheo.player]);
 
   // Once it starts, seats are its turn order and stay put.
   expect(await call("/tables/swap", { token: abuelo.token, first: 1, second: 2 })).toEqual({ status: 409, body: { error: "CONFLICT" } });
-  expect(await seated()).toEqual([abuelo.session, nando.session, papo.session, cheo.session]);
+  expect(await seated()).toEqual([abuelo.player, nando.player, papo.player, cheo.player]);
 });
 
 test("the host can move someone to an empty seat, and a guest at no table cannot swap", async () => {
@@ -202,8 +202,8 @@ test("the host can move someone to an empty seat, and a guest at no table cannot
   expect((await call("/tables/swap", { token: abuelo.token, first: 1, second: 2 })).status).toBe(200);
   const { seats } = (await call("/tables/lobby", { token: abuelo.token })).body.lobby.tables[0];
   expect(seats.map((s: { position: number; player: string }) => [s.position, s.player])).toEqual([
-    [0, abuelo.session],
-    [2, papo.session],
+    [0, abuelo.player],
+    [2, papo.player],
   ]);
   expect(await call("/tables/swap", { token: outsider.token, first: 0, second: 1 })).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
 });

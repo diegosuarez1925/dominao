@@ -1,7 +1,8 @@
 # Application types
 
-DOMINAO has no accounts. Every player at a table is identified by their guest
-session, so Table's players are GuestSessioning's sessions.
+A person playing DOMINAO is a guest, kept by Guesting. Sessioning recognizes their
+browser by its token and answers which person it acts as, so the players of
+Sessioning, Table and Matchmaking are those people.
 
 CodeGenerating keeps codes unique within a context. The app uses two contexts: one
 for session tokens and one for table join codes.
@@ -22,12 +23,15 @@ concrete RuleSet
   The name of one of DominoPlaying's rule sets, such as DEFAULT, LONG or SHORT.
 
 concrete CodeContext
-  The kind of code being generated: SESSION_TOKENS for guest session tokens, or
+  The kind of code being generated: SESSION_TOKENS for session tokens, or
   TABLE_CODES for the join codes of private tables.
 
+concrete Person
+  A person playing: a guest from Guesting.
+
 concrete SeatHolder
-  Whoever holds a seat in a game: a guest's session, or a bot standing in for a
-  guest who left.
+  Whoever holds a seat in a game: a person, or a bot standing in for a person who
+  left.
 ```
 
 ```instances
@@ -40,14 +44,17 @@ instantiate DominoPlaying with
   Player is SeatHolder
   Place is Table.Table
 
-instantiate GuestSessioning
+instantiate Guesting
+
+instantiate Sessioning with
+  Player is Person
 
 instantiate Matchmaking with
-  Player is GuestSessioning.Session
+  Player is Person
   Rules is RuleSet
   Place is Table.Table
 
 instantiate Table with
-  Player is GuestSessioning.Session
+  Player is Person
   Rules is RuleSet
 ```

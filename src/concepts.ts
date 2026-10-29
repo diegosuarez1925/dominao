@@ -2,7 +2,8 @@ import { conceptSet, registerConcept } from "@mit-sdg/sync-engine/assembly";
 import codeGeneratingSpec from "@design/concepts/CodeGenerating.md" with { type: "text" };
 import dominoPlayingSpec from "@design/concepts/DominoPlaying.md" with { type: "text" };
 import matchmakingSpec from "@design/concepts/Matchmaking.md" with { type: "text" };
-import guestSessioningSpec from "@design/concepts/GuestSessioning.md" with { type: "text" };
+import guestingSpec from "@design/concepts/Guesting.md" with { type: "text" };
+import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" };
 import tableSpec from "@design/concepts/Table.md" with { type: "text" };
 import { CodeGeneratingConcept, InvalidLength, NoSuchCode } from "./concepts/CodeGenerating.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
@@ -22,13 +23,8 @@ import {
   SeatTaken,
   UnknownRules,
 } from "./concepts/DominoPlaying.ts";
-import {
-  GuestSessioningConcept,
-  InvalidName,
-  NotIdle,
-  TokenInUse,
-  UnknownSession,
-} from "./concepts/GuestSessioning.ts";
+import { GuestingConcept, InvalidName, NoSuchGuest } from "./concepts/Guesting.ts";
+import { InvalidLifetime, NotIdle, SessioningConcept, TokenInUse, UnknownSession } from "./concepts/Sessioning.ts";
 import {
   AlreadyQueued,
   CountdownRunning,
@@ -80,10 +76,21 @@ const botting = registerConcept({
   refusals: {},
 });
 
-const guestSessioning = registerConcept({
-  class: GuestSessioningConcept,
-  spec: guestSessioningSpec,
-  refusals: { INVALID_NAME: InvalidName, TOKEN_IN_USE: TokenInUse, UNKNOWN_SESSION: UnknownSession, NOT_IDLE: NotIdle },
+const guesting = registerConcept({
+  class: GuestingConcept,
+  spec: guestingSpec,
+  refusals: { INVALID_NAME: InvalidName, NO_SUCH_GUEST: NoSuchGuest },
+});
+
+const sessioning = registerConcept({
+  class: SessioningConcept,
+  spec: sessioningSpec,
+  refusals: {
+    TOKEN_IN_USE: TokenInUse,
+    UNKNOWN_SESSION: UnknownSession,
+    NOT_IDLE: NotIdle,
+    INVALID_LIFETIME: InvalidLifetime,
+  },
 });
 
 const matchmaking = registerConcept({
@@ -117,8 +124,9 @@ export const applicationConceptSet = conceptSet({
   Botting: botting,
   CodeGenerating: codeGenerating,
   DominoPlaying: dominoPlaying,
-  GuestSessioning: guestSessioning,
+  Guesting: guesting,
   Matchmaking: matchmaking,
+  Sessioning: sessioning,
   Table: table,
 });
 export const { concepts } = applicationConceptSet;

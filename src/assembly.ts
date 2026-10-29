@@ -8,8 +8,9 @@ import { composition as tables } from "./compositions/Tables.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import { CodeGeneratingConcept } from "./concepts/CodeGenerating.ts";
 import { DominoPlayingConcept, randomMove, randomShuffle, type MoveChooser } from "./concepts/DominoPlaying.ts";
-import { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
+import { GuestingConcept } from "./concepts/Guesting.ts";
 import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
+import { SessioningConcept } from "./concepts/Sessioning.ts";
 import { TableConcept } from "./concepts/Table.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { db } from "./db.ts";
@@ -30,8 +31,9 @@ export function assembleApplication(
       Botting: new BottingConcept(database),
       CodeGenerating: new CodeGeneratingConcept(database),
       DominoPlaying: new DominoPlayingConcept(database, randomShuffle, clock, options.chooseMove ?? randomMove),
-      GuestSessioning: new GuestSessioningConcept(database, clock),
+      Guesting: new GuestingConcept(database),
       Matchmaking: new MatchmakingConcept(database, clock, undefined, options.matchmakingCountdownMs),
+      Sessioning: new SessioningConcept(database, clock),
       Table: new TableConcept(database),
     },
     composition: { Guests: guests, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking },

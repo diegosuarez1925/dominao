@@ -1,14 +1,14 @@
 import type { createGateway } from "@mit-sdg/sync-engine/boundary";
 import type { BottingConcept } from "./concepts/Botting.ts";
 import type { DominoPlayingConcept } from "./concepts/DominoPlaying.ts";
-import type { GuestSessioningConcept } from "./concepts/GuestSessioning.ts";
 import type { MatchmakingConcept } from "./concepts/Matchmaking.ts";
+import type { SessioningConcept } from "./concepts/Sessioning.ts";
 import type { TableConcept } from "./concepts/Table.ts";
 import { ABSENT_MS, AWAY_BEFORE_GAME_MS, BOT_AFTER_MS, BOT_MOVE_MS } from "./timing.ts";
 
 type Reads = {
   games: Pick<DominoPlayingConcept, "_running" | "_vacancies" | "_turn" | "_players" | "_activeAt">;
-  sessions: Pick<GuestSessioningConcept, "_idleFor">;
+  sessions: Pick<SessioningConcept, "_idleFor">;
   bots: Pick<BottingConcept, "_name">;
   matchmaking: Pick<MatchmakingConcept, "_ready" | "_lobbies" | "_entries">;
   tables: Pick<TableConcept, "_tables" | "_seats">;
@@ -23,7 +23,9 @@ type Reads = {
  * here only decide whom to ask about; each endpoint checks the time again itself.
  */
 export async function tick(gateway: ReturnType<typeof createGateway>, { games, sessions, bots, matchmaking, tables }: Reads) {
-  const away = async (player: string) => ((await sessions._idleFor({ session: player }))[0]?.idleMs ?? 0) >= AWAY_BEFORE_GAME_MS;
+  // Someone with no session at all is gone for good, so counts as away.
+  const away = async (player: string) =>
+    ((await sessions._idleFor({ player }))[0]?.idleMs ?? Number.POSITIVE_INFINITY) >= AWAY_BEFORE_GAME_MS;
   for (const { lobby } of await matchmaking._lobbies()) {
     for (const { player } of await matchmaking._entries({ lobby })) {
       if (await away(player)) await gateway.invoke("/matchmaking/drop-absent", { player });
@@ -39,7 +41,7 @@ export async function tick(gateway: ReturnType<typeof createGateway>, { games, s
       await gateway.invoke("/games/bot-move", { game });
     }
     for (const { player } of await games._players({ game })) {
-      const [seen] = player === "" ? [] : await sessions._idleFor({ session: player });
+      const [seen] = player === "" ? [] : await sessions._idleFor({ player });
       if (seen !== undefined && seen.idleMs >= ABSENT_MS) await gateway.invoke("/games/drop-absent", { game, player });
     }
   }

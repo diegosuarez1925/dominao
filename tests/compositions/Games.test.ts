@@ -37,7 +37,7 @@ async function call(path: string, body: unknown) {
 async function fullTable(rules = "DEFAULT") {
   const guests = [];
   for (const displayName of ["Abuelo", "Papo", "Nando", "Cheo"]) {
-    guests.push((await call("/guests/start", { displayName })).body as { session: string; token: string });
+    guests.push((await call("/guests/start", { displayName })).body as { player: string; token: string });
   }
   const { table, code } = (await call("/tables/open", { token: guests[0].token, rules })).body;
   for (const guest of guests.slice(1)) await call("/tables/join", { token: guest.token, code });
@@ -73,7 +73,7 @@ test("each player sees the same game but only their own hand", async () => {
 test("four guests play a whole game to 200 through the API", async () => {
   const { guests } = await fullTable();
   await call("/games/start", { token: guests[0].token });
-  const bySession = new Map(guests.map((guest) => [guest.session, guest.token]));
+  const bySession = new Map(guests.map((guest) => [guest.player, guest.token]));
 
   let plays = 0;
   for (let moves = 0; moves < 3000; moves++) {
@@ -118,7 +118,7 @@ test("playing out of turn is refused", async () => {
   const { guests } = await fullTable();
   await call("/games/start", { token: guests[0].token });
   const state = await view(guests[0].token);
-  const other = guests.find((guest) => guest.session !== state.turnPlayer)!;
+  const other = guests.find((guest) => guest.player !== state.turnPlayer)!;
   const tile = (await view(other.token)).hand[0].tile;
   expect((await call("/games/play", { token: other.token, game: state.game, tile, side: "LEFT" })).status).toBe(409);
   expect((await call("/games/play", { token: other.token, game: state.game, tile, side: "UP" })).status).toBe(400);
@@ -131,7 +131,7 @@ test("a player leaving pauses the game, and whoever joins takes their seat, hand
   await call("/tables/leave", { token: guests[3].token, table });
   const paused = await view(guests[0].token);
   expect(paused.status).toBe("PAUSED");
-  expect(paused.vacancies).toMatchObject([{ position: 3, player: guests[3].session, displayName: "Cheo" }]);
+  expect(paused.vacancies).toMatchObject([{ position: 3, player: guests[3].player, displayName: "Cheo" }]);
   // The game is still being played, so the host cannot start another.
   expect((await call("/games/start", { token: guests[0].token })).status).toBe(409);
   const newcomer = (await call("/guests/start", { displayName: "Tío" })).body;
@@ -164,7 +164,7 @@ test("a guest who is not at the table cannot play in its game, nor see it", asyn
   const { guests } = await fullTable();
   await call("/games/start", { token: guests[0].token });
   const state = await view(guests[0].token);
-  const turnToken = guests.find((guest) => guest.session === state.turnPlayer)!.token;
+  const turnToken = guests.find((guest) => guest.player === state.turnPlayer)!.token;
   const tile = (await view(turnToken)).hand[0].tile;
 
   const outsider = (await call("/guests/start", { displayName: "Tío" })).body;
@@ -199,7 +199,7 @@ test("a tile that does not fit, or is not in the hand, is refused through the AP
   const { guests } = await fullTable();
   await call("/games/start", { token: guests[0].token });
   const state = await view(guests[0].token);
-  const token = guests.find((guest) => guest.session === state.turnPlayer)!.token;
+  const token = guests.find((guest) => guest.player === state.turnPlayer)!.token;
   const mine = await view(token);
   const ends = [mine.board[0].left, mine.board.at(-1).right];
   const misfit = mine.hand.find(({ tile }: { tile: string }) => !tile.split("-").map(Number).some((n) => ends.includes(n)));
