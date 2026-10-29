@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The first page: play as a guest under any name, log in to an account, or make one.
-import { computed, ref, watch } from "vue";
-import { logIn, NAME_MAX, passwordWeaknesses, say, signUp, startSession, state, USERNAME_PATTERN } from "../session.ts";
+import { computed, ref } from "vue";
+import { logIn, NAME_MAX, say, signUp, startSession, state, USERNAME_PATTERN } from "../session.ts";
+import PasswordRules from "./PasswordRules.vue";
 
 type Mode = "guest" | "login" | "signup";
 const modes: { mode: Mode; label: string }[] = [
@@ -19,32 +20,7 @@ const password = ref("");
 const showPassword = ref(false);
 const usernameOk = computed(() => USERNAME_PATTERN.test(username.value.trim()));
 
-/** The password rules, in the words the sign-up page uses, keyed by the server's names. */
-const RULES = [
-  { rule: "LENGTH", text: "10 or more characters" },
-  { rule: "VARIETY", text: "Three of: lowercase, uppercase, a number, a symbol" },
-  { rule: "CONTAINS_USERNAME", text: "Doesn't contain your username" },
-  { rule: "COMMON", text: "Not a common password" },
-] as const;
-/** What the server said the password breaks; null until it has answered. */
-const broken = ref<string[] | null>(null);
-let asked = 0;
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch([username, password, mode], () => {
-  if (mode.value !== "signup") return;
-  clearTimeout(timer);
-  if (password.value.length === 0) {
-    broken.value = null;
-    return;
-  }
-  // Ask once typing pauses, and only keep the answer to the latest question.
-  timer = setTimeout(async () => {
-    const question = ++asked;
-    const answer = await passwordWeaknesses(username.value, password.value);
-    if (question === asked) broken.value = answer;
-  }, 250);
-});
-const passwordOk = computed(() => broken.value !== null && broken.value.length === 0);
+const passwordOk = ref(false);
 
 function choose(next: Mode) {
   mode.value = next;
@@ -191,18 +167,7 @@ async function submitSignUp() {
               {{ showPassword ? "Hide" : "Show" }}
             </button>
           </div>
-          <ul id="signup-rules" class="rules" aria-live="polite">
-            <li
-              v-for="{ rule, text } in RULES"
-              :key="rule"
-              class="rule"
-              :class="{ 'rule--met': broken !== null && !broken.includes(rule), 'rule--missed': broken?.includes(rule) }"
-            >
-              <span class="rule-mark" aria-hidden="true" />
-              <span>{{ text }}</span>
-              <span class="visually-hidden">{{ broken === null ? "" : broken.includes(rule) ? "(not yet)" : "(done)" }}</span>
-            </li>
-          </ul>
+          <PasswordRules id="signup-rules" v-model:ok="passwordOk" :username="username" :password="password" />
         </div>
         <p class="field-hint">There's no email, so a forgotten password can't be recovered. Keep it somewhere safe.</p>
         <button class="btn btn--block" :disabled="state.busy || !usernameOk || !passwordOk">Create account</button>
@@ -288,71 +253,6 @@ async function submitSignUp() {
 
 .reveal:hover {
   background: var(--color-accent-soft);
-}
-
-/* The password rules: grey until judged, then green ticks or red dots. */
-.rules {
-  display: grid;
-  gap: var(--space-1);
-  margin: var(--space-1) 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.rule {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.rule-mark {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 1.1rem;
-  height: 1.1rem;
-  border: 2px solid var(--line);
-  border-radius: 50%;
-  font-size: 0.7rem;
-  line-height: 1;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s;
-}
-
-.rule--met {
-  color: #2f6b3a;
-}
-
-.rule--met .rule-mark {
-  border-color: #2f6b3a;
-  background: #2f6b3a;
-}
-
-.rule--met .rule-mark::after {
-  content: "✓";
-  color: var(--white);
-  font-weight: 800;
-}
-
-.rule--missed {
-  color: var(--red-700);
-}
-
-.rule--missed .rule-mark {
-  border-color: var(--red-600);
-}
-
-/* Read out by screen readers, not shown. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 code {

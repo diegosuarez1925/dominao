@@ -775,3 +775,28 @@ separate options to sign up or log in.
   button disabled, a strong one ticks every rule), landing on the home screen as the
   account, signing out, a wrong password, logging in with the username in other
   capitals, and a taken username. No horizontal scrolling on the phone.
+
+### An account section on the home screen
+
+Asked for: a section on the home screen for logged-in accounts only (not guests),
+which will later hold friends, games and the like. For now it changes the password and
+deletes the account.
+
+- **Your account** panel under the two play panels, with the username and an avatar
+  letter. It is shown only when `/sessions/me` answers a `username`, so guests never
+  see it. Each part is a row that opens in place, one at a time, so friends and games
+  can be added as more rows later.
+- **Change password:** current password, new password with the same rules list as
+  sign-up (ticked off as you type), and a "Show passwords" box. The button waits until
+  every rule is met and the new password differs. Afterwards: "Password changed. Any
+  other device signed in to this account was signed out." This tab stays signed in.
+- **Delete account:** asks for the password, then a confirmation ("… will be gone for
+  good, and anyone could take the username …"). A wrong password keeps the account and
+  says so. On success the tab goes back to the first page with "Your account was
+  deleted."
+- The password rules list became its own component (`PasswordRules.vue`), shared by
+  sign-up and change password.
+- No server change: the endpoints came with Step 19 and are tested there.
+- Checked in a browser at 1200 and 390 px: a guest's home has no panel; an account's
+  does; changing the password signed the other device out and the new password works;
+  a wrong delete password kept the account; deleting went back to the first page.

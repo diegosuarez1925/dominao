@@ -15,7 +15,8 @@ export const NAME_MAX = 20;
 export const state = reactive({
   /** True until the first check of a saved token is done, so nothing flashes. */
   loading: true,
-  me: null as { player: string; token: string; displayName: string } | null,
+  /** Who this tab plays as. `username` is there only for an account, not a guest. */
+  me: null as { player: string; token: string; displayName: string; username?: string } | null,
   table: null as Table | null,
   game: null as Game | null,
   /** The matchmaking lobby the guest waits in, if any. */
@@ -135,7 +136,9 @@ export async function resume() {
   }
   if (token !== null) {
     const result = await send(() => client.sessions.me({ token }));
-    if (result !== undefined) state.me = { player: result.player, token, displayName: result.displayName };
+    if (result !== undefined) {
+      state.me = { player: result.player, token, displayName: result.displayName, username: "username" in result ? result.username : undefined };
+    }
   }
   state.loading = false;
   await refresh();
@@ -262,6 +265,49 @@ export async function passwordWeaknesses(username: string, password: string) {
     return "error" in result ? null : result.check.weaknesses.map((row) => row.rule);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Changes the account's password. Other devices are signed out by the server; this tab
+ * stays signed in. Answers whether it worked, and says why not.
+ */
+export async function changePassword(current: string, password: string) {
+  const me = state.me;
+  if (state.busy || me === null) return false;
+  state.busy = true;
+  try {
+    const result = await send(() => client.accounts.password({ token: me.token, current, password }), {
+      UNAUTHORIZED: "Your current password isn't right.",
+      INVALID_REQUEST: "The new password has to meet every rule, and differ from the current one.",
+    });
+    if (result === undefined) return false;
+    say("Password changed. Any other device signed in to this account was signed out.");
+    return true;
+  } finally {
+    state.busy = false;
+  }
+}
+
+/** Deletes the account for good, which signs it out everywhere and leaves its table. */
+export async function deleteAccount(password: string) {
+  const me = state.me;
+  if (state.busy || me === null) return false;
+  state.busy = true;
+  try {
+    const result = await send(() => client.accounts.delete({ token: me.token, password }), {
+      UNAUTHORIZED: "That password isn't right, so the account was kept.",
+    });
+    if (result === undefined) return false;
+    playingAt = null;
+    sittingAt = null;
+    sessionStorage.removeItem(TOKEN_KEY);
+    state.dismissedGame = "";
+    await resume();
+    say("Your account was deleted.");
+    return true;
+  } finally {
+    state.busy = false;
   }
 }
 

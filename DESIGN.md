@@ -97,4 +97,5 @@ Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/A
   - At a private table, the host taps two seats to swap them; the picked seat lifts and gets a light-blue ring.
   - The matchmaking toggle "join games in progress".
   - The first page offers Guest, Log in and Sign up as one pill-shaped switch. Signing up lists the password rules and ticks each off in green as it is met, and warns that a forgotten password cannot be recovered. (Step 20)
+  - Accounts (never guests) get a "Your account" panel on the home screen, with rows that open in place to change the password or delete the account. Friends and past games are meant to become more rows there. (Step 21)
 - **Plain-language messages for what happened without you:** the host closing the table, being away too long, or a seat going to someone else.

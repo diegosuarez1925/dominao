@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { CODE_PATTERN, findGame, joinTable, openTable, state } from "../session.ts";
+import AccountPanel from "./AccountPanel.vue";
 import HowToPlay from "./HowToPlay.vue";
 import RulesPicker from "./RulesPicker.vue";
 
@@ -81,6 +82,8 @@ const codeHint = computed(() =>
       </form>
     </section>
   </div>
+  <!-- Only accounts have one; guests never see it. -->
+  <AccountPanel v-if="state.me?.username" />
 </template>
 
 <style scoped>
