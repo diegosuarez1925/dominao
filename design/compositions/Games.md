@@ -41,7 +41,7 @@ never anyone else's. The page asks for it every couple of seconds.
 Games.ViewGame at /games/view
 ```
 
-The view also says who holds each seat (a guest by name, or a bot by its bot name),
+The view also says who holds each seat (a guest by name, an account by its username, also given apart so the page can offer a friend request, or a bot by its bot name),
 how long since each guest's page last checked in (so the page can show who seems to
 have lost their connection), each empty seat with who left it and how long ago, how
 long a seat waits before a bot takes it, and, for a game of strangers, the rules

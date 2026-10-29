@@ -29,7 +29,8 @@ Tables.JoinByCode at /tables/join
 
 Anyone can [see their lobby](reaction:Tables.ShowLobby): the
 [lobby](former:Tables.Lobby) shows the table they sit at, its code, rules and host, and who
-sits in each seat by display name. The page asks again every couple of seconds, so
+sits in each seat by display name (with the username apart for an account, so the
+page can tell accounts from guests). The page asks again every couple of seconds, so
 new arrivals appear without reloading.
 
 ```endpoints

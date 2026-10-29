@@ -167,7 +167,7 @@ test("a player who still has another session stays seated, queued and named when
   await call("/sessions/end", { token: papo.token });
   const lobby = (await call("/tables/lobby", { token: "ABUELO-PHONE" })).body.lobby.tables[0];
   expect(lobby.code).toBe(code);
-  expect(lobby.seats).toEqual([{ position: 0, player: abuelo.player, displayName: "Abuelo" }]);
+  expect(lobby.seats).toEqual([{ position: 0, player: abuelo.player, displayName: "Abuelo", username: null }]);
   expect((await call("/matchmaking/view", { token: "PAPO-PHONE" })).body.queue.lobbies).toHaveLength(1);
   expect(await names()._name({ guest: abuelo.player })).toEqual([{ displayName: "Abuelo" }]);
   // The ended session's token is still freed.

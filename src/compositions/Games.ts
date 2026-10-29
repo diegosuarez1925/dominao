@@ -17,7 +17,8 @@ const { Botting, DominoPlaying, Guesting, Matchmaking, PasswordAuthenticating, S
  * The game at the guest's table as that guest sees it: the scores, the board, whose
  * turn it is, everyone's tile count, their own hand (and nobody else's), every turn
  * so far, how the last match ended, and how every match so far ended (for the score
- * table). Each seat says who holds it (a guest by name, or a bot by its bot name) and
+ * table). Each seat says who holds it (a guest by name, an account by its username, which
+ * is also given apart, or a bot by its bot name) and
  * how long since that guest's page last checked in;
  * each empty seat says who left it and how long ago, so the page can count down to
  * the bot taking over. `publicRules` is set when strangers were matched into the game.
@@ -47,6 +48,7 @@ const GameView = former(
       tileCount,
       displayName,
       botName,
+      username,
       idleMs,
       vacantPosition,
       leaver,
@@ -110,9 +112,10 @@ const GameView = former(
               whether(Guesting._name({ guest: player }).is({ displayName })),
               whether(PasswordAuthenticating._username({ user: player }).is({ username: displayName })),
               whether(Botting._name({ bot: player }).is({ name: botName })),
+              whether(PasswordAuthenticating._username({ user: player }).is({ username })),
               whether(Sessioning._idleFor({ player }).is({ idleMs })),
             )
-            .form({ position, player, displayName, botName, idleMs, tileCount }),
+            .form({ position, player, displayName, botName, username, idleMs, tileCount }),
           vacancies: each(DominoPlaying._vacancies({ game }).is({ position: vacantPosition, player: leaver, vacantMs }))
             .where(
               whether(Guesting._name({ guest: leaver }).is({ displayName: leaverName })),

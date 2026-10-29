@@ -366,13 +366,86 @@ Concrete types:
 _Formers name result shapes evaluated when asked. The source former owns_
 _the authored explanation; this section records the generated shape._
 
+### the accounts matching (text)
+
+Authored path: `Friends.Matches`.
+- Covered by [Friends](../design/compositions/Friends.md), line 22.
+
+```former
+Former "the accounts matching (text)" — inputs (text); bindings (user, username); promises exactly one record — forms:
+  a record of
+    accounts: each PasswordAuthenticating._search (text) has (user, username)
+      form a record of
+        player: user
+        username
+```
+
+### the friends of (me)
+
+Authored path: `Friends.FriendsView`.
+- Covered by [Friends](../design/compositions/Friends.md), line 9.
+
+```former
+Former "the friends of (me)" — inputs (me); bindings (friend, asker, since, friendName, idleMs, request, from, fromName, sentAt, outRequest, to, toName, outSentAt, invite, inviter, inviterName, place, rules, invitedAt, position, seated, sentInvite, invitee, sentPlace, requestsSeen, invitesSeen, friendsSeen); promises exactly one record — forms:
+  a record of
+    friends: each Friending._friends (user: me) has (asker, friend, since)
+      where PasswordAuthenticating._username (user: friend) has (username: friendName)
+      where whether Sessioning._idleFor (player: friend) has (idleMs)
+      form a record of
+        asker
+        idleMs
+        player: friend
+        since
+        username: friendName
+    incoming: each Friending._incoming (user: me) has (from, request, sentAt)
+      where PasswordAuthenticating._username (user: from) has (username: fromName)
+      form a record of
+        from
+        request
+        sentAt
+        username: fromName
+    invites: each Inviting._invitesFor (to: me) has (from: inviter, invite, place, sentAt: invitedAt)
+      where PasswordAuthenticating._username (user: inviter) has (username: inviterName)
+      where Table._get (table: place) has (rules)
+      form a record of
+        from: inviter
+        invite
+        rules
+        seats: each Table._seats (table: place) has (player: seated, position)
+          form a record of
+            position
+        sentAt: invitedAt
+        table: place
+        username: inviterName
+    onlineWithinMs: 90000
+    outgoing: each Friending._outgoing (user: me) has (request: outRequest, sentAt: outSentAt, to)
+      where PasswordAuthenticating._username (user: to) has (username: toName)
+      form a record of
+        request: outRequest
+        sentAt: outSentAt
+        to
+        username: toName
+    seen: each Seeing._seenAt (part: "REQUESTS", user: me) has (seenAt: requestsSeen)
+      where Seeing._seenAt (part: "INVITES", user: me) has (seenAt: invitesSeen)
+      where Seeing._seenAt (part: "FRIENDS", user: me) has (seenAt: friendsSeen)
+      form a record of
+        friends: friendsSeen
+        invites: invitesSeen
+        requests: requestsSeen
+    sent: each Inviting._sentBy (from: me) has (invite: sentInvite, place: sentPlace, to: invitee)
+      form a record of
+        invite: sentInvite
+        table: sentPlace
+        to: invitee
+```
+
 ### the game seen by (me)
 
 Authored path: `Games.GameView`.
 - Covered by [Games](../design/compositions/Games.md), line 35.
 
 ```former
-Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, botName, idleMs, vacantPosition, leaver, leaverName, leaverBot, vacantMs, placeRules, resultMatch, pastMatch, pastWinner, pastTeam, pastPoints, pastSpecial, pastEnding, winner, team, points, prize, special, bonus, ending, turnNumber, turnMatch, mover, move, movedTile, moverName, moverBot); promises exactly one record — forms:
+Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, rulesDescription, status, target, matchNumber, scoreA, scoreB, turnPlayer, tile, boardTile, left, right, fromFirst, position, player, tileCount, displayName, botName, username, idleMs, vacantPosition, leaver, leaverName, leaverBot, vacantMs, placeRules, resultMatch, pastMatch, pastWinner, pastTeam, pastPoints, pastSpecial, pastEnding, winner, team, points, prize, special, bonus, ending, turnNumber, turnMatch, mover, move, movedTile, moverName, moverBot); promises exactly one record — forms:
   a record of
     games: each Table._tableOf (player: me) has (table)
       where DominoPlaying._latestAt (place: table) has (game)
@@ -419,6 +492,7 @@ Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, ru
           where whether Guesting._name (guest: player) has (displayName)
           where whether PasswordAuthenticating._username (user: player) has (username: displayName)
           where whether Botting._name (bot: player) has (name: botName)
+          where whether PasswordAuthenticating._username (user: player) has (username)
           where whether Sessioning._idleFor (player) has (idleMs)
           form a record of
             botName
@@ -427,6 +501,7 @@ Former "the game seen by (me)" — inputs (me); bindings (table, game, rules, ru
             player
             position
             tileCount
+            username
         publicRules: placeRules
         results: each DominoPlaying._results (game) has (ending: pastEnding, matchNumber: pastMatch, points: pastPoints, special: pastSpecial, team: pastTeam, winner: pastWinner)
           form a record of
@@ -461,7 +536,7 @@ Authored path: `Tables.Lobby`.
 - Covered by [Tables](../design/compositions/Tables.md), line 31.
 
 ```former
-Former "the lobby of (me)" — inputs (me); bindings (table, host, code, rules, position, player, displayName); promises exactly one record — forms:
+Former "the lobby of (me)" — inputs (me); bindings (table, host, code, rules, position, player, displayName, username); promises exactly one record — forms:
   a record of
     tables: each Table._tableOf (player: me) has (table)
       where Table._get (table) has (code, host, rules)
@@ -472,10 +547,12 @@ Former "the lobby of (me)" — inputs (me); bindings (table, host, code, rules, 
         seats: each Table._seats (table) has (player, position)
           where whether Guesting._name (guest: player) has (displayName)
           where whether PasswordAuthenticating._username (user: player) has (username: displayName)
+          where whether PasswordAuthenticating._username (user: player) has (username)
           form a record of
             displayName
             player
             position
+            username
         table
 ```
 
@@ -879,6 +956,657 @@ where
   earlier, RequestBoundary.request (requestId)
 then
   RequestBoundary.respond (error: message, requestId)
+```
+
+### Friends.AcceptInvite
+
+Authored path: `Friends.AcceptInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 67.
+- Covered by [Friends](../design/compositions/Friends.md), line 77.
+
+```reaction
+when RequestBoundary.request (invite, path: "/invites/accept", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.AcceptInvite:invited#2
+
+Authored path: `Friends.AcceptInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 67.
+- Covered by [Friends](../design/compositions/Friends.md), line 77.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.AcceptInvite
+where
+  no Matchmaking._lobbyOf (player: me)
+  earlier, RequestBoundary.request (invite, path: "/invites/accept", requestId, token)
+  Inviting._invite (invite) has (place: table, to: me)
+then
+  Table.join (player: me, table)
+```
+
+### Friends.AcceptInvite:invited#3
+
+Authored path: `Friends.AcceptInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 67.
+- Covered by [Friends](../design/compositions/Friends.md), line 77.
+
+```reaction
+when Table.join (player: me, table, position), asked by Friends.AcceptInvite:invited#2
+where
+  earlier, RequestBoundary.request (invite, path: "/invites/accept", requestId, token)
+then
+  RequestBoundary.respond (position, requestId, table)
+```
+
+### Friends.AcceptInvite:no-such-invite#2
+
+Authored path: `Friends.AcceptInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 67.
+- Covered by [Friends](../design/compositions/Friends.md), line 77.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.AcceptInvite
+where
+  earlier, RequestBoundary.request (invite, path: "/invites/accept", requestId, token)
+  no Inviting._invite (invite) has (to: me)
+then
+  RequestBoundary.respond (error: "NO_SUCH_INVITE", requestId)
+```
+
+### Friends.AcceptInvite:queued#2
+
+Authored path: `Friends.AcceptInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 67.
+- Covered by [Friends](../design/compositions/Friends.md), line 77.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.AcceptInvite
+where
+  Matchmaking._lobbyOf (player: me)
+  earlier, RequestBoundary.request (invite, path: "/invites/accept", requestId, token)
+  Inviting._invite (invite) has (to: me)
+then
+  RequestBoundary.respond (error: "IN_QUEUE", requestId)
+```
+
+### Friends.AcceptRequest
+
+Authored path: `Friends.AcceptRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 35.
+- Covered by [Friends](../design/compositions/Friends.md), line 42.
+
+```reaction
+when RequestBoundary.request (path: "/friends/accept", request, requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.AcceptRequest#2
+
+Authored path: `Friends.AcceptRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 35.
+- Covered by [Friends](../design/compositions/Friends.md), line 42.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.AcceptRequest
+where
+  earlier, RequestBoundary.request (path: "/friends/accept", request, requestId, token)
+then
+  Friending.accept (request, to: me)
+```
+
+### Friends.AcceptRequest#3
+
+Authored path: `Friends.AcceptRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 35.
+- Covered by [Friends](../design/compositions/Friends.md), line 42.
+
+```reaction
+when Friending.accept (request, to: me, from), asked by Friends.AcceptRequest#2
+where
+  earlier, RequestBoundary.request (path: "/friends/accept", request, requestId, token)
+then
+  RequestBoundary.respond (friend: from, request, requestId)
+```
+
+### Friends.DeclineInvite
+
+Authored path: `Friends.DeclineInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 69.
+- Covered by [Friends](../design/compositions/Friends.md), line 78.
+
+```reaction
+when RequestBoundary.request (invite, path: "/invites/decline", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.DeclineInvite#2
+
+Authored path: `Friends.DeclineInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 69.
+- Covered by [Friends](../design/compositions/Friends.md), line 78.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.DeclineInvite
+where
+  earlier, RequestBoundary.request (invite, path: "/invites/decline", requestId, token)
+then
+  Inviting.decline (invite, to: me)
+```
+
+### Friends.DeclineInvite#3
+
+Authored path: `Friends.DeclineInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 69.
+- Covered by [Friends](../design/compositions/Friends.md), line 78.
+
+```reaction
+when Inviting.decline (invite, to: me), asked by Friends.DeclineInvite#2
+where
+  earlier, RequestBoundary.request (invite, path: "/invites/decline", requestId, token)
+then
+  RequestBoundary.respond (invite, requestId)
+```
+
+### Friends.ExpireRequest
+
+Authored path: `Friends.ExpireRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 39.
+- Covered by [Friends](../design/compositions/Friends.md), line 44.
+
+```reaction
+when RequestBoundary.request (path: "/friends/expire", request, requestId)
+then
+  Friending.expire (request)
+```
+
+### Friends.ExpireRequest#2
+
+Authored path: `Friends.ExpireRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 39.
+- Covered by [Friends](../design/compositions/Friends.md), line 44.
+
+```reaction
+when Friending.expire (request), asked by Friends.ExpireRequest
+where
+  earlier, RequestBoundary.request (path: "/friends/expire", request, requestId)
+then
+  RequestBoundary.respond (request, requestId)
+```
+
+### Friends.ForgetFriendsOfDeletedAccount
+
+Authored path: `Friends.ForgetFriendsOfDeletedAccount`.
+- Covered by [Friends](../design/compositions/Friends.md), line 82.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+then
+  Friending.forget (user)
+```
+
+### Friends.ForgetInvitesOfDeletedAccount
+
+Authored path: `Friends.ForgetInvitesOfDeletedAccount`.
+- Covered by [Friends](../design/compositions/Friends.md), line 83.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+then
+  Inviting.forget (user)
+```
+
+### Friends.ForgetLooksOfDeletedAccount
+
+Authored path: `Friends.ForgetLooksOfDeletedAccount`.
+- Covered by [Friends](../design/compositions/Friends.md), line 84.
+
+```reaction
+when PasswordAuthenticating.unregister (user)
+then
+  Seeing.forget (user)
+```
+
+### Friends.MarkSeen
+
+Authored path: `Friends.MarkSeen`.
+- Covered by [Friends](../design/compositions/Friends.md), line 47.
+- Covered by [Friends](../design/compositions/Friends.md), line 53.
+
+```reaction
+when RequestBoundary.request (part, path: "/friends/seen", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.MarkSeen:account#2
+
+Authored path: `Friends.MarkSeen`.
+- Covered by [Friends](../design/compositions/Friends.md), line 47.
+- Covered by [Friends](../design/compositions/Friends.md), line 53.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.MarkSeen
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (part, path: "/friends/seen", requestId, token)
+then
+  Seeing.see (part, user: me)
+```
+
+### Friends.MarkSeen:account#3
+
+Authored path: `Friends.MarkSeen`.
+- Covered by [Friends](../design/compositions/Friends.md), line 47.
+- Covered by [Friends](../design/compositions/Friends.md), line 53.
+
+```reaction
+when Seeing.see (part, user: me), asked by Friends.MarkSeen:account#2
+where
+  earlier, RequestBoundary.request (part, path: "/friends/seen", requestId, token)
+then
+  RequestBoundary.respond (part, requestId)
+```
+
+### Friends.MarkSeen:guest#2
+
+Authored path: `Friends.MarkSeen`.
+- Covered by [Friends](../design/compositions/Friends.md), line 47.
+- Covered by [Friends](../design/compositions/Friends.md), line 53.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.MarkSeen
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (part, path: "/friends/seen", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Friends.RejectRequest
+
+Authored path: `Friends.RejectRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 36.
+- Covered by [Friends](../design/compositions/Friends.md), line 43.
+
+```reaction
+when RequestBoundary.request (path: "/friends/reject", request, requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.RejectRequest#2
+
+Authored path: `Friends.RejectRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 36.
+- Covered by [Friends](../design/compositions/Friends.md), line 43.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.RejectRequest
+where
+  earlier, RequestBoundary.request (path: "/friends/reject", request, requestId, token)
+then
+  Friending.reject (request, to: me)
+```
+
+### Friends.RejectRequest#3
+
+Authored path: `Friends.RejectRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 36.
+- Covered by [Friends](../design/compositions/Friends.md), line 43.
+
+```reaction
+when Friending.reject (request, to: me), asked by Friends.RejectRequest#2
+where
+  earlier, RequestBoundary.request (path: "/friends/reject", request, requestId, token)
+then
+  RequestBoundary.respond (request, requestId)
+```
+
+### Friends.Search
+
+Authored path: `Friends.Search`.
+- Covered by [Friends](../design/compositions/Friends.md), line 21.
+- Covered by [Friends](../design/compositions/Friends.md), line 31.
+
+```reaction
+when RequestBoundary.request (path: "/friends/search", requestId, text, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.Search:account#2
+
+Authored path: `Friends.Search`.
+- Covered by [Friends](../design/compositions/Friends.md), line 21.
+- Covered by [Friends](../design/compositions/Friends.md), line 31.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.Search
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/search", requestId, text, token)
+then
+  RequestBoundary.respond (found: former "the accounts matching (text)" with (text), requestId)
+```
+
+### Friends.Search:guest#2
+
+Authored path: `Friends.Search`.
+- Covered by [Friends](../design/compositions/Friends.md), line 21.
+- Covered by [Friends](../design/compositions/Friends.md), line 31.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.Search
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/search", requestId, text, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Friends.SendInvite
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.SendInvite:friend-already-here#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  Table._get (table) has (host: me)
+  no Matchmaking._placeRules (place: table)
+  no DominoPlaying._activeAt (place: table)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+  Friending._areFriends (other: friend, user: me) has (friends: true)
+  Table._tableOf (player: friend) has (table)
+then
+  RequestBoundary.respond (error: "ALREADY_SEATED", requestId)
+```
+
+### Friends.SendInvite:game-running#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  Table._get (table) has (host: me)
+  no Matchmaking._placeRules (place: table)
+  DominoPlaying._activeAt (place: table)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  RequestBoundary.respond (error: "GAME_IN_PROGRESS", requestId)
+```
+
+### Friends.SendInvite:host-invites-friend#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  Table._get (table) has (host: me)
+  no Matchmaking._placeRules (place: table)
+  no DominoPlaying._activeAt (place: table)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+  Friending._areFriends (other: friend, user: me) has (friends: true)
+  no Table._tableOf (player: friend) has (table)
+then
+  Inviting.invite (from: me, place: table, to: friend)
+```
+
+### Friends.SendInvite:host-invites-friend#3
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Inviting.invite (from: me, place: table, to: friend, invite), asked by Friends.SendInvite:host-invites-friend#2
+where
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  RequestBoundary.respond (invite, requestId)
+```
+
+### Friends.SendInvite:not-friends#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  Table._get (table) has (host: me)
+  no Matchmaking._placeRules (place: table)
+  no DominoPlaying._activeAt (place: table)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+  Friending._areFriends (other: friend, user: me) has (friends: false)
+then
+  RequestBoundary.respond (error: "NOT_FRIENDS", requestId)
+```
+
+### Friends.SendInvite:not-host#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  no Table._get (table) has (host: me)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_HOST", requestId)
+```
+
+### Friends.SendInvite:not-seated#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  no Table._tableOf (player: me)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_SEATED", requestId)
+```
+
+### Friends.SendInvite:public-table#2
+
+Authored path: `Friends.SendInvite`.
+- Covered by [Friends](../design/compositions/Friends.md), line 56.
+- Covered by [Friends](../design/compositions/Friends.md), line 64.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendInvite
+where
+  Table._tableOf (player: me) has (table)
+  Table._get (table) has (host: me)
+  Matchmaking._placeRules (place: table)
+  earlier, RequestBoundary.request (friend, path: "/invites/send", requestId, token)
+then
+  RequestBoundary.respond (error: "PUBLIC_TABLE", requestId)
+```
+
+### Friends.SendRequest
+
+Authored path: `Friends.SendRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 23.
+- Covered by [Friends](../design/compositions/Friends.md), line 32.
+
+```reaction
+when RequestBoundary.request (path: "/friends/request", requestId, token, username)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.SendRequest:account-found#2
+
+Authored path: `Friends.SendRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 23.
+- Covered by [Friends](../design/compositions/Friends.md), line 32.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendRequest
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/request", requestId, token, username)
+  PasswordAuthenticating._byUsername (username) has (user: other)
+then
+  Friending.request (from: me, to: other)
+```
+
+### Friends.SendRequest:account-found#3
+
+Authored path: `Friends.SendRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 23.
+- Covered by [Friends](../design/compositions/Friends.md), line 32.
+
+```reaction
+when Friending.request (from: me, to: other, request), asked by Friends.SendRequest:account-found#2
+where
+  earlier, RequestBoundary.request (path: "/friends/request", requestId, token, username)
+then
+  RequestBoundary.respond (request, requestId, to: other)
+```
+
+### Friends.SendRequest:guest#2
+
+Authored path: `Friends.SendRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 23.
+- Covered by [Friends](../design/compositions/Friends.md), line 32.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendRequest
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/request", requestId, token, username)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Friends.SendRequest:no-such-account#2
+
+Authored path: `Friends.SendRequest`.
+- Covered by [Friends](../design/compositions/Friends.md), line 23.
+- Covered by [Friends](../design/compositions/Friends.md), line 32.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.SendRequest
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/request", requestId, token, username)
+  no PasswordAuthenticating._byUsername (username)
+then
+  RequestBoundary.respond (error: "NO_SUCH_USER", requestId)
+```
+
+### Friends.ShowFriends
+
+Authored path: `Friends.ShowFriends`.
+- Covered by [Friends](../design/compositions/Friends.md), line 8.
+- Covered by [Friends](../design/compositions/Friends.md), line 18.
+
+```reaction
+when RequestBoundary.request (path: "/friends/view", requestId, token)
+then
+  Sessioning.resume (token)
+```
+
+### Friends.ShowFriends:account#2
+
+Authored path: `Friends.ShowFriends`.
+- Covered by [Friends](../design/compositions/Friends.md), line 8.
+- Covered by [Friends](../design/compositions/Friends.md), line 18.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.ShowFriends
+where
+  PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/view", requestId, token)
+then
+  RequestBoundary.respond (friends: former "the friends of (me)" with (me), requestId)
+```
+
+### Friends.ShowFriends:guest#2
+
+Authored path: `Friends.ShowFriends`.
+- Covered by [Friends](../design/compositions/Friends.md), line 8.
+- Covered by [Friends](../design/compositions/Friends.md), line 18.
+
+```reaction
+when Sessioning.resume (token, player: me), asked by Friends.ShowFriends
+where
+  no PasswordAuthenticating._username (user: me)
+  earlier, RequestBoundary.request (path: "/friends/view", requestId, token)
+then
+  RequestBoundary.respond (error: "NOT_AN_ACCOUNT", requestId)
+```
+
+### Friends.UseInviteOnJoin
+
+Authored path: `Friends.UseInviteOnJoin`.
+- Covered by [Friends](../design/compositions/Friends.md), line 71.
+
+```reaction
+when Table.join (player, table, position)
+where
+  Inviting._inviteTo (place: table, to: player) has (invite)
+then
+  Inviting.accept (invite, to: player)
+```
+
+### Friends.WithdrawInvitesWhenGameStarts
+
+Authored path: `Friends.WithdrawInvitesWhenGameStarts`.
+- Covered by [Friends](../design/compositions/Friends.md), line 72.
+
+```reaction
+when DominoPlaying.start (place, game)
+then
+  Inviting.withdraw (place)
+```
+
+### Friends.WithdrawInvitesWhenTableCloses
+
+Authored path: `Friends.WithdrawInvitesWhenTableCloses`.
+- Covered by [Friends](../design/compositions/Friends.md), line 73.
+
+```reaction
+when Table.close (table, code)
+then
+  Inviting.withdraw (place: table)
 ```
 
 ### Games.AbandonGameWhenTableCloses
@@ -2001,8 +2729,8 @@ then
 ### Tables.Close
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 67.
-- Covered by [Tables](../design/compositions/Tables.md), line 74.
+- Covered by [Tables](../design/compositions/Tables.md), line 68.
+- Covered by [Tables](../design/compositions/Tables.md), line 75.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/close", requestId, table, token)
@@ -2013,8 +2741,8 @@ then
 ### Tables.Close:host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 67.
-- Covered by [Tables](../design/compositions/Tables.md), line 74.
+- Covered by [Tables](../design/compositions/Tables.md), line 68.
+- Covered by [Tables](../design/compositions/Tables.md), line 75.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.Close
@@ -2028,8 +2756,8 @@ then
 ### Tables.Close:host#3
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 67.
-- Covered by [Tables](../design/compositions/Tables.md), line 74.
+- Covered by [Tables](../design/compositions/Tables.md), line 68.
+- Covered by [Tables](../design/compositions/Tables.md), line 75.
 
 ```reaction
 when Table.close (table, code), asked by Tables.Close:host#2
@@ -2042,8 +2770,8 @@ then
 ### Tables.Close:not-host#2
 
 Authored path: `Tables.Close`.
-- Covered by [Tables](../design/compositions/Tables.md), line 67.
-- Covered by [Tables](../design/compositions/Tables.md), line 74.
+- Covered by [Tables](../design/compositions/Tables.md), line 68.
+- Covered by [Tables](../design/compositions/Tables.md), line 75.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.Close
@@ -2057,7 +2785,7 @@ then
 ### Tables.CloseEmptyTable
 
 Authored path: `Tables.CloseEmptyTable`.
-- Covered by [Tables](../design/compositions/Tables.md), line 66.
+- Covered by [Tables](../design/compositions/Tables.md), line 67.
 
 ```reaction
 when Table.leave (table)
@@ -2070,8 +2798,8 @@ then
 ### Tables.DropAbsentSitter:away
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
@@ -2087,8 +2815,8 @@ then
 ### Tables.DropAbsentSitter:away#2
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when Table.leave (player, table), asked by Tables.DropAbsentSitter:away
@@ -2101,8 +2829,8 @@ then
 ### Tables.DropAbsentSitter:no-session
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
@@ -2117,8 +2845,8 @@ then
 ### Tables.DropAbsentSitter:no-session#2
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when Table.leave (player, table), asked by Tables.DropAbsentSitter:no-session
@@ -2131,8 +2859,8 @@ then
 ### Tables.DropAbsentSitter:not-seated
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
@@ -2145,8 +2873,8 @@ then
 ### Tables.DropAbsentSitter:playing
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
@@ -2160,8 +2888,8 @@ then
 ### Tables.DropAbsentSitter:present
 
 Authored path: `Tables.DropAbsentSitter`.
-- Covered by [Tables](../design/compositions/Tables.md), line 53.
-- Covered by [Tables](../design/compositions/Tables.md), line 60.
+- Covered by [Tables](../design/compositions/Tables.md), line 54.
+- Covered by [Tables](../design/compositions/Tables.md), line 61.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/drop-absent", player, requestId)
@@ -2177,7 +2905,7 @@ then
 ### Tables.FreeTableCode
 
 Authored path: `Tables.FreeTableCode`.
-- Covered by [Tables](../design/compositions/Tables.md), line 69.
+- Covered by [Tables](../design/compositions/Tables.md), line 70.
 
 ```reaction
 when Table.close (code)
@@ -2279,8 +3007,8 @@ then
 ### Tables.Leave
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 63.
-- Covered by [Tables](../design/compositions/Tables.md), line 73.
+- Covered by [Tables](../design/compositions/Tables.md), line 64.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/leave", requestId, table, token)
@@ -2291,8 +3019,8 @@ then
 ### Tables.Leave#2
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 63.
-- Covered by [Tables](../design/compositions/Tables.md), line 73.
+- Covered by [Tables](../design/compositions/Tables.md), line 64.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.Leave
@@ -2305,8 +3033,8 @@ then
 ### Tables.Leave#3
 
 Authored path: `Tables.Leave`.
-- Covered by [Tables](../design/compositions/Tables.md), line 63.
-- Covered by [Tables](../design/compositions/Tables.md), line 73.
+- Covered by [Tables](../design/compositions/Tables.md), line 64.
+- Covered by [Tables](../design/compositions/Tables.md), line 74.
 
 ```reaction
 when Table.leave (player: me, table), asked by Tables.Leave#2
@@ -2319,7 +3047,7 @@ then
 ### Tables.LeaveTableOnSessionEnd
 
 Authored path: `Tables.LeaveTableOnSessionEnd`.
-- Covered by [Tables](../design/compositions/Tables.md), line 64.
+- Covered by [Tables](../design/compositions/Tables.md), line 65.
 
 ```reaction
 when Sessioning.end (player)
@@ -2333,7 +3061,7 @@ then
 ### Tables.LeaveTableOnSessionExpire
 
 Authored path: `Tables.LeaveTableOnSessionExpire`.
-- Covered by [Tables](../design/compositions/Tables.md), line 65.
+- Covered by [Tables](../design/compositions/Tables.md), line 66.
 
 ```reaction
 when Sessioning.expire (player)
@@ -2436,7 +3164,7 @@ then
 
 Authored path: `Tables.ShowLobby`.
 - Covered by [Tables](../design/compositions/Tables.md), line 30.
-- Covered by [Tables](../design/compositions/Tables.md), line 36.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
 
 ```reaction
 when RequestBoundary.request (path: "/tables/lobby", requestId, token)
@@ -2448,7 +3176,7 @@ then
 
 Authored path: `Tables.ShowLobby`.
 - Covered by [Tables](../design/compositions/Tables.md), line 30.
-- Covered by [Tables](../design/compositions/Tables.md), line 36.
+- Covered by [Tables](../design/compositions/Tables.md), line 37.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.ShowLobby
@@ -2461,8 +3189,8 @@ then
 ### Tables.SwapSeats
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when RequestBoundary.request (first, path: "/tables/swap", requestId, second, token)
@@ -2473,8 +3201,8 @@ then
 ### Tables.SwapSeats:game-running#2
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.SwapSeats
@@ -2490,8 +3218,8 @@ then
 ### Tables.SwapSeats:host-before-game#2
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.SwapSeats
@@ -2508,8 +3236,8 @@ then
 ### Tables.SwapSeats:host-before-game#3
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Table.swap (first, second, table), asked by Tables.SwapSeats:host-before-game#2
@@ -2522,8 +3250,8 @@ then
 ### Tables.SwapSeats:not-host#2
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.SwapSeats
@@ -2538,8 +3266,8 @@ then
 ### Tables.SwapSeats:not-seated#2
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.SwapSeats
@@ -2553,8 +3281,8 @@ then
 ### Tables.SwapSeats:public-table#2
 
 Authored path: `Tables.SwapSeats`.
-- Covered by [Tables](../design/compositions/Tables.md), line 41.
-- Covered by [Tables](../design/compositions/Tables.md), line 48.
+- Covered by [Tables](../design/compositions/Tables.md), line 42.
+- Covered by [Tables](../design/compositions/Tables.md), line 49.
 
 ```reaction
 when Sessioning.resume (token, player: me), asked by Tables.SwapSeats
@@ -2580,6 +3308,13 @@ not listed here have no explicit input contract.
 - `/accounts/password-check` — requires `username`, `password`
 - `/accounts/register` — requires `username`, `password`
 - `/accounts/signin` — requires `username`, `password`
+- `/friends/accept` — requires `token`, `request`
+- `/friends/expire` — requires `request`
+- `/friends/reject` — requires `token`, `request`
+- `/friends/request` — requires `token`, `username`
+- `/friends/search` — requires `token`, `text`
+- `/friends/seen` — requires `token`, `part`
+- `/friends/view` — requires `token`
 - `/games/bot-move` — requires `game`
 - `/games/drop-absent` — requires `game`, `player`
 - `/games/play` — requires `token`, `game`, `tile`, `side`
@@ -2587,6 +3322,9 @@ not listed here have no explicit input contract.
 - `/games/start` — requires `token`
 - `/games/view` — requires `token`
 - `/guests/start` — requires `displayName`
+- `/invites/accept` — requires `token`, `invite`
+- `/invites/decline` — requires `token`, `invite`
+- `/invites/send` — requires `token`, `friend`
 - `/matchmaking/drop-absent` — requires `player`
 - `/matchmaking/enqueue` — requires `token`, `rules`, `midway`
 - `/matchmaking/launch` — requires `lobby`

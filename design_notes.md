@@ -879,3 +879,31 @@ are new, not changes to P1 concepts. Each keeps to one job:
 - No endpoint uses them yet (part 2). Concept tests: 14 for Friending (including the
   week running out, and two requests sent at the same moment), 10 for Inviting, 3 for
   Seeing, 1 for the search.
+
+### Friends and game invites, part 2: endpoints and reactions
+
+A new composition, `Friends` (design/compositions/Friends.md), for accounts only (a
+guest is answered `NOT_AN_ACCOUNT`):
+
+- `/friends/view`: friends (username, who asked, and how long since their page last
+  checked in, with `onlineWithinMs` = 90 s for the page to call them online), requests
+  sent to and by the account, invites it was sent (from whom, the table's rules and its
+  seats) and sent, and when it last looked at each part.
+- `/friends/search` (up to 10 usernames by their start), `/friends/request` (by
+  username, ignoring case), `/friends/accept`, `/friends/reject`, and `/friends/seen`
+  (`REQUESTS`, `INVITES` or `FRIENDS`).
+- `/friends/expire`: the server's ten-minute timer (the one that expires sessions)
+  clears requests older than a week. They already stop showing the moment they run out.
+- `/invites/send`: only the host of a private table, before its game starts, and only
+  to a friend not already sitting there. `/invites/accept` sits the friend down exactly
+  as joining by code does; a full table keeps the invite. `/invites/decline`.
+- Reactions: sitting down at a table (by invite or by code) uses up the invite to it;
+  starting the table's game or closing the table withdraws all its invites; deleting
+  an account forgets its friends, requests, invites and looks.
+- The lobby and the game now give each seat's `username` apart from its display
+  name, so the page can tell an account (which can be sent a request) from a guest.
+- **Decisions to check:** an invite stays valid if the host who sent it leaves the
+  table (the table still exists, and hosting passes on). There is no way to remove a
+  friend yet, since it was not asked for.
+- Tests: 21 new composition tests (Friends.test.ts), and the 9 new endpoints added to
+  the access-control test (an invented, ended or borrowed token gets 401).

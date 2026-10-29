@@ -30,6 +30,8 @@ export class InvitingConcept {
   async invite({ from, to, place }: { from: string; to: string; place: string }) {
     await this.#ensureIndexes();
     if (from === to) throw new SelfInvite("You can't invite yourself.");
+    if (await this.invites.findOne({ to, place })) throw new AlreadyInvited("They're already invited.");
+    // The unique index catches two invites sent at the same moment.
     const invite = crypto.randomUUID();
     try {
       await this.invites.insertOne({ _id: invite, from, to, place, sentAt: this.clock() });

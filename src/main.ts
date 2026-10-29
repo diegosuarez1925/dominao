@@ -3,10 +3,11 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
 import { BottingConcept } from "./concepts/Botting.ts";
 import { DominoPlayingConcept } from "./concepts/DominoPlaying.ts";
+import { FriendingConcept } from "./concepts/Friending.ts";
 import { MatchmakingConcept } from "./concepts/Matchmaking.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
 import { TableConcept } from "./concepts/Table.ts";
-import { EXPIRY_INTERVAL_MS, expireIdleSessions } from "./expiry.ts";
+import { EXPIRY_INTERVAL_MS, expireIdleSessions, expireOldRequests } from "./expiry.ts";
 import { startTicker } from "./ticker.ts";
 import { TICK_MS } from "./timing.ts";
 import { policy } from "./http.ts";
@@ -39,10 +40,13 @@ const server = Bun.serve({
   },
 });
 
-// Idle sessions are expired on a timer, which frees their seats and queue places.
+// Idle sessions are expired on a timer, which frees their seats and queue places, and
+// friend requests nobody answered within a week are cleared away.
 const sessions = new SessioningConcept(db);
+const friending = new FriendingConcept(db);
 setInterval(() => {
   expireIdleSessions(gateway, sessions).catch((error) => console.error("Expiring idle sessions failed:", error));
+  expireOldRequests(gateway, friending).catch((error) => console.error("Expiring old friend requests failed:", error));
 }, EXPIRY_INTERVAL_MS);
 
 // Full lobbies whose countdown is over are launched, empty seats get bots, bots take

@@ -16,10 +16,13 @@ const { CodeGenerating, DominoPlaying, Guesting, Matchmaking, PasswordAuthentica
 const TABLE_CODES = "TABLE_CODES";
 const CODE_SIZE = 6;
 
-/** The table the guest sits at, if any, with every seat and the name of who sits there. */
+/**
+ * The table the guest sits at, if any, with every seat and the name of who sits there.
+ * A seat taken by an account also has its username; a guest's has none.
+ */
 const Lobby = former(
   "the lobby of (me)",
-  ({ me }, { table, host, code, rules, position, player, displayName }) =>
+  ({ me }, { table, host, code, rules, position, player, displayName, username }) =>
     form({
       tables: each(Table._tableOf({ player: me }).is({ table }))
         .where(Table._get({ table }).is({ host, code, rules }))
@@ -32,8 +35,9 @@ const Lobby = former(
             .where(
               whether(Guesting._name({ guest: player }).is({ displayName })),
               whether(PasswordAuthenticating._username({ user: player }).is({ username: displayName })),
+              whether(PasswordAuthenticating._username({ user: player }).is({ username })),
             )
-            .form({ position, player, displayName }),
+            .form({ position, player, displayName, username }),
         }),
     }),
 );

@@ -27,6 +27,13 @@ export const ABSENT_MS = 45_000;
  */
 export const AWAY_BEFORE_GAME_MS = 2 * 60_000;
 
+/**
+ * How recently a friend's page must have checked in for them to show as online. An
+ * open page checks in every two seconds, but a browser may slow a background tab to
+ * about once a minute, so this allows a little more than that.
+ */
+export const ONLINE_MS = 90_000;
+
 /** How long a guest's session lasts unused before the guest must start again. */
 export const GUEST_SESSION_MS = 12 * 60 * 60 * 1000;
 

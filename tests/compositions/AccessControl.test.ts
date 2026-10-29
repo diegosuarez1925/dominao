@@ -75,6 +75,15 @@ const guestEndpoints = (table: string, game: string, code: string): [string, Rec
   ["/matchmaking/leave", {}],
   ["/accounts/password", { current: "Fichas-de-1957", password: "Otra-Clave-2026" }],
   ["/accounts/delete", { password: "Fichas-de-1957" }],
+  ["/friends/view", {}],
+  ["/friends/search", { text: "abu" }],
+  ["/friends/request", { username: "abuelo_pr" }],
+  ["/friends/accept", { request: "some-request" }],
+  ["/friends/reject", { request: "some-request" }],
+  ["/friends/seen", { part: "REQUESTS" }],
+  ["/invites/send", { friend: "some-player" }],
+  ["/invites/accept", { invite: "some-invite" }],
+  ["/invites/decline", { invite: "some-invite" }],
 ];
 
 test("every guest endpoint turns away an invented token, a signed-out token, and a player id", async () => {

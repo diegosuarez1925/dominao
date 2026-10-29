@@ -1,6 +1,7 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
 import { composition as accounts } from "./compositions/Accounts.ts";
+import { composition as friends } from "./compositions/Friends.ts";
 import { composition as games } from "./compositions/Games.ts";
 import { composition as guests } from "./compositions/Guests.ts";
 import { composition as matchmaking } from "./compositions/Matchmaking.ts";
@@ -47,7 +48,7 @@ export function assembleApplication(
       Throttling: new ThrottlingConcept(database, clock),
       Table: new TableConcept(database),
     },
-    composition: { Guests: guests, Accounts: accounts, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking },
+    composition: { Guests: guests, Accounts: accounts, Tables: tables, Games: games, Seats: seats, Matchmaking: matchmaking, Friends: friends },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.
     rawFaultReporter: ({ error }) => console.error(error),
   });

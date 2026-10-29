@@ -65,10 +65,10 @@ test("the journey: Abuelo opens a table and his three brothers join by code", as
       host: abuelo.player,
       rules: "DEFAULT",
       seats: [
-        { position: 0, player: abuelo.player, displayName: "Abuelo" },
-        { position: 1, player: brothers[0].player, displayName: "Papo" },
-        { position: 2, player: brothers[1].player, displayName: "Nando" },
-        { position: 3, player: brothers[2].player, displayName: "Cheo" },
+        { position: 0, player: abuelo.player, displayName: "Abuelo", username: null },
+        { position: 1, player: brothers[0].player, displayName: "Papo", username: null },
+        { position: 2, player: brothers[1].player, displayName: "Nando", username: null },
+        { position: 3, player: brothers[2].player, displayName: "Cheo", username: null },
       ],
     },
   ]);

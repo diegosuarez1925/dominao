@@ -39,3 +39,11 @@ export function flags(field: string, rest: EndpointValidator): EndpointValidator
   return (value) =>
     record(value) && typeof value[field] === "boolean" ? rest(value) : { ok: false, detail: `${field} must be true or false` };
 }
+
+/** Like another validator, but also requires the field to name a part of the Friends section: REQUESTS, INVITES or FRIENDS. */
+export function parts(field: string, rest: EndpointValidator): EndpointValidator {
+  return (value) =>
+    record(value) && (value[field] === "REQUESTS" || value[field] === "INVITES" || value[field] === "FRIENDS")
+      ? rest(value)
+      : { ok: false, detail: `${field} must be REQUESTS, INVITES or FRIENDS` };
+}
