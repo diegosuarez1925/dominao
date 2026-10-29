@@ -658,6 +658,21 @@ leave everyone stuck, but someone sitting idle with the page open must stay.
   browser: the host closed his tab, the other guest's page sat idle for 2 min 15 s,
   and only the host was taken off.
 
+### Design document and README
+
+Asked for (P4): a one-to-two page design document on how the final app differs from
+the P1 concepts and the P3 visual design, and a concise README.
+
+- **DESIGN.md** (Step 16): for each concept, what changed since P1 and why, with links
+  to its spec and to the commit that changed it; how the compositions tie the concepts
+  together (access control, leaving mid-game, the server's ticker); and the visual
+  design, what was kept from the P3 study and what is new. It is kept up to date with
+  each later step (accounts, friends, stats).
+- **README.md** (Step 17): a short overview, a table of links (deployed app, video,
+  design document, specs, generated API reference, this notebook, test results), how
+  to run and test locally, the repository layout and known limitations. The demo
+  video link is left for elnene to fill in.
+
 ### Splitting guest sessions, to make room for accounts
 
 Asked for: permanent accounts with usernames and passwords. This first step changes

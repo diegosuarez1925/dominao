@@ -1,6 +1,6 @@
 # DOMINAO
 
-DOMINAO is a web app for playing Puerto Rican dominoes online with four players. You can play as a guest under any name, or keep an account (a unique username and a password) to be the same player on any device. You can open a private table and share its 6-character code with family, or be matched with strangers who chose the same rules. If someone leaves mid-game, the game waits for someone to take their seat, and a bot plays it in the meantime.
+DOMINAO is a web app for playing Puerto Rican dominoes online with four players. You can play as a guest under any name, or keep an account (a unique username and a password) to be the same player on any device. You can open a private table and share its 6-character code with family, or be matched with strangers who chose the same rules. If someone leaves mid-game, the game waits for someone to take their seat, and a bot plays it in the meantime. With an account you can also add friends, invite them to your table, and keep match and game statistics for each rule set.
 
 | | |
 |---|---|
@@ -39,12 +39,12 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 | Tests | What they cover |
 |---|---|
 | [tests/concepts](tests/concepts) | Each concept on its own, through its actions and queries: every action, its refusals and its principle. Game rules use seeded deals ([tests/support/dominoes.ts](tests/support/dominoes.ts)). |
-| [tests/compositions](tests/compositions) | The HTTP API end to end. This covers whole journeys, who may do what, the error each refusal returns, seat replacement and bots, and the server's timer. The clock is moved by hand, so timed rules are tested exactly. |
+| [tests/compositions](tests/compositions) | The HTTP API end to end. This covers whole journeys, who may do what, the error each refusal returns, seat replacement and bots, the server's timer, accounts, friends and invites, and statistics counted over whole games. The clock is moved by hand, so timed rules are tested exactly. |
 | [tests/web](tests/web) | The board layout: no overlaps, every tile touches the one before it, turns and doubles. |
 
 ## Repository layout
 
-- [src/concepts](src/concepts): the nine concepts.
+- [src/concepts](src/concepts): the thirteen concepts, each with its spec in [design/concepts](design/concepts).
 - [src/compositions](src/compositions): reactions and endpoints that tie the concepts together.
 - [src/ticker.ts](src/ticker.ts): the server's one-second timer.
 - [src/main.ts](src/main.ts): the server.
@@ -56,6 +56,8 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 - A guest who closes their tab or clears their browser storage starts over as a new guest. An account is remembered per tab too, so a regular logs in again in a new tab.
 - There is no email, so a forgotten password cannot be recovered.
 - Bots play random legal moves. A smarter bot is one function in [src/assembly.ts](src/assembly.ts).
+- Friends cannot be removed yet, and an invite stays open if its host leaves the table (it ends when the game starts or the table closes).
+- Only accounts keep statistics, so games played as a guest before signing up are not counted. Tied matches (tranques) are not counted either.
 - Two seat swaps sent at the very same instant at one table are not atomic. Only the host can swap, one at a time, so this does not come up in use.
 
 ## Earlier deliverables
