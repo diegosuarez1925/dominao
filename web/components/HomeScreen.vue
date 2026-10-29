@@ -1,16 +1,39 @@
 <script setup lang="ts">
+// The home screen: pick public or private games, each with its picture front and
+// centre, the rules beside one big button, and (for an account) a side menu.
 import { computed, ref, watch } from "vue";
-import { CODE_PATTERN, findGame, joinTable, openTable, state } from "../session.ts";
-import AccountPanel from "./AccountPanel.vue";
+import { CODE_PATTERN, findGame, joinTable, openTable, rulesName, state } from "../session.ts";
 import HowToPlay from "./HowToPlay.vue";
-import RulesPicker from "./RulesPicker.vue";
+import PrivateArt from "./PrivateArt.vue";
+import PublicArt from "./PublicArt.vue";
+import RulesButton from "./RulesButton.vue";
+import SideMenu from "./SideMenu.vue";
 
-// Each panel keeps its own choice of rules; a table joined by code keeps its own.
+type Tab = "public" | "private";
+const tabs: { tab: Tab; label: string }[] = [
+  { tab: "public", label: "Public games" },
+  { tab: "private", label: "Private games" },
+];
+// The tab last used, remembered on this device.
+const TAB_KEY = "dominao.homeTab";
+const tab = ref<Tab>("public");
+try {
+  if (localStorage.getItem(TAB_KEY) === "private") tab.value = "private";
+} catch {}
+watch(tab, (now) => {
+  try {
+    localStorage.setItem(TAB_KEY, now);
+  } catch {}
+});
+
+// Each tab keeps its own choice of rules; a table joined by code keeps its own.
 const strangerRules = ref("DEFAULT");
 const tableRules = ref("DEFAULT");
+const target = (rules: string) => state.rulesets.find((row) => row.rules === rules)?.target;
 const code = ref("");
 const howOpen = ref(false);
-// Whether the guest is happy to be dropped into a game of strangers already going on,
+const menuOpen = ref(false);
+// Whether the player is happy to be dropped into a game of strangers already going on,
 // remembered on this device.
 const MIDWAY_KEY = "dominao.midway";
 const midway = ref(false);
@@ -23,7 +46,7 @@ watch(midway, (now) => {
   } catch {}
 });
 const cleanCode = computed(() => code.value.trim().toUpperCase());
-/** Shown once the guest has typed a whole code that can't be one. */
+/** Shown once the player has typed a whole code that can't be one. */
 const codeHint = computed(() =>
   cleanCode.value.length === 6 && !CODE_PATTERN.test(cleanCode.value)
     ? "Codes use letters and the digits 2 to 9 (no I, O, 0 or 1)."
@@ -32,19 +55,65 @@ const codeHint = computed(() =>
 </script>
 
 <template>
-  <div class="how-row">
-    <p class="how-hint">New to Puerto Rican dominoes, or to DOMINAO?</p>
-    <button class="btn btn--secondary btn--small" @click="howOpen = true">How to play</button>
-  </div>
-  <HowToPlay v-model:open="howOpen" />
-  <div class="grid-2">
-    <section class="panel">
-      <h2 class="panel-title">Play with strangers</h2>
-      <p class="panel-text">
-        We'll seat you with three other players who picked the same rules. Partners are drawn at random.
-      </p>
-      <RulesPicker v-model="strangerRules" />
-      <label class="toggle">
+  <div class="home">
+    <div class="home-top">
+      <button v-if="state.me?.username" class="round-btn" aria-label="Open menu" :aria-expanded="menuOpen" @click="menuOpen = true">
+        <span class="burger" aria-hidden="true"><span /><span /><span /></span>
+      </button>
+      <div class="tabs" role="tablist" aria-label="Kind of game">
+        <button
+          v-for="option in tabs"
+          :id="`tab-${option.tab}`"
+          :key="option.tab"
+          class="tab"
+          :class="{ 'tab--on': tab === option.tab }"
+          role="tab"
+          type="button"
+          :aria-selected="tab === option.tab"
+          aria-controls="home-panel"
+          @click="tab = option.tab"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+      <button class="round-btn" aria-label="How to play" title="How to play" @click="howOpen = true">?</button>
+    </div>
+
+    <section id="home-panel" class="home-panel" role="tabpanel" :aria-labelledby="`tab-${tab}`">
+      <Transition name="screen" mode="out-in">
+        <div :key="tab" class="stage">
+          <PublicArt v-if="tab === 'public'" class="stage-art" />
+          <PrivateArt v-else class="stage-art" />
+          <h2 class="stage-title">{{ tab === "public" ? "Play the world" : "Play with your people" }}</h2>
+          <p class="stage-text">
+            {{
+              tab === "public"
+                ? "We'll seat you with three players from anywhere who picked the same rules. Partners are drawn at random."
+                : "Open a table and share its code with family and friends. You choose who partners with whom."
+            }}
+          </p>
+        </div>
+      </Transition>
+
+      <div class="play-bar">
+        <RulesButton v-if="tab === 'public'" v-model="strangerRules" />
+        <RulesButton v-else v-model="tableRules" />
+        <button
+          v-if="tab === 'public'"
+          class="big-btn"
+          :disabled="state.busy"
+          @click="findGame(strangerRules, midway)"
+        >
+          <span class="big-btn-title">Play</span>
+          <span class="big-btn-sub">Public table · {{ rulesName(strangerRules) }} to {{ target(strangerRules) }}</span>
+        </button>
+        <button v-else class="big-btn" :disabled="state.busy" @click="openTable(tableRules)">
+          <span class="big-btn-title big-btn-title--long">Create private table</span>
+          <span class="big-btn-sub">{{ rulesName(tableRules) }} to {{ target(tableRules) }}</span>
+        </button>
+      </div>
+
+      <label v-if="tab === 'public'" class="toggle extra">
         <input v-model="midway" type="checkbox" class="toggle-input" />
         <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb" /></span>
         <span class="toggle-text">
@@ -52,59 +121,233 @@ const codeHint = computed(() =>
           <span class="field-hint">Take over the seat of someone who left a game with the same rules. You keep their tiles and their team's score.</span>
         </span>
       </label>
-      <button class="btn btn--block push-down" :disabled="state.busy" @click="findGame(strangerRules, midway)">Find a game</button>
-    </section>
 
-    <section class="panel">
-      <h2 class="panel-title">Private table</h2>
-      <p class="panel-text">Open a table and share its code, so you play with your own people.</p>
-      <RulesPicker v-model="tableRules" />
-      <button class="btn btn--block" :disabled="state.busy" @click="openTable(tableRules)">Create private table</button>
-      <div class="divider">or join one</div>
-      <form class="row" @submit.prevent="joinTable(code)">
-        <div class="field">
-          <label class="field-label" for="join-code">Invite code</label>
-          <input
-            id="join-code"
-            v-model="code"
-            class="input input--code"
-            placeholder="ABC123"
-            maxlength="6"
-            autocomplete="off"
-            aria-describedby="join-code-hint"
-            required
-          />
-          <span id="join-code-hint" class="field-hint" :class="{ 'field-hint--error': codeHint }">
-            {{ codeHint || "6 characters, from the host's lobby screen." }}
-          </span>
+      <form v-else class="extra join" @submit.prevent="joinTable(code)">
+        <div class="divider">or join one</div>
+        <div class="row">
+          <div class="field">
+            <label class="field-label" for="join-code">Invite code</label>
+            <input
+              id="join-code"
+              v-model="code"
+              class="input input--code"
+              placeholder="ABC123"
+              maxlength="6"
+              autocomplete="off"
+              aria-describedby="join-code-hint"
+              required
+            />
+            <span id="join-code-hint" class="field-hint" :class="{ 'field-hint--error': codeHint }">
+              {{ codeHint || "6 characters, from the host's lobby screen." }}
+            </span>
+          </div>
+          <button class="btn btn--secondary" :disabled="state.busy || cleanCode.length !== 6">Join table</button>
         </div>
-        <button class="btn btn--secondary" :disabled="state.busy || cleanCode.length !== 6">Join table</button>
       </form>
     </section>
   </div>
-  <!-- Only accounts have one; guests never see it. -->
-  <AccountPanel v-if="state.me?.username" />
+  <HowToPlay v-model:open="howOpen" />
+  <SideMenu v-if="state.me?.username" v-model:open="menuOpen" />
 </template>
 
 <style scoped>
-/* The way into the rules, above the two panels. */
-.how-row {
+/* One column, phone-like even on a wide screen, as in game apps. */
+.home {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.home-top {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-4);
+  gap: var(--space-2);
+}
+
+/* A round button on the red background: the menu, and how to play. */
+.round-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 2px solid rgb(255 255 255 / 0.6);
+  border-radius: 50%;
+  font: 400 1.2rem/1 var(--font-display);
+  color: var(--white);
+  background: rgb(0 0 0 / 0.15);
+  cursor: pointer;
+}
+
+.round-btn:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.round-btn:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.burger {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.burger span {
+  display: block;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* The two kinds of game, as one pill with the chosen half filled. */
+.tabs {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.22);
+}
+
+.tab {
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: 800 0.95rem/1.15 var(--font-body);
+  color: rgb(255 255 255 / 0.85);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.tab:hover {
   color: var(--white);
 }
 
-.how-hint {
-  margin: 0;
+.tab:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 1px;
 }
 
-/* Keeps the strangers panel's button level with the bottom of a taller neighbour. */
-.push-down {
-  margin-top: auto;
+.tab--on,
+.tab--on:hover {
+  color: var(--red-800);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.home-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The picture, front and centre, on a lit card. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: radial-gradient(120% 90% at 50% 30%, var(--white), var(--color-surface) 55%, #f1e4da);
+  box-shadow: var(--shadow-md);
+}
+
+.stage-art {
+  max-width: 26rem;
+}
+
+.stage-title {
+  margin: var(--space-2) 0 0;
+  font: 400 clamp(1.4rem, 5vw, 1.8rem) / 1.1 var(--font-display);
+  color: var(--color-primary);
+}
+
+.stage-text {
+  max-width: 26rem;
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+}
+
+/* The rules card, then the one big button, in one bar. */
+.play-bar {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.big-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 5.5rem;
+  padding: var(--space-2) var(--space-4);
+  border: 3px solid var(--white);
+  border-radius: var(--radius-md);
+  color: var(--white);
+  background: linear-gradient(180deg, var(--red-500), var(--red-600) 60%, var(--red-700));
+  box-shadow:
+    0 4px 0 var(--red-900),
+    var(--shadow-md);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.big-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--red-900);
+}
+
+.big-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.big-btn:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.big-btn-title {
+  font: 400 clamp(1.8rem, 7vw, 2.3rem) / 1 var(--font-display);
+  text-shadow: 0 2px 0 var(--red-900);
+}
+
+.big-btn-title--long {
+  font-size: clamp(1.1rem, 4.5vw, 1.45rem);
+  line-height: 1.15;
+}
+
+.big-btn-sub {
+  font: 700 0.9rem/1.2 var(--font-body);
+  opacity: 0.9;
+}
+
+/* The line under the bar: a switch, or joining by code, on a light card. */
+.extra {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.join {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 /* A switch: the checkbox stays in the page for keyboards and screen readers, drawn as a track. */

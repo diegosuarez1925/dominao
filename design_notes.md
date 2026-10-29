@@ -800,3 +800,36 @@ deletes the account.
 - Checked in a browser at 1200 and 390 px: a guest's home has no panel; an account's
   does; changing the password signed the other device out and the new password works;
   a wrong delete password kept the account; deleting went back to the first page.
+
+### Home screen redone as Public / Private tabs
+
+Asked for: a home screen like Mesa28 and Clash Royale. Tabs for Public and Private
+games instead of two panels side by side; a big picture for each kind of game, drawn
+for the app (worldwide for public, friends for private, both with dominoes and a
+table); a big Play button with the rules beside it; for private, the same layout with
+"Create private table", then joining by code; and the account moved into a side menu
+whose sections open over the home screen. Only the home screen changes.
+
+- **Tabs:** one pill switch, "Public games" and "Private games". The tab last used is
+  remembered on this device. Each tab keeps its own choice of rules.
+- **Pictures** (`PublicArt.vue`, `PrivateArt.vue`) are inline SVG drawn for the app, so
+  they stay sharp at any size and need no image files. Public: a globe with pins and
+  routes, four players from around the world on an orbit, a table with tiles. Private:
+  four friends round a felt table under a hanging lamp and string lights, a heart and a
+  speech bubble with a table code.
+- **Play bar:** the rules card (`RulesButton.vue`) shows the target in big numbers and
+  the rules name, with a swap badge; tapping it opens the list of rule sets with their
+  descriptions above it (Escape or a tap outside closes it). Beside it, the big button:
+  "Play" on Public, "Create private table" on Private, with the rules repeated under it.
+- **Under the bar:** Public keeps the "Join games in progress" switch; Private has
+  joining by code, with the same hint for impossible codes as before.
+- **Side menu** (`SideMenu.vue`), only for accounts: a ≡ button left of the tabs opens
+  a drawer from the left with "Account settings", and "Friends" and "Stats" marked
+  "Soon". A section opens as an overlay in the middle of the screen; Escape, the × or a
+  tap outside closes it. Account settings is the Step 21 panel, unchanged inside.
+- `RulesPicker.vue` is no longer used anywhere and was removed.
+- No server change.
+- Checked in a browser at 1200 and 390 px: a guest has no menu; both tabs, the rules
+  list (each tab kept its own rules), creating a private table, the code hint, the
+  menu, account settings over the home screen, and Escape closing it. No horizontal
+  scrolling on the phone.

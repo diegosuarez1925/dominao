@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// The account's own corner of the home screen, shown only to someone logged in to an
-// account. For now it changes the password and deletes the account; friends and past
-// games will join it later as more sections.
+// Account settings, opened from the side menu over the home screen, only for someone
+// logged in to an account. For now it changes the password and deletes the account.
 import { ref } from "vue";
 import { confirmAction } from "../dialog.ts";
 import { changePassword, deleteAccount, state } from "../session.ts";
@@ -44,7 +43,7 @@ async function submitDelete() {
     <div class="account-head">
       <span class="account-avatar" aria-hidden="true">{{ state.me?.username?.charAt(0).toUpperCase() }}</span>
       <div>
-        <h2 id="account-title" class="panel-title">Your account</h2>
+        <h2 id="account-title" class="panel-title">Account settings</h2>
         <p class="panel-text">Logged in as <strong class="account-name">{{ state.me?.username }}</strong></p>
       </div>
     </div>
@@ -129,10 +128,14 @@ async function submitDelete() {
 
 <style scoped>
 .account {
-  margin-top: var(--space-5);
+  width: min(34rem, 100%);
+  max-height: calc(100dvh - 2 * var(--gutter));
+  overflow-y: auto;
 }
 
+/* Leaves room for the overlay's close button on the right. */
 .account-head {
+  padding-right: var(--space-6);
   display: flex;
   align-items: center;
   gap: var(--space-3);

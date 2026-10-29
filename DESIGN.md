@@ -97,5 +97,6 @@ Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/A
   - At a private table, the host taps two seats to swap them; the picked seat lifts and gets a light-blue ring.
   - The matchmaking toggle "join games in progress".
   - The first page offers Guest, Log in and Sign up as one pill-shaped switch. Signing up lists the password rules and ticks each off in green as it is met, and warns that a forgotten password cannot be recovered. (Step 20)
-  - Accounts (never guests) get a "Your account" panel on the home screen, with rows that open in place to change the password or delete the account. Friends and past games are meant to become more rows there. (Step 21)
+  - Accounts (never guests) get account settings, with rows that open in place to change the password or delete the account. (Step 21)
+  - The home screen was redone after mobile game apps (Mesa28, Clash Royale): a Public / Private switch instead of two panels side by side, a drawn picture for each kind of game front and centre (a globe with players around it; friends around a table under a lamp), and one big button with the rules card beside it. Account settings moved into a side menu that opens each section over the home screen; Friends and Stats wait there as "Soon". (Step 22)
 - **Plain-language messages for what happened without you:** the host closing the table, being away too long, or a seat going to someone else.
