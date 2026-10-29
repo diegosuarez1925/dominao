@@ -1,121 +1,72 @@
 # DOMINAO
 
-DOMINAO is an app for playing Puerto Rican dominoes online, with private tables for friends, public matchmaking for quick games, and guest sessions so nobody needs an account.
-
-This README is the entry point. The first part is the P3 submission: the live app, the journey and its recording, the visual design study, and how to run and test the code. The second part is the P1 design, with each section linking to the Markdown file that holds it.
-
-## P3 submission
+DOMINAO is a web app for playing Puerto Rican dominoes online with four players and no accounts. You can open a private table and share its 6-character code with family, or be matched with strangers who chose the same rules. If someone leaves mid-game, the game waits for someone to take their seat, and a bot plays it in the meantime.
 
 | | |
 |---|---|
 | Deployed app | https://dominao.mit-sdg.dev/ |
-| Journey recording (YouTube) | https://youtu.be/T4UbuC2Oy6U |
-| Updated user journey | [below](#updated-user-journey) |
-| Visual design study | [below](#visual-design-study) |
-| Code | [src](src) (concepts, syncs, server) and [web](web) (Vue frontend) |
-| Specs | [design](design) |
-| Tests and their saved output | [tests](tests), [tests/output.txt](tests/output.txt) |
+| Demo video (P4) | FINAL_VIDEO_LINK_HERE |
+| Design document | [DESIGN.md](DESIGN.md): how the final app differs from the P1 concepts and the P3 visual design |
+| Specs | [design/concepts](design/concepts) (concepts), [design/compositions](design/compositions) (how they are composed), [design/types.md](design/types.md) |
+| API | [generated/dominao.md](generated/dominao.md): every endpoint with its input, output and errors, generated from the code |
+| Design notebook | [design_notes.md](design_notes.md): each step, what was asked, what changed and how it was tested |
+| Test results | [tests/output.txt](tests/output.txt) (local), [tests/deploy-output.txt](tests/deploy-output.txt) (deployed app) |
 
-## Updated user journey
-
-My grandpa, while on a bus taking him to the town plaza, is feeling a little bored and wants to play dominoes to kill the boredom. So he hops on DOMINAO and logs in as a guest, skipping sign-up and email confirmations. Because he has around 10 minutes until he gets to the plaza, he decides to play a quick match instead of the usual game to 200 points, so he chooses the ruleset he would like for the game and hops in a public lobby. After a few seconds, people queue in and a game starts, and he plays on until the game is over, just before arriving at the plaza. After his visit to a store, his brother calls him and tells him they need a fourth player for a match to 500 points, and sends him a code to join, which my grandfather uses to join the private table and play with his friends and family remotely.
-
-The [recording](YOUTUBE_LINK_HERE) follows this journey in the deployed app. The original P1 journey is in [P1 TASKS/user_journey.md](P1%20TASKS/user_journey.md).
-
-## Visual design study
-
-**Typography.** Bungee, a loud signage font, for the big moments (logo, titles, the ¡Capicú! banner), inspired by hand-painted Puerto Rican street signs. Nunito, a rounded sans-serif, for everything you read, in the style of friendly game apps and the rounded-off nature of dominos.
-
-![Typography slide](visual-study/typography.png)
-
-**Color.** Light blues, beiges and reds sampled from the Lares flag, the Puerto Rican flag and Old San Juan streets, each matched to the app color it became.
-
-![Color slide](visual-study/color.png)
-
-## Running the app
+## Running it locally
 
 You need [Bun](https://bun.sh) 1.4 and a MongoDB server.
 
 ```sh
 bun install
-MONGODB_URL=mongodb://127.0.0.1:27017/dominao bun run start   # the whole app on http://localhost:3000
+MONGODB_URL=mongodb://127.0.0.1:27017/dominao bun run start   # page and API on http://localhost:3000
 ```
 
-`bun run dev` does the same with a local Mongo in a container (Podman) and reloads on changes. `bun run preview` runs it exactly as the class platform does.
+- `bun run dev` does the same with a local MongoDB in a container (Podman) and reloads on changes.
+- `bun run preview` runs the app exactly as the class platform does.
+
+To try a full table on one computer, open four browser windows (or private windows). Each window is its own guest.
 
 ## Testing
 
 ```sh
-bun run test:save        # runs every test and saves the output to tests/output.txt
-bun run check            # the sync-engine checks and the TypeScript compiler
+bun run test:save        # every test, output saved to tests/output.txt (needs MongoDB at MONGODB_URL)
+bun run test:memory      # the same with a throwaway in-memory MongoDB
+bun run check            # sync-engine checks and the TypeScript compiler
 bun run check:design     # checks the specs in design/ against each other
+bun run check:deploy     # checks the deployed app from outside; output saved to tests/deploy-output.txt
 ```
-
-`bun test` needs MongoDB too; `bun run test:memory` starts a throwaway one in memory instead. The last saved run is in [tests/output.txt](tests/output.txt).
 
 | Tests | What they cover |
 |---|---|
-| [tests/concepts](tests/concepts) | Each concept on its own, through its actions and queries only: every action, its refusals, and the principle. Game rules are tested with seeded deals ([tests/support/dominoes.ts](tests/support/dominoes.ts)), so no test writes to the database. |
-| [tests/compositions](tests/compositions) | The HTTP API end to end: journeys (open a table, three friends join, play a whole game to 200; four strangers matched and seated), who may do what, and the error each refusal returns. |
-| [tests/web](tests/web) | The board layout: no tiles overlap, every tile touches the one before it, turns and doubles. |
+| [tests/concepts](tests/concepts) | Each concept on its own, through its actions and queries: every action, its refusals and its principle. Game rules use seeded deals ([tests/support/dominoes.ts](tests/support/dominoes.ts)). |
+| [tests/compositions](tests/compositions) | The HTTP API end to end. This covers whole journeys, who may do what, the error each refusal returns, seat replacement and bots, and the server's timer. The clock is moved by hand, so timed rules are tested exactly. |
+| [tests/web](tests/web) | The board layout: no overlaps, every tile touches the one before it, turns and doubles. |
 
-## Specs and API
+## Repository layout
 
-- Concept specs: [design/concepts](design/concepts). Composition specs: [design/compositions](design/compositions). Shared types: [design/types.md](design/types.md).
-- Every endpoint, its input, output and errors: [generated/dominao.md](generated/dominao.md), generated from the code by `bun run generate`.
-- How each step was built and checked, and the review against the course rubrics: [design_notes.md](design_notes.md).
+- [src/concepts](src/concepts): the six concepts.
+- [src/compositions](src/compositions): reactions and endpoints that tie the concepts together.
+- [src/ticker.ts](src/ticker.ts): the server's one-second timer.
+- [src/main.ts](src/main.ts): the server.
+- [web](web): the Vue frontend, served by the same process.
+- [scripts](scripts): API and deployment checks.
 
 ## Known limitations
 
-- Guests only: there are no accounts, so a guest who clears their browser storage loses their seat.
-- If every player in a full matchmaking lobby closes the page during the countdown, the lobby waits until one of them opens the page again, since launching is asked for by the page. Other guests are put in a fresh lobby meanwhile.
-- The score card shows the last match's result only; the move log has every move.
+- Guests only. A guest who clears their browser storage starts over as a new guest.
+- Bots play random legal moves. A smarter bot is one function in [src/assembly.ts](src/assembly.ts).
+- Two seat swaps sent at the very same instant at one table are not atomic. Only the host can swap, one at a time, so this does not come up in use.
 
-# P1 design
+## Earlier deliverables
 
-## Contents
+**P3 (beta).**
+- [Journey recording](https://youtu.be/T4UbuC2Oy6U).
+- Visual design study: [typography](visual-study/typography.png) (Bungee for big moments, Nunito for reading) and [color](visual-study/color.png) (from the Lares flag, the Puerto Rican flag and Old San Juan).
+- Updated user journey: a grandfather on a bus plays a quick public game, then joins his brother's private table for a game to 500.
 
-1. [Problem framing and stakeholders](#1-problem-framing-and-stakeholders)
-2. [Application pitch](#2-application-pitch)
-3. [Concept specifications, essential reactions, and design note](#3-concept-specifications-essential-reactions-and-design-note)
-4. [UI sketches](#4-ui-sketches)
-5. [User journey](#5-user-journey)
-
----
-
-## 1. Problem framing and stakeholders
-
-📄 [problem_framing.md](P1%20TASKS/problem_framing.md)
-
-- [Domain](P1%20TASKS/problem_framing.md#domain)
-- [Bad situations](P1%20TASKS/problem_framing.md#bad-situations)
-- [Corroboration](P1%20TASKS/problem_framing.md#corroboration)
-- [Workarounds and comparables](P1%20TASKS/problem_framing.md#workarounds-and-comparables)
-- [Solution sketch](P1%20TASKS/problem_framing.md#solution-sketch)
-- [Stakeholder list](P1%20TASKS/problem_framing.md#stakeholder-list)
-
-## 2. Application pitch
-
-📄 [app_pitch.md](P1%20TASKS/app_pitch.md)
-
-A short pitch for DOMINAO and its three core features: Private Tables, Public Matchmaking, and Guest Sessions.
-
-## 3. Concept specifications, essential reactions, and design note
-
-📄 [concept_design.md](P1%20TASKS/concept_design.md)
-
-- **Concept specifications:** [GuestSessioning, CodeGenerating, Matchmaking, Table](P1%20TASKS/concept_design.md#concepts)
-- **Essential reactions:** [Guest sessions and private tables](P1%20TASKS/concept_design.md#reactions)
-- **Design note** (the role of each concept): [Design Note](P1%20TASKS/concept_design.md#design-note)
-
-## 4. UI sketches
-
-🖼️ [ui_sketches.jpg](P1%20TASKS/ui_sketches.jpg)
-
-![UI sketches](P1%20TASKS/ui_sketches.jpg)
-
-## 5. User journey
-
-📄 [user_journey.md](P1%20TASKS/user_journey.md) (the P3 version is [above](#updated-user-journey))
-
-The story of a grandfather in chemotherapy who plays quick public games, then opens a private table with his brothers using a join code.
+**P1 (concept design)**, in [P1 TASKS](P1%20TASKS):
+- [Problem framing and stakeholders](P1%20TASKS/problem_framing.md)
+- [App pitch](P1%20TASKS/app_pitch.md)
+- [Concept specifications, reactions and design note](P1%20TASKS/concept_design.md)
+- [UI sketches](P1%20TASKS/ui_sketches.jpg)
+- [User journey](P1%20TASKS/user_journey.md)
