@@ -13,7 +13,7 @@ DOMINAO lets four people play Puerto Rican dominoes online: friends at a private
 
 ## Concepts: P1 vs. final
 
-P1 had four concepts. The final app has nine: three from P1 (each changed), P1's GuestSessioning split in two (**Sessioning** and **Guesting**), **DominoPlaying** (the game itself, which P1 left for later), **Botting**, and, for accounts, **PasswordAuthenticating** and **Throttling**. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
+P1 had four concepts. The final app has twelve: three from P1 (each changed), P1's GuestSessioning split in two (**Sessioning** and **Guesting**), **DominoPlaying** (the game itself, which P1 left for later), **Botting**, and, for accounts, **PasswordAuthenticating**, **Throttling**, **Friending**, **Inviting** and **Seeing**. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
 
 ### GuestSessioning, now Sessioning and Guesting: [Sessioning](design/concepts/Sessioning.md), [Guesting](design/concepts/Guesting.md)
 - **Split in two for accounts** ([Step 18, dd00747](https://github.com/diegosuarez1925/dominao/commit/dd00747)). GuestSessioning did two jobs: keeping a guest's name, and recognizing a browser by its token. Accounts need the second but not the first. **Guesting** keeps P1's purpose (play under a name without an account); **Sessioning [Player]** recognizes a browser for any player, guest or account, with a lifetime per session (12 hours for a guest, 30 days for an account). A player can have several sessions (a phone and a laptop) and leaves their table only when the last one ends.
@@ -62,12 +62,17 @@ P1 had four concepts. The final app has nine: three from P1 (each changed), P1's
 - **Throttling** locks an account for 15 minutes after 5 wrong passwords in 15 minutes. A wrong password and an unknown username get the same answer, so nobody can learn which usernames exist.
 - **The account is the player**, so signing in on another device is the same player at the same table, and stats or friends can attach to it later.
 
+### Friending, Inviting and Seeing (new): [Friending](design/concepts/Friending.md), [Inviting](design/concepts/Inviting.md), [Seeing](design/concepts/Seeing.md)
+- **Friends for accounts** ([Step 23a, db18b0e](https://github.com/diegosuarez1925/dominao/commit/db18b0e)). **Friending** keeps friend requests, which run out after a week, and friendships, remembering who asked. A request to someone who already asked you is refused, so crossed requests never pile up.
+- **Inviting** keeps invites to a place and nothing more. That only the host of a private table invites, and that invites end when the game starts or the table closes, is decided by reactions ([Friends](design/compositions/Friends.md)).
+- **Seeing** remembers when an account last looked at its requests, invites and friends, so the app points out only what is newer. That is how the notification bubbles go away once seen, without Friending or Inviting storing anything about the screen.
+
 ### Botting (new): [spec](design/concepts/Botting.md)
 - **Gives a stand-in an obvious bot name.** DominoPlaying decides how a seat plays. How bots choose moves (random legal moves for now) is a single swappable function in [src/assembly.ts](src/assembly.ts).
 
 ## Compositions: how the concepts work together
 
-Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/Accounts.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md).
+Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/Accounts.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md), [Friends](design/compositions/Friends.md).
 
 - **Access control is structural.** Every player endpoint first turns the token into the player it acts for (a guest or an account), and that player is always the actor. No endpoint takes a player id from the browser. One test goes through every endpoint with forged, ended and borrowed tokens. ([Step 9a, 81aa5d5](https://github.com/diegosuarez1925/dominao/commit/81aa5d5))
 - **A matched game is a private-table game.** A reaction turns a launched lobby into a table under a fresh code and starts its game, so everything afterwards shares one code path.
@@ -98,5 +103,6 @@ Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/A
   - The matchmaking toggle "join games in progress".
   - The first page offers Guest, Log in and Sign up as one pill-shaped switch. Signing up lists the password rules and ticks each off in green as it is met, and warns that a forgotten password cannot be recovered. (Step 20)
   - Accounts (never guests) get account settings, with rows that open in place to change the password or delete the account. (Step 21)
-  - The home screen was redone after mobile game apps (Mesa28, Clash Royale): a Public / Private switch instead of two panels side by side, a drawn picture for each kind of game front and centre (a globe with players around it; friends around a table under a lamp), and one big button with the rules card beside it. Account settings moved into a side menu that opens each section over the home screen; Friends and Stats wait there as "Soon". (Step 22)
+  - Accounts get a Friends section in the side menu: a friend list (online friends first, with a green dot), friend requests (search by username, accept or reject), and game invites (who from, the rules and how many are seated). Red bubbles on the menu button, the Friends item and each tab count what is new, and go away once seen. New requests and invites, and accepted requests, also pop up at the top of the home screen to answer right there. The host invites friends from the lobby; tapping a player at a table opens a small menu to send a friend request, and guests now carry a GUEST tag as bots carry BOT. (Step 23)
+  - The home screen was redone after mobile game apps (Mesa28, Clash Royale): a Public / Private switch instead of two panels side by side, a drawn picture for each kind of game front and centre (a globe with players around it; friends around a table under a lamp), and one big button with the rules card beside it. Account settings moved into a side menu that opens each section over the home screen; Stats waits there as "Soon". (Step 22)
 - **Plain-language messages for what happened without you:** the host closing the table, being away too long, or a seat going to someone else.

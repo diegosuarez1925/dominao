@@ -3,7 +3,8 @@
 // "you" or "partner". The player whose turn it is glows. An empty seat shows a dashed
 // circle instead. A player who just passed shakes and says so in a bubble. A bot gets a
 // robot face and a BOT tag; a player whose connection seems lost is faded, with a
-// pulsing dot.
+// pulsing dot. A guest gets a GUEST tag, so nobody tries to befriend them. With
+// `clickable` the badge is a button, which opens the player's little menu.
 defineProps<{
   name?: string;
   note?: string;
@@ -11,13 +12,20 @@ defineProps<{
   stacked?: boolean;
   passed?: boolean;
   bot?: boolean;
+  guest?: boolean;
   away?: boolean;
   empty?: boolean;
+  clickable?: boolean;
 }>();
 </script>
 
 <template>
-  <div class="badge" :class="{ active, stacked, passed, bot, away, empty: empty || !name }">
+  <component
+    :is="clickable ? 'button' : 'div'"
+    class="badge"
+    :class="{ active, stacked, passed, bot, away, clickable, empty: empty || !name }"
+    :type="clickable ? 'button' : undefined"
+  >
     <Transition name="pop">
       <span v-if="passed" class="pass-bubble" role="status">¡Paso!</span>
     </Transition>
@@ -36,13 +44,14 @@ defineProps<{
       <span class="badge-name">
         {{ name ?? "Waiting…" }}
         <span v-if="bot" class="bot-tag">bot</span>
+        <span v-else-if="guest" class="bot-tag guest-tag">guest</span>
       </span>
       <span v-if="note" class="badge-note">
         <span v-if="away" class="away-dot" aria-hidden="true" />
         {{ note }}
       </span>
     </span>
-  </div>
+  </component>
 </template>
 
 <style scoped>
@@ -145,6 +154,29 @@ defineProps<{
   vertical-align: 0.1em;
   color: #22303b;
   background: #c9d3dc;
+}
+
+/* A guest: a sand-coloured tag in the same place as a bot's. */
+.guest-tag {
+  color: #4a3a1c;
+  background: #ead9b5;
+}
+
+/* A badge that opens the player's menu. */
+.clickable {
+  border: 0;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.clickable:hover {
+  background: rgb(0 0 0 / 0.38);
+}
+
+.clickable:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 /* Lost connection: faded, with an amber dot that pulses by the note. */

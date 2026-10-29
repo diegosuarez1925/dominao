@@ -2,7 +2,8 @@
 // The home screen: pick public or private games, each with its picture front and
 // centre, the rules beside one big button, and (for an account) a side menu.
 import { computed, nextTick, ref, watch } from "vue";
-import { CODE_PATTERN, findGame, joinTable, openTable, rulesName, state } from "../session.ts";
+import { CODE_PATTERN, findGame, joinTable, newInvites, newRequests, openTable, rulesName, state } from "../session.ts";
+import FriendToasts from "./FriendToasts.vue";
 import HowToPlay from "./HowToPlay.vue";
 import PrivateArt from "./PrivateArt.vue";
 import PublicArt from "./PublicArt.vue";
@@ -41,6 +42,8 @@ watch(joinOpen, async (now) => {
   codeInput.value?.focus();
 });
 const menuOpen = ref(false);
+/** New friend requests and invites, counted on the menu button. */
+const fresh = computed(() => newRequests().length + newInvites().length);
 // Whether the player is happy to be dropped into a game of strangers already going on,
 // remembered on this device.
 const MIDWAY_KEY = "dominao.midway";
@@ -65,8 +68,15 @@ const codeHint = computed(() =>
 <template>
   <div class="home">
     <div class="home-top">
-      <button v-if="state.me?.username" class="round-btn" aria-label="Open menu" :aria-expanded="menuOpen" @click="menuOpen = true">
+      <button
+        v-if="state.me?.username"
+        class="round-btn menu-btn"
+        :aria-label="fresh > 0 ? `Open menu (${fresh} new)` : 'Open menu'"
+        :aria-expanded="menuOpen"
+        @click="menuOpen = true"
+      >
         <span class="burger" aria-hidden="true"><span /><span /><span /></span>
+        <span v-if="fresh > 0" class="count-bubble menu-btn-count" aria-hidden="true">{{ fresh }}</span>
       </button>
       <div class="tabs" role="tablist" aria-label="Kind of game">
         <button
@@ -169,6 +179,7 @@ const codeHint = computed(() =>
   </Transition>
   <HowToPlay v-model:open="howOpen" />
   <SideMenu v-if="state.me?.username" v-model:open="menuOpen" />
+  <FriendToasts v-if="state.me?.username" />
 </template>
 
 <style scoped>
@@ -209,6 +220,16 @@ const codeHint = computed(() =>
 .round-btn:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.menu-btn {
+  position: relative;
+}
+
+.menu-btn-count {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
 }
 
 .burger {

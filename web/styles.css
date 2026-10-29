@@ -643,3 +643,30 @@ li {
   background: none;
   cursor: pointer;
 }
+
+/* A count of new things on a button or tab, such as unseen friend requests. */
+.count-bubble {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius-pill);
+  font: 800 0.75rem/1 var(--font-body);
+  color: var(--white);
+  background: #d9302c;
+  box-shadow: 0 0 0 2px var(--white);
+}
+
+/* Online: a green dot by a friend's picture. */
+.online-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #3fa45b;
+}
+
+.online-dot--off {
+  background: #b9aca8;
+}

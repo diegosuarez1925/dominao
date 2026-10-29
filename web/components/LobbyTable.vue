@@ -2,13 +2,15 @@
 // A square table seen from above, with one player on each side: the guest at the
 // bottom, then counter-clockwise (right, top, left). The middle of the table holds
 // whatever the lobby wants to show there, such as the join code or the countdown.
-// With `pickable`, each seat is a button, so the host can pick two seats to swap.
+// With `pickable`, each seat is a button, so the host can pick two seats to swap; with
+// `tappable`, each taken seat is a button, to open that player's menu.
 import PlayerBadge from "./PlayerBadge.vue";
 
-export type LobbySeat = { name: string; note?: string } | null;
+export type LobbySeat = { name: string; note?: string; guest?: boolean } | null;
 
 /** The four seats, in the order bottom, right, top, left; `picked` is the index of a picked seat. */
-defineProps<{ seats: LobbySeat[]; pickable?: boolean; picked?: number | null }>();
+const props = defineProps<{ seats: LobbySeat[]; pickable?: boolean; tappable?: boolean; picked?: number | null }>();
+const isButton = (index: number) => props.pickable || (props.tappable && props.seats[index] !== null);
 const emit = defineEmits<{ pick: [index: number] }>();
 const SIDES = ["bottom", "right", "top", "left"] as const;
 </script>
@@ -17,15 +19,20 @@ const SIDES = ["bottom", "right", "top", "left"] as const;
   <div class="lobby-table">
     <div v-for="(side, index) in SIDES" :key="side" class="seat" :class="`seat--${side}`">
       <component
-        :is="pickable ? 'button' : 'div'"
+        :is="isButton(index) ? 'button' : 'div'"
         class="seat-pick"
-        :class="{ pickable, picked: picked === index }"
+        :class="{ pickable: isButton(index), picked: picked === index }"
         :aria-pressed="pickable ? picked === index : undefined"
-        :aria-label="pickable ? `Seat of ${seats[index]?.name ?? 'nobody (empty)'}` : undefined"
-        @click="pickable && emit('pick', index)"
+        :aria-label="isButton(index) ? `Seat of ${seats[index]?.name ?? 'nobody (empty)'}` : undefined"
+        @click="isButton(index) && emit('pick', index)"
       >
         <Transition name="pop" mode="out-in">
-          <PlayerBadge :key="seats[index]?.name ?? 'empty'" :name="seats[index]?.name" :note="seats[index]?.note" />
+          <PlayerBadge
+            :key="seats[index]?.name ?? 'empty'"
+            :name="seats[index]?.name"
+            :note="seats[index]?.note"
+            :guest="seats[index]?.guest"
+          />
         </Transition>
       </component>
     </div>

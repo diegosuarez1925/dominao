@@ -907,3 +907,47 @@ guest is answered `NOT_AN_ACCOUNT`):
   friend yet, since it was not asked for.
 - Tests: 21 new composition tests (Friends.test.ts), and the 9 new endpoints added to
   the access-control test (an invented, ended or borrowed token gets 401).
+
+### Friends and game invites, part 3: the page
+
+- **Side menu:** Friends is on, with a red bubble counting new requests and invites.
+  The ≡ button on the home screen shows the same count.
+- **Friends section** (`FriendsPanel.vue`), over the home screen, with three tabs:
+  - *Friend list:* each friend's initial in a circle (there are no profile pictures
+    yet, so the initial stands in, as everywhere else in the app), username, and a
+    green dot with "Online" for anyone whose page checked in within 90 seconds. Online
+    friends come first, then by name.
+  - *Friend requests:* search by the start of a username; each result says "Friends",
+    "Request sent", or offers "Add friend" (or "Accept their request" if they asked
+    first). Below, requests for you with Accept and Reject, and the ones you sent that
+    wait for an answer.
+  - *Game invites:* who invited you, the table's rules and how many of 4 are seated,
+    with Join (which sits you down, like the code) and Decline. A full table shows
+    "Full".
+  - Each tab with something new has a bubble. Opening a tab marks it seen
+    (`/friends/seen`), so its bubble, and the matching count on the menu, go away;
+    anything that arrives while it is open is seen too. Items that were new when the
+    section opened keep a small "New" tag until it closes.
+- **Pop-ups** (`FriendToasts.vue`) at the top of the home screen for each new friend
+  request (Accept / Reject), game invite (Join / Decline) and accepted request. Up to
+  three at a time, newest first. Closing one with × is remembered on that device; all of
+  them also go once that part of Friends has been seen.
+- **Lobby:** the host of a private table with an account and a free seat gets "Invite
+  friends", a list of friends (online first) with Invite, "Invited ✓" or "At the table".
+- **Seat menu** (`SeatMenu.vue`): tapping a player in the lobby or the game opens a
+  small card with their name, a GUEST or BOT tag, and "Send friend request" (or "You're
+  friends", "Friend request sent", "Accept their friend request"). Guests and bots get
+  a line saying why they can't be added. A guest looking at an account is told to make
+  an account first.
+  - Because tapping a seat now opens this menu, the host swaps seats from it: tap a
+    player, "Swap seats", then the other seat (an empty seat still picks directly).
+- **GUEST tag:** guests carry a sand-coloured GUEST tag next to their name in the lobby
+  and the game, as bots carry BOT.
+- Escape now closes these pop-ups even after the button that had focus turned into a
+  note (such as Invite becoming "Invited ✓").
+- Checked in a browser at 1200 and 390 px with three accounts and a guest: the pop-up
+  and bubbles for a request, the bubble going away on opening the tab, accepting,
+  searching and adding, the "accepted" pop-up on the other side, inviting from the
+  lobby, joining from the invite pop-up, the guest's menu and tag, swapping from the
+  menu, and sending a request from an opponent's seat mid-game. No errors and no
+  horizontal scrolling.

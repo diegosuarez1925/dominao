@@ -24,6 +24,7 @@ import OpponentSeat from "./OpponentSeat.vue";
 import PlayerBadge from "./PlayerBadge.vue";
 import PlayerHand from "./PlayerHand.vue";
 import ScoreCard from "./ScoreCard.vue";
+import SeatMenu, { type MenuSeat } from "./SeatMenu.vue";
 
 const props = defineProps<{ game: Game }>();
 
@@ -89,6 +90,12 @@ const others = computed(() =>
     };
   }),
 );
+
+// Tapping another player opens their menu, to send them a friend request.
+const menuSeat = ref<MenuSeat | null>(null);
+function openMenu(player: Player) {
+  menuSeat.value = { player: player.player, name: playerName(player) ?? "?", username: player.username, bot: player.botName !== null };
+}
 
 /** Anyone who held a seat in this game, by name: a guest, a bot, or someone who left. */
 function name(session: string) {
@@ -289,8 +296,10 @@ const logOpen = remembered("dominao.logOpen", false);
         :active="seat.turn"
         :passed="passing.has(seat.player.player)"
         :bot="seat.player.botName !== null"
+        :guest="seat.player.botName === null && seat.player.username === null"
         :away="isAway(seat.player)"
         :empty="seat.player.player === ''"
+        @open="openMenu(seat.player)"
       />
     </div>
 
@@ -336,6 +345,7 @@ const logOpen = remembered("dominao.logOpen", false);
     <div class="area-me">
       <PlayerBadge
         :name="me?.displayName ?? state.me?.displayName"
+        :guest="state.me?.username === undefined"
         :note="myNote"
         :active="myTurn"
         :passed="passing.has(state.me?.player ?? '')"
@@ -344,6 +354,7 @@ const logOpen = remembered("dominao.logOpen", false);
     </div>
 
     <MoveLog v-model:open="logOpen" :log="game.log" />
+    <SeatMenu v-model:seat="menuSeat" />
 
     <div v-if="active || paused" class="area-leave">
       <button class="btn btn--ghost btn--small" :disabled="state.busy" @click="leaveGame">Leave game</button>

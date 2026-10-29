@@ -1,13 +1,18 @@
 <script setup lang="ts">
 // The side menu of an account: its sections open over the home screen. Account settings
-// is the first; friends and stats are next, and show as coming soon until then.
-import { nextTick, ref, watch } from "vue";
-import { state } from "../session.ts";
+// and Friends are there (Friends with a bubble counting new requests and invites); stats
+// shows as coming soon until then.
+import { computed, nextTick, ref, watch } from "vue";
+import { newInvites, newRequests, state } from "../session.ts";
 import AccountPanel from "./AccountPanel.vue";
+import FriendsPanel, { type FriendsTab } from "./FriendsPanel.vue";
 
 const open = defineModel<boolean>("open", { default: false });
-type Section = "account";
-const section = ref<Section | null>(null);
+type Section = "account" | "friends";
+/** The section open over the home screen, if any; the home screen can open one too. */
+const section = defineModel<Section | null>("section", { default: null });
+const friendsTab = defineModel<FriendsTab>("friendsTab", { default: "list" });
+const fresh = computed(() => newRequests().length + newInvites().length);
 const first = ref<HTMLButtonElement | null>(null);
 const closeSection = ref<HTMLButtonElement | null>(null);
 
@@ -45,10 +50,10 @@ async function show(next: Section) {
             </button>
           </li>
           <li>
-            <button class="menu-item" disabled>
+            <button class="menu-item" @click="show('friends')">
               <span class="menu-icon" aria-hidden="true">☺</span>
               <span>Friends</span>
-              <span class="soon">Soon</span>
+              <span v-if="fresh > 0" class="count-bubble menu-count" :aria-label="`${fresh} new`">{{ fresh }}</span>
             </button>
           </li>
           <li>
@@ -65,9 +70,17 @@ async function show(next: Section) {
 
   <Transition name="pop">
     <div v-if="section" class="overlay" @click.self="section = null" @keydown.esc="section = null">
-      <div class="overlay-box" role="dialog" aria-modal="true" aria-labelledby="account-title">
-        <button ref="closeSection" class="overlay-close" aria-label="Close account settings" @click="section = null">×</button>
+      <div class="overlay-box" role="dialog" aria-modal="true" :aria-labelledby="`${section}-title`">
+        <button
+          ref="closeSection"
+          class="overlay-close"
+          :aria-label="section === 'account' ? 'Close account settings' : 'Close friends'"
+          @click="section = null"
+        >
+          ×
+        </button>
         <AccountPanel v-if="section === 'account'" />
+        <FriendsPanel v-else-if="section === 'friends'" v-model:tab="friendsTab" />
       </div>
     </div>
   </Transition>
@@ -197,6 +210,10 @@ async function show(next: Section) {
   font-size: 1.1rem;
   color: var(--color-primary);
   background: var(--color-accent-soft);
+}
+
+.menu-count {
+  margin-left: auto;
 }
 
 .soon {

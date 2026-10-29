@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Another player at the game table: who they are and their hand face down, so the
 // number of tiles they hold shows at a glance. Players across the table hold their
-// tiles in a row; players at the sides hold them in a column.
+// tiles in a row; players at the sides hold them in a column. Tapping who they are
+// opens their little menu (to send a friend request).
 import DominoTile from "./DominoTile.vue";
 import PlayerBadge from "./PlayerBadge.vue";
 
@@ -13,14 +14,29 @@ defineProps<{
   passed: boolean;
   side: "top" | "left" | "right";
   bot?: boolean;
+  guest?: boolean;
   away?: boolean;
   empty?: boolean;
 }>();
+const emit = defineEmits<{ open: [] }>();
 </script>
 
 <template>
   <div class="opponent" :class="`opponent--${side}`">
-    <PlayerBadge :name="name" :note="note" :active="active" :passed="passed" :bot="bot" :away="away" :empty="empty" stacked />
+    <PlayerBadge
+      :name="name"
+      :note="note"
+      :active="active"
+      :passed="passed"
+      :bot="bot"
+      :guest="guest"
+      :away="away"
+      :empty="empty"
+      :clickable="!empty"
+      :aria-label="empty ? undefined : `${name}: open menu`"
+      stacked
+      @click="!empty && emit('open')"
+    />
     <TransitionGroup tag="div" name="tile" class="backs" :class="{ waiting: empty }" :aria-label="`${tileCount} tiles`">
       <DominoTile v-for="n in tileCount" :key="n" face-down :vertical="side === 'top'" class="back" />
     </TransitionGroup>

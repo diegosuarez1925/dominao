@@ -2,7 +2,7 @@
 // page can take. Components read the state and call the actions; only this file talks to
 // the backend, and only this file turns the backend's answers into words for the guest.
 import { reactive } from "vue";
-import { client, type Game, type QueueLobby, type RuleSet, type Side, type Table } from "./api.ts";
+import { client, type FoundAccount, type Friends, type Game, type QueueLobby, type RuleSet, type Side, type Table } from "./api.ts";
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
@@ -36,6 +36,8 @@ export const state = reactive({
   online: true,
   /** A message for the guest, such as why a move was refused. */
   message: "",
+  /** An account's friends, friend requests and game invites; null for a guest. */
+  friends: null as Friends | null,
 });
 
 /** The last game answer as text; the game is replaced only when it changed. */
@@ -122,6 +124,7 @@ async function act(action: () => Promise<unknown>) {
 function forget(message: string) {
   sessionStorage.removeItem(TOKEN_KEY);
   state.me = null;
+  state.friends = null;
   state.dismissedGame = "";
   say(message);
   void refresh();
@@ -152,6 +155,7 @@ export async function refresh() {
     state.game = null;
     state.queue = null;
     state.starting = false;
+    state.friends = null;
     return;
   }
   const lobby = await send(() => client.tables.lobby({ token: me.token }));
@@ -186,6 +190,7 @@ export async function refresh() {
   if (state.queue?.full && next === null) startingUntil = Date.now() + STARTING_WAIT_MS;
   state.queue = next;
   state.starting = state.table === null && state.queue === null && Date.now() < startingUntil;
+  if (me.username !== undefined) await refreshFriends();
   const view = await send(() => client.games.view({ token: me.token }));
   if (view === undefined) return;
   const game = view.view.games[0] ?? null;
@@ -202,6 +207,147 @@ export async function refresh() {
     state.online = true;
     if (state.message.startsWith("We can't reach")) say("");
   }
+}
+
+/**
+ * Reloads an account's friends, requests and invites. Quietly: this runs every couple
+ * of seconds, and the table and game refresh already says when the server is away.
+ */
+export async function refreshFriends() {
+  const me = state.me;
+  if (me?.username === undefined) {
+    state.friends = null;
+    return;
+  }
+  try {
+    const result = await client.friends.view({ token: me.token });
+    if (!("error" in result) && state.me === me) state.friends = result.friends;
+  } catch {
+    // Offline; the next refresh tries again.
+  }
+}
+
+/** Whether a friend's page checked in recently enough to call them online. */
+export function isOnline(friend: { idleMs: number | null }) {
+  return friend.idleMs !== null && state.friends !== null && friend.idleMs < state.friends.onlineWithinMs;
+}
+
+/** When the account last looked at its requests, invites and friends (0 for never). */
+function seen() {
+  return state.friends?.seen[0] ?? { requests: 0, invites: 0, friends: 0 };
+}
+
+/** Friend requests that came in since the account last looked at them. */
+export function newRequests() {
+  return (state.friends?.incoming ?? []).filter((row) => row.sentAt > seen().requests);
+}
+
+/** Game invites that came in since the account last looked at them. */
+export function newInvites() {
+  return (state.friends?.invites ?? []).filter((row) => row.sentAt > seen().invites);
+}
+
+/** Friends who accepted this account's request since it last looked at its friends. */
+export function newlyAccepted() {
+  return (state.friends?.friends ?? []).filter((row) => row.asker === state.me?.player && row.since > seen().friends);
+}
+
+/** The account looked at a part of its Friends section, so what is there is no longer new. */
+export async function markSeen(part: "REQUESTS" | "INVITES" | "FRIENDS") {
+  const me = state.me;
+  if (me?.username === undefined) return;
+  try {
+    await client.friends.seen({ token: me.token, part });
+  } catch {
+    return;
+  }
+  await refreshFriends();
+}
+
+/** Accounts whose username starts with the text, leaving out this one. */
+export async function searchAccounts(text: string): Promise<FoundAccount[]> {
+  const me = state.me;
+  if (me === null || text.trim() === "") return [];
+  try {
+    const result = await client.friends.search({ token: me.token, text: text.trim() });
+    return "error" in result ? [] : result.found.accounts.filter((row) => row.player !== me.player);
+  } catch {
+    return [];
+  }
+}
+
+/** Runs a friends action, one at a time, then reloads the friends. Answers whether it worked. */
+async function friendsAct(action: () => Promise<unknown>) {
+  if (state.busy || state.me === null) return false;
+  state.busy = true;
+  try {
+    const result = await action();
+    await refreshFriends();
+    if (result !== undefined) say("");
+    return result !== undefined;
+  } finally {
+    state.busy = false;
+  }
+}
+
+export async function sendFriendRequest(username: string) {
+  return friendsAct(() =>
+    send(() => client.friends.request({ token: state.me!.token, username }), {
+      NOT_FOUND: `No account is called ${username}.`,
+      CONFLICT: `You're already friends with ${username}, already asked them, or they asked you first (look in your friend requests).`,
+      INVALID_REQUEST: "That's you! Pick someone else.",
+      FORBIDDEN: "Make an account to have friends.",
+    }),
+  );
+}
+
+export async function acceptFriendRequest(request: string) {
+  return friendsAct(() =>
+    send(() => client.friends.accept({ token: state.me!.token, request }), {
+      NOT_FOUND: "That friend request is no longer there. It may have run out after a week.",
+    }),
+  );
+}
+
+export async function rejectFriendRequest(request: string) {
+  return friendsAct(() =>
+    send(() => client.friends.reject({ token: state.me!.token, request }), {
+      NOT_FOUND: "That friend request is no longer there.",
+    }),
+  );
+}
+
+/** The host invites a friend to their private table. */
+export async function inviteFriend(friend: string) {
+  return friendsAct(() =>
+    send(() => client.invites.send({ token: state.me!.token, friend }), {
+      CONFLICT: "They're already invited or at the table, or the game has started.",
+      FORBIDDEN: "Only the host can invite, and only friends, to a private table.",
+      NOT_FOUND: "You're no longer at this table.",
+    }),
+  );
+}
+
+/** Accepting an invite sits the account down at that table, as its code would. */
+export async function acceptInvite(invite: string) {
+  let joined = false;
+  await act(async () => {
+    const result = await send(() => client.invites.accept({ token: state.me!.token, invite }), {
+      NOT_FOUND: "That invite is no longer there: the game may have started, or the table closed.",
+      CONFLICT: "That table is full, or you're at another table or waiting for strangers. Leave first, then try again.",
+    });
+    joined = result !== undefined;
+    if (joined) say("");
+  });
+  return joined;
+}
+
+export async function declineInvite(invite: string) {
+  return friendsAct(() =>
+    send(() => client.invites.decline({ token: state.me!.token, invite }), {
+      NOT_FOUND: "That invite is no longer there.",
+    }),
+  );
 }
 
 export async function startSession(displayName: string) {

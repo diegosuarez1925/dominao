@@ -19,3 +19,10 @@ export type BoardTile = Game["board"][number];
 export type Side = "LEFT" | "RIGHT";
 /** How a match ended, as the game reports it. */
 export type MatchResult = Game["lastResult"][number];
+/** An account's friends, requests and invites, and when it last looked at each part. */
+export type Friends = Answer<ReturnType<Client["friends"]["view"]>>["friends"];
+export type Friend = Friends["friends"][number];
+export type FriendRequest = Friends["incoming"][number];
+export type GameInvite = Friends["invites"][number];
+/** An account found by searching usernames. */
+export type FoundAccount = Answer<ReturnType<Client["friends"]["search"]>>["found"]["accounts"][number];
