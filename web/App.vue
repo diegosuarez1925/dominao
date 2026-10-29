@@ -5,8 +5,8 @@ import ConfirmDialog from "./components/ConfirmDialog.vue";
 import GameScreen from "./components/GameScreen.vue";
 import HomeScreen from "./components/HomeScreen.vue";
 import MatchmakingLobby from "./components/MatchmakingLobby.vue";
-import NameForm from "./components/NameForm.vue";
 import TableLobby from "./components/TableLobby.vue";
+import Welcome from "./components/Welcome.vue";
 import { say, state } from "./session.ts";
 
 /**
@@ -15,7 +15,7 @@ import { say, state } from "./session.ts";
  */
 const screen = computed(() => {
   if (state.loading) return "loading";
-  if (state.me === null) return "name";
+  if (state.me === null) return "welcome";
   if (state.table && state.game && state.game.game !== state.dismissedGame) return "game";
   if (state.table) return "table";
   if (state.queue) return "queue";
@@ -39,7 +39,7 @@ const screen = computed(() => {
         <span class="spinner" aria-hidden="true" />
         <p class="lobby-hint">Loading…</p>
       </section>
-      <NameForm v-else-if="screen === 'name'" />
+      <Welcome v-else-if="screen === 'welcome'" />
       <HomeScreen v-else-if="screen === 'home'" />
       <TableLobby v-else-if="screen === 'table' && state.table" :table="state.table" />
       <MatchmakingLobby v-else-if="screen === 'queue' && state.queue" :queue="state.queue" />

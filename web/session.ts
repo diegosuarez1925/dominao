@@ -96,8 +96,10 @@ async function send<R extends object>(request: () => Promise<R>, reasons: Record
     return undefined;
   }
   state.online = true;
-  if (error === "UNAUTHORIZED") {
-    forget("Your guest session ended. Pick a name to keep playing.");
+  // Signing in answers UNAUTHORIZED for a wrong password; anywhere else it means the
+  // session is over.
+  if (error === "UNAUTHORIZED" && !("UNAUTHORIZED" in reasons)) {
+    forget("You were signed out. Log in or pick a name to keep playing.");
     return undefined;
   }
   say(reasons[error] ?? "Something went wrong on our side. Please try again.");
@@ -209,6 +211,58 @@ export async function startSession(displayName: string) {
   sessionStorage.setItem(TOKEN_KEY, result.token);
   say("");
   await resume();
+}
+
+/** A username the server will take: 3 to 20 letters, digits, _ . or -, starting with a letter or digit. */
+export const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,19}$/;
+
+/** Signs in to an account; answers whether it worked, and says why not. */
+export async function logIn(username: string, password: string) {
+  if (state.busy) return false;
+  state.busy = true;
+  try {
+    const result = await send(() => client.accounts.signin({ username: username.trim(), password }), {
+      UNAUTHORIZED: "That username and password don't match.",
+      FORBIDDEN: "Too many wrong passwords for this account. Wait 15 minutes and try again.",
+      INVALID_REQUEST: "Type your username and password.",
+    });
+    if (result === undefined) return false;
+    sessionStorage.setItem(TOKEN_KEY, result.token);
+    say("");
+    await resume();
+    return true;
+  } finally {
+    state.busy = false;
+  }
+}
+
+/** Makes an account and signs in to it; answers whether it worked, and says why not. */
+export async function signUp(username: string, password: string) {
+  if (state.busy) return false;
+  state.busy = true;
+  try {
+    const result = await send(() => client.accounts.register({ username: username.trim(), password }), {
+      CONFLICT: "That username is taken. Try another one.",
+      INVALID_REQUEST: "Check the username and password rules below.",
+    });
+    if (result === undefined) return false;
+    sessionStorage.setItem(TOKEN_KEY, result.token);
+    say("");
+    await resume();
+    return true;
+  } finally {
+    state.busy = false;
+  }
+}
+
+/** The password rules a password breaks for this username, as the server judges them. */
+export async function passwordWeaknesses(username: string, password: string) {
+  try {
+    const result = await client.accounts["password-check"]({ username: username.trim(), password });
+    return "error" in result ? null : result.check.weaknesses.map((row) => row.rule);
+  } catch {
+    return null;
+  }
 }
 
 export async function endSession() {

@@ -745,3 +745,33 @@ friends come later. This step is the server side; the page comes next.
   The access-control sweep covers the new endpoints. The deployment check gained an
   accounts section that registers, signs in and deletes a throwaway account.
   228 pass.
+
+### Sign up and log in on the first page
+
+Asked for: on the front end, for now, the only difference is the first page, with
+separate options to sign up or log in.
+
+- **Before:** the first page only asked for a name to play as a guest.
+- **Now:** the same card has a three-way switch: **Guest** (the old form, unchanged),
+  **Log in** (username and password) and **Sign up** (username and password).
+  - Signing up lists the four password rules. As you type, the page asks the server
+    which ones the password breaks (`/accounts/password-check`) and ticks each met
+    rule in green; **Create account** stays disabled until the username fits its rule
+    and every password rule is met. It also says plainly that, without email, a
+    forgotten password cannot be recovered.
+  - Passwords have a Show/Hide button, and the boxes use the right `autocomplete`
+    values so password managers fill and save them.
+  - Errors say what to do: "That username and password don't match", "Too many wrong
+    passwords for this account. Wait 15 minutes and try again", "That username is
+    taken".
+- **Everything after the first page is unchanged.** An account's username shows
+  where a guest's name would (header, tables, games), because the server answers it
+  in the same field. Signing out goes back to the first page. A session ending now
+  says "You were signed out. Log in or pick a name to keep playing."
+- The token still lives in the tab's `sessionStorage`, as before, so a regular logs in
+  again in a new tab. Remembering the sign-in across tabs is a small follow-up if
+  wanted.
+- Checked in a browser at 1200 and 390 px: signing up (a weak password keeps the
+  button disabled, a strong one ticks every rule), landing on the home screen as the
+  account, signing out, a wrong password, logging in with the username in other
+  capitals, and a taken username. No horizontal scrolling on the phone.

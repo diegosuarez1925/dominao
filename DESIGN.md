@@ -1,6 +1,6 @@
 # DOMINAO: final design
 
-DOMINAO lets four people play Puerto Rican dominoes online: friends at a private table they find by a code, or strangers matched by the rules they want. Nobody needs an account. This document says how the final app differs from the P1 concept design and the P3 visual design, and why.
+DOMINAO lets four people play Puerto Rican dominoes online: friends at a private table they find by a code, or strangers matched by the rules they want. Anyone can play as a guest; regulars can keep an account. This document says how the final app differs from the P1 concept design and the P3 visual design, and why.
 
 | | Link |
 |---|---|
@@ -13,9 +13,10 @@ DOMINAO lets four people play Puerto Rican dominoes online: friends at a private
 
 ## Concepts: P1 vs. final
 
-P1 had four concepts. The final app has six: the four from P1 (each changed) plus **DominoPlaying** (the game itself, which P1 left for later) and **Botting**. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
+P1 had four concepts. The final app has nine: three from P1 (each changed), P1's GuestSessioning split in two (**Sessioning** and **Guesting**), **DominoPlaying** (the game itself, which P1 left for later), **Botting**, and, for accounts, **PasswordAuthenticating** and **Throttling**. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
 
-### GuestSessioning: [spec](design/concepts/GuestSessioning.md)
+### GuestSessioning, now Sessioning and Guesting: [Sessioning](design/concepts/Sessioning.md), [Guesting](design/concepts/Guesting.md)
+- **Split in two for accounts** ([Step 18, dd00747](https://github.com/diegosuarez1925/dominao/commit/dd00747)). GuestSessioning did two jobs: keeping a guest's name, and recognizing a browser by its token. Accounts need the second but not the first. **Guesting** keeps P1's purpose (play under a name without an account); **Sessioning [Player]** recognizes a browser for any player, guest or account, with a lifetime per session (12 hours for a guest, 30 days for an account). A player can have several sessions (a phone and a laptop) and leaves their table only when the last one ends.
 - **Same purpose and principle:** a guest picks a name, the browser keeps a token, and the guest resumes with it.
 - **Token comes in from outside.** `start(displayName, token)` takes a token that CodeGenerating made, as P1's reactions already implied. ([Step 1b, 3fdcea8](https://github.com/diegosuarez1925/dominao/commit/3fdcea8))
 - **Dropped `rename`:** nothing in the app needed it.
@@ -56,14 +57,19 @@ P1 had four concepts. The final app has six: the four from P1 (each changed) plu
   - `autoplay` makes a legal move for a bot.
   - `_results` lists every match for the score table.
 
+### PasswordAuthenticating and Throttling (new): [PasswordAuthenticating](design/concepts/PasswordAuthenticating.md), [Throttling](design/concepts/Throttling.md)
+- **Accounts with a unique username and a password that is not simple** ([Step 19, caa728b](https://github.com/diegosuarez1925/dominao/commit/caa728b)). Usernames are unique whatever their case. Passwords need 10+ characters, three kinds of character, not the username, and not a common password (also when dressed up as "P@ssw0rd2026"). They are kept only as argon2id hashes.
+- **Throttling** locks an account for 15 minutes after 5 wrong passwords in 15 minutes. A wrong password and an unknown username get the same answer, so nobody can learn which usernames exist.
+- **The account is the player**, so signing in on another device is the same player at the same table, and stats or friends can attach to it later.
+
 ### Botting (new): [spec](design/concepts/Botting.md)
 - **Gives a stand-in an obvious bot name.** DominoPlaying decides how a seat plays. How bots choose moves (random legal moves for now) is a single swappable function in [src/assembly.ts](src/assembly.ts).
 
 ## Compositions: how the concepts work together
 
-Specs: [Guests](design/compositions/Guests.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md).
+Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/Accounts.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md).
 
-- **Access control is structural.** Every guest endpoint first turns the token into a session, and that session is always the actor. No endpoint takes a player id from the browser. One test goes through every endpoint with forged, ended and borrowed tokens. ([Step 9a, 81aa5d5](https://github.com/diegosuarez1925/dominao/commit/81aa5d5))
+- **Access control is structural.** Every player endpoint first turns the token into the player it acts for (a guest or an account), and that player is always the actor. No endpoint takes a player id from the browser. One test goes through every endpoint with forged, ended and borrowed tokens. ([Step 9a, 81aa5d5](https://github.com/diegosuarez1925/dominao/commit/81aa5d5))
 - **A matched game is a private-table game.** A reaction turns a launched lobby into a table under a fresh code and starts its game, so everything afterwards shares one code path.
 - **Leaving never kills a game** ([Seats](design/compositions/Seats.md)).
   - Leaving pauses the game, and whoever sits down next takes over the hand.
@@ -90,4 +96,5 @@ Specs: [Guests](design/compositions/Guests.md), [Tables](design/compositions/Tab
   - A "How to play" pop-up on the home screen, with the rule sets as the server lists them. ([Step 11, 3f956ba](https://github.com/diegosuarez1925/dominao/commit/3f956ba))
   - At a private table, the host taps two seats to swap them; the picked seat lifts and gets a light-blue ring.
   - The matchmaking toggle "join games in progress".
+  - The first page offers Guest, Log in and Sign up as one pill-shaped switch. Signing up lists the password rules and ticks each off in green as it is met, and warns that a forgotten password cannot be recovered. (Step 20)
 - **Plain-language messages for what happened without you:** the host closing the table, being away too long, or a seat going to someone else.

@@ -1,6 +1,6 @@
 # DOMINAO
 
-DOMINAO is a web app for playing Puerto Rican dominoes online with four players and no accounts. You can open a private table and share its 6-character code with family, or be matched with strangers who chose the same rules. If someone leaves mid-game, the game waits for someone to take their seat, and a bot plays it in the meantime.
+DOMINAO is a web app for playing Puerto Rican dominoes online with four players. You can play as a guest under any name, or keep an account (a unique username and a password) to be the same player on any device. You can open a private table and share its 6-character code with family, or be matched with strangers who chose the same rules. If someone leaves mid-game, the game waits for someone to take their seat, and a bot plays it in the meantime.
 
 | | |
 |---|---|
@@ -24,7 +24,7 @@ MONGODB_URL=mongodb://127.0.0.1:27017/dominao bun run start   # page and API on 
 - `bun run dev` does the same with a local MongoDB in a container (Podman) and reloads on changes.
 - `bun run preview` runs the app exactly as the class platform does.
 
-To try a full table on one computer, open four browser windows (or private windows). Each window is its own guest.
+To try a full table on one computer, open four browser windows (or private windows). Each window is its own guest, or its own sign-in.
 
 ## Testing
 
@@ -44,7 +44,7 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 
 ## Repository layout
 
-- [src/concepts](src/concepts): the six concepts.
+- [src/concepts](src/concepts): the nine concepts.
 - [src/compositions](src/compositions): reactions and endpoints that tie the concepts together.
 - [src/ticker.ts](src/ticker.ts): the server's one-second timer.
 - [src/main.ts](src/main.ts): the server.
@@ -53,7 +53,8 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 
 ## Known limitations
 
-- Guests only. A guest who clears their browser storage starts over as a new guest.
+- A guest who closes their tab or clears their browser storage starts over as a new guest. An account is remembered per tab too, so a regular logs in again in a new tab.
+- There is no email, so a forgotten password cannot be recovered.
 - Bots play random legal moves. A smarter bot is one function in [src/assembly.ts](src/assembly.ts).
 - Two seat swaps sent at the very same instant at one table are not atomic. Only the host can swap, one at a time, so this does not come up in use.
 

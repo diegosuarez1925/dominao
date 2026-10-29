@@ -31,7 +31,7 @@ async function signOut() {
         <span class="chip-label">Playing as</span>
         <span class="chip-name">{{ state.me.displayName }}</span>
       </span>
-      <button class="btn btn--ghost btn--small" title="End your guest session" @click="signOut">Sign out</button>
+      <button class="btn btn--ghost btn--small" title="Sign out of DOMINAO on this tab" @click="signOut">Sign out</button>
     </div>
   </header>
 </template>
