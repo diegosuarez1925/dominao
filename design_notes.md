@@ -1010,3 +1010,28 @@ P1 has no concept for this, so it is new rather than a change to a P1 concept:
   nothing), and a deleted account. Taking the autoplay reactions out makes the bot test
   fail, so it really checks them. `/stats/view` is in the access-control test.
   293 tests pass.
+
+### Statistics, part 3: the Stats section
+
+- **Stats in the side menu** is no longer "Soon": it opens a Stats section over the
+  home screen, like Account settings and Friends (`StatsPanel.vue`).
+  - First a light-blue block, *All rule sets*: matches and games won, lost and played,
+    each with its winrate.
+  - Then one card per rule set the server offers (Default, Long, Short, in its order),
+    with its target ("to 200") and its best match ("Best match 90 pts"), and the same
+    two lines. A rule set never played shows zeros, and dashes for the winrate and the
+    best match instead of 0%.
+  - Each line (`StatsLines.vue`) ends with the winrate in Bungee over a thin red bar
+    filled to that percentage, with "winrate" written under it.
+  - Someone who has played nothing yet is told that results show up after a game
+    played while logged in, and that tranques are not counted.
+- The numbers are loaded when the section opens (`loadStats` in `web/session.ts`,
+  calling `/stats/view`). Nothing changes them while it is open, since it is only
+  reachable from the home screen, not during a game.
+- Checked in a browser at 1200 and 390 px after playing a Default and a Short game
+  through the server with one account and three guests: the numbers match
+  `/stats/view`, a new account shows the empty state, Escape closes the section, and
+  there are no errors and no horizontal scrolling. On a phone the counts wrap under
+  each other and the winrate stays on the right.
+- DESIGN.md: thirteen concepts, a Tallying section, the two outcome queries, the Stats
+  composition, and the Stats section under visual design.

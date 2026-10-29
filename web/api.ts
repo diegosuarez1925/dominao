@@ -25,4 +25,8 @@ export type Friend = Friends["friends"][number];
 export type FriendRequest = Friends["incoming"][number];
 export type GameInvite = Friends["invites"][number];
 /** An account found by searching usernames. */
+/** An account's statistics: a record per rule set it played, and all of them together. */
+export type Stats = Answer<ReturnType<Client["stats"]["view"]>>["stats"];
+export type StatsRecord = Stats["records"][number];
+export type StatsTotals = Stats["overall"][number];
 export type FoundAccount = Answer<ReturnType<Client["friends"]["search"]>>["found"]["accounts"][number];

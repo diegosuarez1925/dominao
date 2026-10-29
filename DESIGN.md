@@ -13,7 +13,7 @@ DOMINAO lets four people play Puerto Rican dominoes online: friends at a private
 
 ## Concepts: P1 vs. final
 
-P1 had four concepts. The final app has twelve: three from P1 (each changed), P1's GuestSessioning split in two (**Sessioning** and **Guesting**), **DominoPlaying** (the game itself, which P1 left for later), **Botting**, and, for accounts, **PasswordAuthenticating**, **Throttling**, **Friending**, **Inviting** and **Seeing**. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
+P1 had four concepts. The final app has thirteen: three from P1 (each changed), P1's GuestSessioning split in two (**Sessioning** and **Guesting**), **DominoPlaying** (the game itself, which P1 left for later), **Botting**, and, for accounts, **PasswordAuthenticating**, **Throttling**, **Friending**, **Inviting** and **Seeing**, and **Tallying** for statistics. No concept refers to another. Every link between them is a reaction or endpoint in [src/compositions](src/compositions).
 
 ### GuestSessioning, now Sessioning and Guesting: [Sessioning](design/concepts/Sessioning.md), [Guesting](design/concepts/Guesting.md)
 - **Split in two for accounts** ([Step 18, dd00747](https://github.com/diegosuarez1925/dominao/commit/dd00747)). GuestSessioning did two jobs: keeping a guest's name, and recognizing a browser by its token. Accounts need the second but not the first. **Guesting** keeps P1's purpose (play under a name without an account); **Sessioning [Player]** recognizes a browser for any player, guest or account, with a lifetime per session (12 hours for a guest, 30 days for an account). A player can have several sessions (a phone and a laptop) and leaves their table only when the last one ends.
@@ -56,6 +56,7 @@ P1 had four concepts. The final app has twelve: three from P1 (each changed), P1
   - `vacate` empties a seat and keeps its hand; `seat` gives that seat to whoever sits next.
   - `autoplay` makes a legal move for a bot.
   - `_results` lists every match for the score table.
+  - `_matchOutcomes` and `_gameOutcomes` say how each seated player came out of the latest match and of a finished game, so statistics can be kept without reading the game's own records. ([Step 24a, 2b9a2fd](https://github.com/diegosuarez1925/dominao/commit/2b9a2fd))
 
 ### PasswordAuthenticating and Throttling (new): [PasswordAuthenticating](design/concepts/PasswordAuthenticating.md), [Throttling](design/concepts/Throttling.md)
 - **Accounts with a unique username and a password that is not simple** ([Step 19, caa728b](https://github.com/diegosuarez1925/dominao/commit/caa728b)). Usernames are unique whatever their case. Passwords need 10+ characters, three kinds of character, not the username, and not a common password (also when dressed up as "P@ssw0rd2026"). They are kept only as argon2id hashes.
@@ -67,12 +68,16 @@ P1 had four concepts. The final app has twelve: three from P1 (each changed), P1
 - **Inviting** keeps invites to a place and nothing more. That only the host of a private table invites, and that invites end when the game starts or the table closes, is decided by reactions ([Friends](design/compositions/Friends.md)).
 - **Seeing** remembers when an account last looked at its requests, invites and friends, so the app points out only what is newer. That is how the notification bubbles go away once seen, without Friending or Inviting storing anything about the screen.
 
+### Tallying (new): [spec](design/concepts/Tallying.md)
+- **Statistics for accounts** ([Step 24a, 2b9a2fd](https://github.com/diegosuarez1925/dominao/commit/2b9a2fd)). A running record per player and rule set: matches and games won and lost, and the most points won in one match, with winrates worked out when asked.
+- **Each match and game is counted once.** Tallying remembers what it counted and refuses the same one twice, so the reactions that count after every move ([Stats](design/compositions/Stats.md), [Step 24b, af37c49](https://github.com/diegosuarez1925/dominao/commit/af37c49)) can fire as often as they like. Tranque ties are not counted, and only accounts are, not guests or bots.
+
 ### Botting (new): [spec](design/concepts/Botting.md)
 - **Gives a stand-in an obvious bot name.** DominoPlaying decides how a seat plays. How bots choose moves (random legal moves for now) is a single swappable function in [src/assembly.ts](src/assembly.ts).
 
 ## Compositions: how the concepts work together
 
-Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/Accounts.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md), [Friends](design/compositions/Friends.md).
+Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/Accounts.md), [Tables](design/compositions/Tables.md), [Games](design/compositions/Games.md), [Matchmaking](design/compositions/Matchmaking.md), [Seats](design/compositions/Seats.md), [Friends](design/compositions/Friends.md), [Stats](design/compositions/Stats.md).
 
 - **Access control is structural.** Every player endpoint first turns the token into the player it acts for (a guest or an account), and that player is always the actor. No endpoint takes a player id from the browser. One test goes through every endpoint with forged, ended and borrowed tokens. ([Step 9a, 81aa5d5](https://github.com/diegosuarez1925/dominao/commit/81aa5d5))
 - **A matched game is a private-table game.** A reaction turns a launched lobby into a table under a fresh code and starts its game, so everything afterwards shares one code path.
@@ -104,5 +109,6 @@ Specs: [Guests](design/compositions/Guests.md), [Accounts](design/compositions/A
   - The first page offers Guest, Log in and Sign up as one pill-shaped switch. Signing up lists the password rules and ticks each off in green as it is met, and warns that a forgotten password cannot be recovered. (Step 20)
   - Accounts (never guests) get account settings, with rows that open in place to change the password or delete the account. (Step 21)
   - Accounts get a Friends section in the side menu: a friend list (online friends first, with a green dot), friend requests (search by username, accept or reject), and game invites (who from, the rules and how many are seated). Red bubbles on the menu button, the Friends item and each tab count what is new, and go away once seen. New requests and invites, and accepted requests, also pop up at the top of the home screen to answer right there. The host invites friends from the lobby; tapping a player at a table opens a small menu to send a friend request, and guests now carry a GUEST tag as bots carry BOT. (Step 23)
-  - The home screen was redone after mobile game apps (Mesa28, Clash Royale): a Public / Private switch instead of two panels side by side, a drawn picture for each kind of game front and centre (a globe with players around it; friends around a table under a lamp), and one big button with the rules card beside it. Account settings moved into a side menu that opens each section over the home screen; Stats waits there as "Soon". (Step 22)
+  - Accounts get a Stats section in the side menu: a light-blue block for every rule set together, then a card per rule set (Default, Long, Short, each with its target and best match), each with matches and games won, lost and played, and the winrate in Bungee over a thin red bar. A rule set never played shows dashes, not 0%. (Step 24)
+  - The home screen was redone after mobile game apps (Mesa28, Clash Royale): a Public / Private switch instead of two panels side by side, a drawn picture for each kind of game front and centre (a globe with players around it; friends around a table under a lamp), and one big button with the rules card beside it. Account settings moved into a side menu that opens each section over the home screen. (Step 22)
 - **Plain-language messages for what happened without you:** the host closing the table, being away too long, or a seat going to someone else.

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-// The side menu of an account: its sections open over the home screen. Account settings
-// and Friends are there (Friends with a bubble counting new requests and invites); stats
-// shows as coming soon until then.
+// The side menu of an account: its sections open over the home screen. Account settings,
+// Friends (with a bubble counting new requests and invites) and Stats are there.
 import { computed, nextTick, ref, watch } from "vue";
 import { newInvites, newRequests, state } from "../session.ts";
 import AccountPanel from "./AccountPanel.vue";
 import FriendsPanel, { type FriendsTab } from "./FriendsPanel.vue";
+import StatsPanel from "./StatsPanel.vue";
 
 const open = defineModel<boolean>("open", { default: false });
-type Section = "account" | "friends";
+type Section = "account" | "friends" | "stats";
+const CLOSE_LABEL: Record<Section, string> = {
+  account: "Close account settings",
+  friends: "Close friends",
+  stats: "Close stats",
+};
 /** The section open over the home screen, if any; the home screen can open one too. */
 const section = defineModel<Section | null>("section", { default: null });
 const friendsTab = defineModel<FriendsTab>("friendsTab", { default: "list" });
@@ -57,10 +62,9 @@ async function show(next: Section) {
             </button>
           </li>
           <li>
-            <button class="menu-item" disabled>
+            <button class="menu-item" @click="show('stats')">
               <span class="menu-icon" aria-hidden="true">▤</span>
               <span>Stats</span>
-              <span class="soon">Soon</span>
             </button>
           </li>
         </ul>
@@ -74,13 +78,14 @@ async function show(next: Section) {
         <button
           ref="closeSection"
           class="overlay-close"
-          :aria-label="section === 'account' ? 'Close account settings' : 'Close friends'"
+          :aria-label="CLOSE_LABEL[section]"
           @click="section = null"
         >
           ×
         </button>
         <AccountPanel v-if="section === 'account'" />
         <FriendsPanel v-else-if="section === 'friends'" v-model:tab="friendsTab" />
+        <StatsPanel v-else-if="section === 'stats'" />
       </div>
     </div>
   </Transition>
@@ -190,15 +195,10 @@ async function show(next: Section) {
   cursor: pointer;
 }
 
-.menu-item:hover:not(:disabled),
+.menu-item:hover,
 .menu-item:focus-visible {
   background: var(--color-accent-soft);
   outline: none;
-}
-
-.menu-item:disabled {
-  color: var(--color-text-muted);
-  cursor: default;
 }
 
 .menu-icon {
@@ -214,16 +214,6 @@ async function show(next: Section) {
 
 .menu-count {
   margin-left: auto;
-}
-
-.soon {
-  margin-left: auto;
-  padding: 0.1rem 0.5rem;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--color-text-muted);
-  background: var(--line);
 }
 
 /* A section opens centred over the home screen. */

@@ -2,7 +2,7 @@
 // page can take. Components read the state and call the actions; only this file talks to
 // the backend, and only this file turns the backend's answers into words for the guest.
 import { reactive } from "vue";
-import { client, type FoundAccount, type Friends, type Game, type QueueLobby, type RuleSet, type Side, type Table } from "./api.ts";
+import { client, type FoundAccount, type Friends, type Game, type QueueLobby, type RuleSet, type Side, type Stats, type Table } from "./api.ts";
 
 // sessionStorage is per tab, so four tabs can be four different players.
 const TOKEN_KEY = "dominao.token";
@@ -262,6 +262,18 @@ export async function markSeen(part: "REQUESTS" | "INVITES" | "FRIENDS") {
     return;
   }
   await refreshFriends();
+}
+
+/** An account's statistics, or null for a guest or when the server cannot be reached. */
+export async function loadStats(): Promise<Stats | null> {
+  const me = state.me;
+  if (me?.username === undefined) return null;
+  try {
+    const result = await client.stats.view({ token: me.token });
+    return "error" in result ? null : result.stats;
+  } catch {
+    return null;
+  }
 }
 
 /** Accounts whose username starts with the text, leaving out this one. */
