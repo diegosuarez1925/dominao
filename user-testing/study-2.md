@@ -19,14 +19,14 @@ what happened) is where it broke down. Use the debrief to explain it._
 
 | # | Task | Completed? | Time | Interventions | Observations |
 |---|---|---|---|---|---|
-| 1 | Learn the rules | | | | |
-| 2 | Make an account | | | | |
-| 3 | Play a quick game with strangers | | | | |
-| 4 | Read the score | | | | |
-| 5 | Step away and come back | | | | |
+| 1 | Enter as a guest | | | | |
+| 2 | Read the rules | | | | |
+| 3 | Join a short public game | | | | |
+| 4 | Play and follow the game | | | | |
+| 5 | Make an account | | | | |
 | 6 | Add a friend | | | | |
-| 7 | Host a family game | | | | |
-| 8 | Check your record | | | | |
+| 7 | Set up a private game together | | | | |
+| 8 | Delete your account | | | | |
 
 ## Debrief notes
 

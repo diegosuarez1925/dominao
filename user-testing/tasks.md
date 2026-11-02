@@ -2,26 +2,30 @@
 
 Each participant works through these tasks in order, on the deployed app at
 https://dominao.mit-sdg.dev/, thinking aloud. Together they take about 40 minutes,
-followed by a 20-minute debrief. Earlier tasks set up what later ones need: the account
-made in task 2 is the one that plays, makes a friend and ends up with statistics.
+followed by a 20-minute debrief. Earlier tasks set up what later ones need: the guest
+from task 1 plays the public game, and the account made in task 5 adds a friend, sets
+up the private table and is deleted at the end.
 
 | # | Task | Instruction (read to the participant) | Rationale |
 |---|---|---|---|
-| 1 | Learn the rules | "Before you play, find out how many points it takes to win a short game, and what happens when nobody can play." | One step through the "How to play" pop-up. Tests whether a newcomer finds help from the home screen at all (execution) and whether the rule-set descriptions answer a real question in words they understand (evaluation). A walkthrough can't tell us whether the "?" button reads as help. |
-| 2 | Make an account | "You'd like the app to remember you and your results. Set that up." | The first page offers Guest, Log in and Sign up. Tests whether "keep my results" maps to signing up rather than playing as a guest, and how the password rules (ticked off as you type) feel to someone choosing a real password. |
-| 3 | Play a quick game with strangers | "You have about ten minutes on the bus. Join a game with people you don't know that ends at 100 points, and play until the first hand is over." | The core loop: pick the Short rule set, press Play, wait in the lobby, then play tiles. Tests whether choosing rules before Play is clear, whether the participant can tell whose turn it is, which tiles fit and which end to play on, and whether an automatic skip is understood. The facilitator fills the other three seats with test accounts. |
-| 4 | Read the score | "Tell me which team is ahead, by how much, and how the last hand ended." | Purely about the gulf of evaluation: the score card as a hand-kept tally, "us" versus "them", and the match result banner. Shows whether the participant knows which team is theirs. |
-| 5 | Step away and come back | "Your stop is coming up. Leave this game. Then get back into a game that's already being played, with the same rules." | Leaving mid-game hands the seat to a bot instead of ending the game, and getting back in needs the "Join games in progress" toggle. Tests whether the participant feels safe leaving, notices the toggle, and understands they took over someone else's seat and score. |
-| 6 | Add a friend | "Your cousin plays on DOMINAO as tinycoqui. Add them as a friend." | Finding Friends in the side menu, searching by username and sending a request; then noticing the "accepted" pop-up when the facilitator accepts as tinycoqui. Tests the discoverability of the menu and the feedback for a request that waits on someone else. |
-| 7 | Host a family game | "Set up a private game to 500 for your family. Invite your cousin from the app, get two more people in by sending them the table's code, and make your cousin your partner. Then start the game." | The most complex task: opening a private Long table, inviting a friend, sharing the code, swapping seats through a player's menu, and starting. Tests whether partners sitting across is understood, and whether "swap seats" is found without help. The facilitator joins as tinycoqui and two other test accounts. |
-| 8 | Check your record | "How often do you win short games, and what's the most points you've won in one hand?" | Reading the Stats section after tasks 3 and 5. Tests whether the participant finds Stats, tells per-rule-set numbers from the overall ones, and understands the difference between a match (a hand) and a game. |
+| 1 | Enter as a guest | "You just want to try the app without signing up for anything. Get in under a name of your choice." | Playing as a guest is a key promise of DOMINAO: no email, no password, straight in. Tests whether the Guest option on the first page is the obvious choice for someone who wants to try it, and whether anything (the Log in and Sign up options, the name field) makes them hesitate. |
+| 2 | Read the rules | "Before playing, find out how the game is played, and tell me how many points it takes to win a short game." | Tests whether participants find the rules button on the home screen at all (execution), and whether the rules and the rule-set descriptions are understandable to someone who may play dominoes differently (evaluation). A walkthrough can't tell us whether the "?" reads as help. |
+| 3 | Join a short public game | "Join a game with people you don't know that ends at 100 points." | One of the app's primary flows: changing the rule set on the Public tab, then pressing Play and waiting in the lobby for others. Tests whether the rules card reads as something you can change, whether participants confirm they picked Short before joining, and whether the lobby and countdown explain what they are waiting for. The facilitator fills the other seats. |
+| 4 | Play and follow the game | "Play until the first hand is over. As you go, tell me whose turn it is, which of your tiles you can play, how many tiles each of the others has left, the score of each hand so far, and what the last few moves were." | Tests whether the whole game screen can be read without help: (1) whose turn it is, (2) which tiles can be played and on which end, (3) each player's tile count, (4) each match's points in the score table, and (5) the move log. Most of this is the gulf of evaluation, which only a real player's reading of the screen can show. |
+| 5 | Make an account | "You'd like the app to remember you from now on. Stop playing as a guest and set up an account." | Signing out and signing up is simple but a primary function. Tests whether participants find how to sign out, whether "Sign up" is clearly the way to keep a lasting player, and how the password rules (ticked off as you type) feel when choosing a real password. |
+| 6 | Add a friend | "Add [username given by the facilitator] as a friend." | Friends live in the side menu, which only accounts see, so this tests discoverability: whether participants notice the menu button that appeared after signing up, find Friends inside it, search by username and understand that the request waits for the other person. It also sets up the invite in task 7. |
+| 7 | Set up a private game together | Host: "Set up a private game for the four of you, and get the others to your table." Others: "Join the game [the host] is setting up." | Four participants do this at the same time: one opens a private table, invites friends from the lobby and shares the table's code; the others join through the invite pop-up or by typing the code. Tests whether everyone understands how private games come together from both sides, whether the invite and the code are both understood as ways in, and whether the host knows when and how to start. |
+| 8 | Delete your account | "You're done with the app. Delete your account." | A rare but important action that should be findable and safe. Tests whether participants look in the side menu's account settings, and whether asking for the password again and confirming makes clear that it can't be undone. |
 
 ## Setup and facilitation
 
 - **Test data.** The deployed app has 100 accounts with statistics from earlier games
-  (made by [src/seed.ts](../src/seed.ts), listed in [seed/users.md](../seed/users.md)).
-  The facilitator plays as test accounts in other windows to fill tables and to be the
-  cousin, `tinycoqui`.
+  (made by [src/seed.ts](../src/seed.ts), listed in [seed/users.md](../seed/users.md)),
+  so search results, public lobbies and the Stats screen look lived in. The facilitator
+  plays test accounts in other windows to fill the public game in tasks 3 and 4.
+- **Task 7 with four people.** All four participants do task 7 at the same table at
+  the same time. Decide beforehand who hosts and which participants each one befriends
+  in task 6, so the host has friends to invite and the rest need the code.
 - **Before starting:** get consent (and consent to record the screen and audio), explain
   that the app is being tested, not them, and ask them to think aloud.
 - **When to intervene:** only after about 3 minutes with no progress and after one

@@ -65,7 +65,7 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 
 Two participants, outside the class, used the deployed app with realistic data for about an hour each: 40 minutes of tasks while thinking aloud, then a 20-minute debrief.
 
-- [Task list](user-testing/tasks.md): eight tasks, from reading the rules to hosting a family game, each with its instruction and why it is worth testing, plus how the sessions were run.
+- [Task list](user-testing/tasks.md): eight tasks, from entering as a guest to setting up a private game together and deleting an account, each with its instruction and why it is worth testing, plus how the sessions were run.
 - Study reports: [study 1](user-testing/study-1.md) and [study 2](user-testing/study-2.md).
 - [Design flaws and opportunities](user-testing/flaws.md): what went wrong or could be better, why, how to address it, and each one's level and severity.
 - Test data: 100 accounts with statistics, added by [src/seed.ts](src/seed.ts) (on the deployed app, through the `SEED_USERS` variable). Their usernames are in [seed/users.md](seed/users.md).
