@@ -1,4 +1,4 @@
-Checking https://dominao.mit-sdg.dev at 2026-10-27T10:25:29.820Z
+Checking https://dominao.mit-sdg.dev at 2026-10-29T13:01:21.339Z
 
 Health
 PASS  /health answers 200
@@ -12,12 +12,12 @@ PASS  an unknown rule set is 400
 PASS  five guests started sessions
 
 Tokens
-PASS  /guests/me refuses an invented token, a signed-out token and a session id (401)
-PASS  /tables/lobby refuses an invented token, a signed-out token and a session id (401)
-PASS  /tables/open refuses an invented token, a signed-out token and a session id (401)
-PASS  /games/view refuses an invented token, a signed-out token and a session id (401)
-PASS  /games/start refuses an invented token, a signed-out token and a session id (401)
-PASS  /matchmaking/enqueue refuses an invented token, a signed-out token and a session id (401)
+PASS  /sessions/me refuses an invented token, a signed-out token and a player id (401)
+PASS  /tables/lobby refuses an invented token, a signed-out token and a player id (401)
+PASS  /tables/open refuses an invented token, a signed-out token and a player id (401)
+PASS  /games/view refuses an invented token, a signed-out token and a player id (401)
+PASS  /games/start refuses an invented token, a signed-out token and a player id (401)
+PASS  /matchmaking/enqueue refuses an invented token, a signed-out token and a player id (401)
 
 Private table
 PASS  the host opens a table and gets a 6-character code
@@ -45,25 +45,26 @@ PASS  an outsider cannot play in the game (409)
 PASS  playing a tile that is not in your hand is 400
 PASS  a side other than LEFT or RIGHT is 400
 PASS  nothing moved after those refusals
-PASS  the player whose turn it is plays 1-6
+PASS  the player whose turn it is plays 0-6
 PASS  everyone sees the move
 
 Sessions
-PASS  an active session cannot be expired by anyone (409)
+PASS  a player id cannot be used to expire their session (401)
+PASS  an invented session cannot be expired (401)
+
+Accounts
+PASS  the password check explains a weak password
+PASS  a weak password is refused (400)
+PASS  registering signs the account in
+PASS  the account is recognized by its username
+PASS  a taken username is refused (409)
+PASS  a wrong password is refused (401)
+PASS  an unknown username gets the same answer (401)
+PASS  signing in again is the same player
+PASS  the account can be deleted, which signs it out everywhere
+PASS  a deleted account cannot sign in (401)
 
 Left the game running and saved its guests to scripts/.deploy-check.json.
 Redeploy, then run with --after-redeploy to check it is still there.
-
-All checks passed.
-
-Checking https://dominao.mit-sdg.dev at 2026-10-27T10:52:22.937Z
-
-Persistence (data saved by --keep before the redeploy)
-PASS  Check Abuelo is still signed in with the same token
-PASS  Check Papo is still signed in with the same token
-PASS  Check Nando is still signed in with the same token
-PASS  Check Cheo is still signed in with the same token
-PASS  the table is still there with all four seats
-PASS  the game is still there, unchanged
 
 All checks passed.

@@ -1,7 +1,5 @@
 # Test accounts
 
-Every account's password is `SoyPirata77.`. Each has made-up statistics for the rule sets it "played" (a few have none, as new players would).
-
 - ana1993
 - ana1994
 - ana2001
