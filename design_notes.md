@@ -1050,3 +1050,22 @@ P1 has no concept for this, so it is new rather than a change to a P1 concept:
   each other and the winrate stays on the right.
 - DESIGN.md: thirteen concepts, a Tallying section, the two outcome queries, the Stats
   composition, and the Stats section under visual design.
+
+## P5 progress log
+
+### Test accounts for user studies
+
+Asked for: about 100 accounts with plausible, family-friendly usernames, one shared
+password for the demos, and made-up statistics, so testers see an app in use.
+
+- `scripts/seed-users.ts` registers 100 accounts through PasswordAuthenticating (the
+  same checks and hashing as signing up) with usernames in the styles people use
+  (`icy_lion88`, `sofia.falcon`, `tinycoqui`, `luis1990`). The list is in
+  [seed/users.md](seed/users.md).
+- Statistics are written straight into Tallying's records: they stand for games
+  played before the test, which have no game ids to count one by one. Each player gets
+  a skill (30 to 70% game winrate) and an activity level, from newcomers with no games
+  to regulars with dozens per rule set; Long is played less. Best match points grow
+  with the matches won and stay within what each rule set can pay.
+- The numbers are generated from a fixed seed, so the list and the data always agree.
+  Running it again skips existing usernames. No friendships are made.
