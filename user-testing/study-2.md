@@ -23,10 +23,11 @@ what happened) is where it broke down. Use the debrief to explain it._
 | 2 | Read the rules | | | | |
 | 3 | Join a short public game | | | | |
 | 4 | Play and follow the game | | | | |
-| 5 | Make an account | | | | |
-| 6 | Add a friend | | | | |
-| 7 | Set up a private game together | | | | |
-| 8 | Delete your account | | | | |
+| 5 | Sign out | | | | |
+| 6 | Create an account | | | | |
+| 7 | Add a friend | | | | |
+| 8 | Play a private game together | | | | |
+| 9 | Delete your account | | | | |
 
 ## Debrief notes
 
