@@ -1069,3 +1069,7 @@ password for the demos, and made-up statistics, so testers see an app in use.
   with the matches won and stay within what each rule set can pay.
 - The numbers are generated from a fixed seed, so the list and the data always agree.
   Running it again skips existing usernames. No friendships are made.
+- The class platform's MongoDB shows its URL only to the app, so the seeding lives in
+  `src/seed.ts` and the server runs it once on startup when the `SEED_USERS` variable
+  is `1`, in the background so health checks still pass. The script uses the same
+  code for local databases.

@@ -12,6 +12,7 @@ import { startTicker } from "./ticker.ts";
 import { TICK_MS } from "./timing.ts";
 import { policy } from "./http.ts";
 import { db } from "./db.ts";
+import { seedUsers } from "./seed.ts";
 // The Vue page. Bun bundles it (with the Vue plugin from bunfig.toml) when the server
 // starts, so one process serves both the page and the API, as the class platform needs.
 import homepage from "../web/index.html";
@@ -63,5 +64,14 @@ startTicker(
   },
   TICK_MS,
 );
+
+// With SEED_USERS=1 the test accounts for user studies are added once (src/seed.ts),
+// in the background so the server answers health checks meanwhile. The class
+// platform's database is reachable only from the app, so this is how it gets them.
+if (process.env.SEED_USERS === "1") {
+  seedUsers(db)
+    .then(({ added, skipped }) => console.log(`Seeded ${added.length} test accounts (${skipped.length} already there).`))
+    .catch((error) => console.error("Seeding test accounts failed:", error));
+}
 
 console.log(`Backend ready on ${server.url}`);
