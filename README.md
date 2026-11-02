@@ -4,11 +4,12 @@ DOMINAO is a web app for playing Puerto Rican dominoes online with four players.
 
 | | |
 |---|---|
-| Deployed app | https://dominao.mit-sdg.dev/ |
-| Demo video (P4) | FINAL_VIDEO_LINK_HERE |
+| Deployed app | https://dominao.mit-sdg.dev/ (populated with 100 test accounts and their statistics for the user studies; see [seed/users.md](seed/users.md)) |
+| Demo video (P4) | https://youtu.be/aSYXeobvxyo |
 | Design document | [DESIGN.md](DESIGN.md): how the final app differs from the P1 concepts and the P3 visual design |
 | Specs | [design/concepts](design/concepts) (concepts), [design/compositions](design/compositions) (how they are composed), [design/types.md](design/types.md) |
 | API | [generated/dominao.md](generated/dominao.md): every endpoint with its input, output and errors, generated from the code |
+| User studies (P5) | [task list](user-testing/tasks.md), [study 1](user-testing/study-1.md), [study 2](user-testing/study-2.md), [design flaws and opportunities](user-testing/flaws.md) |
 | Design notebook | [design_notes.md](design_notes.md): each step, what was asked, what changed and how it was tested |
 | Test results | [tests/output.txt](tests/output.txt) (local), [tests/deploy-output.txt](tests/deploy-output.txt) (deployed app) |
 
@@ -59,6 +60,15 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 - Friends cannot be removed yet, and an invite stays open if its host leaves the table (it ends when the game starts or the table closes).
 - Only accounts keep statistics, so games played as a guest before signing up are not counted. Tied matches (tranques) are not counted either.
 - Two seat swaps sent at the very same instant at one table are not atomic. Only the host can swap, one at a time, so this does not come up in use.
+
+## User studies (P5)
+
+Two participants, outside the class, used the deployed app with realistic data for about an hour each: 40 minutes of tasks while thinking aloud, then a 20-minute debrief.
+
+- [Task list](user-testing/tasks.md): eight tasks, from reading the rules to hosting a family game, each with its instruction and why it is worth testing, plus how the sessions were run.
+- Study reports: [study 1](user-testing/study-1.md) and [study 2](user-testing/study-2.md).
+- [Design flaws and opportunities](user-testing/flaws.md): what went wrong or could be better, why, how to address it, and each one's level and severity.
+- Test data: 100 accounts with statistics, added by [src/seed.ts](src/seed.ts) (on the deployed app, through the `SEED_USERS` variable). Their usernames are in [seed/users.md](seed/users.md).
 
 ## Earlier deliverables
 
