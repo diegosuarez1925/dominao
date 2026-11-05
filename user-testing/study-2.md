@@ -2,36 +2,32 @@
 
 | | |
 |---|---|
-| Participant | P2: _age range, relationship to dominoes (e.g. plays weekly with family), comfort with apps_ |
-| Date and setting | _date, in person or remote, device and browser_ |
-| Length | _tasks: N min, debrief: N min_ |
-| Consent | _consent to take part; consent to record screen and audio (yes/no)_ |
+| Participant | P2: _Fabián Ruiz, Guillermo Santiago, Gianna Tomassini, Samuel Manolis_ |
+| Date and setting | _November 2nd, in person_ |
+| Length | _tasks: ~50 min, debrief: ~15 min_ |
+| Consent | _consent to take part; consent to record audio_ |
 
 ## Report
 
-_200–300 words. Summarize and analyze the key moments: what the participant did, said
-or felt, and why you think it happened. Balance what worked with what did not. For a
-breakdown, say what they expected, what the interface did instead, and whether the
-gulf of execution (could not figure out how to act) or of evaluation (could not tell
-what happened) is where it broke down. Use the debrief to explain it._
+Overall, the test was pretty smooth. In general, the testers seemed to really like the application, and wanted me to release it to the public. Most feedback I received on the application (directly and indirectly) from this group was quite positive, especially regarding the simplicity of the UI. In general, the testers seemed to flow quite naturally through the tasks, and were having some visible fun for tasks 4 and 8 especially. The debrief after the session confirmed that feelings were mostly positive in relation with the user experience. All testers, regardless, did agree that, even though the design of the UI was good, it wasn't always self-evident, like finding the account menu (a problem the last group had). Other negative feedback includes some aspects of the game UI and mechanics, like it being unclear where a tile that can be played on both sides will go or the timing of skips. However, most criticisms did not involve negative feelings about the core features of the app, more so desires for slight reworks of their UI or certain aspects of them. Hence, all testers agreed that, besides some minor tweaks that would make it perfect, the user experience was overall positive.
 
 ## Task notes
 
-| # | Task | Completed? | Time | Interventions | Observations |
+| # | Task | Completed | Time | Interventions | Observations |
 |---|---|---|---|---|---|
-| 1 | Enter as a guest | | | | |
-| 2 | Read the rules | | | | |
-| 3 | Join a short public game | | | | |
-| 4 | Play and follow the game | | | | |
-| 5 | Sign out | | | | |
-| 6 | Create an account | | | | |
-| 7 | Add a friend | | | | |
-| 8 | Play a private game together | | | | |
-| 9 | Delete your account | | | | |
+| 1 | Enter as a guest | All| ~1 min| None| All testers were able to complete the task well without further explanations or interventions. No notable comments in this task.|
+| 2 | Read the rules | All| ~3 min| None| As in the first test, some testers seemed to be confused on where to find the rules, though they managed to do so pretty quickly. A notable comment on this was that a simple "Rules" label over the rules button would make it more clear. |
+| 3 | Join a short public game | All| ~2 min| 1| Most testers were able to join a game without any problems. One of them, however, did not change the rules to Short format before pressing the play button, expecting to be prompted to choose his preferred rules then. I had to intervene to tell him "Remember to change the rules", and he quickly figured out that the rules are changed in the button beside the play button. All testers expressed slight praise for the ruleset explanations.|
+| 4 | Play and follow the game | All| ~20 min| 1| All testers were able to play the full game out and meet with the task requirements. Some noteworthy comments and observations include a confusion from one of the testers when the piece she wanted to play could be played on both extremes of the board: when this happens, the app prompts you to chose to play the tile on the left or right end to resolve the ambiguity. The problem was that, in the boards snaking pattern, by the time she wanted to play this tile, the board had way more tile played on the left side than the right side, so as to have the left arm of the board snake back "further right" than the right end. Thus she played the tile on the right end, thinking it would play it on the other end. Going on, I had to intervene at some point for another tester that accidentally closed out of the game just in the middle of it, and, for time's sake, I had to step in to show him how to join back in the middle of a game, even when it wasn't one of the intended tasks for the test. Aside from those two instances, everything went pretty smoothly: testers were able to correctly identify turn order, tile counts, legal moves, and were actively using the move logs and score boards during their games (except for one of them, who said that move logs "are a bad feature against the nature of the game", as these don't exist in real life and players opt to remember the whole history of the match). Some other noteworthy comments include two testers criticising the same issue with how the board "snakes" when doubles are played as "looking weird", some high praise for the whole rest of the interface, one critic that skips go by too quickly, and it being weird to not be able to see everyone else's tiles after matches are over.|
+| 5 | Sign out | All| ~1 min| None| Once again, like in the last test, this task introduced no friction or noteworthy commentary. All testers recognized the sign out button immediately and knew what to do with no further instructions.|
+| 6 | Create an account | All| ~2 min| None| All tester completed the task in the expected amount of time with very little friction. One tester criticized the fact that there is no email or phone number required to sign up, as there is no way to regain passwords if forgotten. Otherwise, no other noteworthy comments were made, nor are there any more interesting observations to assess.|
+| 7 | Add a friend | All| ~3 min| None| Once again, testers seemed to have some trouble finding the account tab at first. Three of them, after the instruction, attempted to access it through the account display in the top right, and then stumbled across the three bars button almost by chance. A noteworthy observation is that I saw one of them, after opening this menu, close it and attempt to open it again, and saw how, when trying to open it again, his cursor moved to the top left of the screen before he remembered where the menu was accessed and went back to the button in the middle of the page. I asked him about this, and he said that because the menu slides over from the left to appear, it felt natural to try to open it somewhere in the left side of the screen (I feel a little dumb for not considering this while making it...). The others agreed with him on this. Once they had the menu open, they understood quickly how to send each other friend requests, and there was no more observable friction from there on out.|
+| 8 | Play a private game together | All| ~15 min| 1| One of the testers acted as the host, while the rest joined the table. The host had no issues creating the table, and two of the testers joined via friend invites. The last tester, who was to join by code, was having issues joining for a while because it showed that no table was open with the inputted code. After a minute or so of attempts to join I stepped in: turns out he was inputting the code wrong. The original code was "9XMN7F" and he was inputting "9XNM7F", swapping the M and the N. Once identified that the code was wrong, he was able to join and play out a match with the other testers, and all from there was pretty smooth. The testers were evidently more familiarized with the game UI by this point and showed no visible friction. No more noteworthy commentary was said during the game.|
+| 9 | Delete your account | All| ~1 min| None| This task went by swiftly, with all participants quickly recognizing that they had to access the account menu first, which they had already discovered in a previous step. One tester still attempted to open this menu through the signed-in-as display, and expressed that the menu should be able to be opened from there as well. He still quickly completed the task with no extra friction however. Aside from that instance, there is no more noteworthy commentary or interesting observations: they all successfully completed the task.|
 
 ## Debrief notes
 
-- **Worked well:** _…_
-- **Could be improved:** _…_
-- **Moments of hesitation, and what they expected:** _…_
-- **Notable quotes:** _…_
+- **Worked well:** _Guesting and Accounts, Home screen UI (game selection aspect), Game UI (move log, score table, tile count displays), Friends, and most other main features_
+- **Could be improved:** _UI clarity (discoverability for some menus, and clarity for some game aspects detailed above), Game UI (for ambiguous tile placements and board display for doubles), Accounts (adding email for password recovery)_
+- **Moments of hesitation, and what they expected:** _Finding account menu (all), changing rules for game (1/4 testers)_
+

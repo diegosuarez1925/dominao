@@ -10,6 +10,7 @@ DOMINAO is a web app for playing Puerto Rican dominoes online with four players.
 | Specs | [design/concepts](design/concepts) (concepts), [design/compositions](design/compositions) (how they are composed), [design/types.md](design/types.md) |
 | API | [generated/dominao.md](generated/dominao.md): every endpoint with its input, output and errors, generated from the code |
 | User studies (P5) | [task list](user-testing/tasks.md), [study 1](user-testing/study-1.md), [study 2](user-testing/study-2.md), [design flaws and opportunities](user-testing/flaws.md) |
+| Reflection (P5) | [reflection.md](reflection.md) |
 | Design notebook | [design_notes.md](design_notes.md): each step, what was asked, what changed and how it was tested |
 | Test results | [tests/output.txt](tests/output.txt) (local), [tests/deploy-output.txt](tests/deploy-output.txt) (deployed app) |
 
@@ -63,11 +64,12 @@ bun run check:deploy     # checks the deployed app from outside; output saved to
 
 ## User studies (P5)
 
-Two participants, outside the class, used the deployed app with realistic data for about an hour each: 40 minutes of tasks while thinking aloud, then a 20-minute debrief.
+Two study sessions, each with four different participants from outside the class, used the deployed app with realistic data. Each session was a full table of four, so that adding friends and playing a private game together (tasks 7 and 8) could happen for real: about 45 to 50 minutes of tasks while thinking aloud, then a debrief of about 15 minutes.
 
 - [Task list](user-testing/tasks.md): nine tasks, from entering as a guest to playing a private game together and deleting an account, each with its instruction and why it is worth testing, plus how the sessions were run.
 - Study reports: [study 1](user-testing/study-1.md) and [study 2](user-testing/study-2.md).
 - [Design flaws and opportunities](user-testing/flaws.md): what went wrong or could be better, why, how to address it, and each one's level and severity.
+- [Reflection](reflection.md): what the project and the user studies taught me.
 - Test data: 100 accounts with statistics, added by [src/seed.ts](src/seed.ts) (on the deployed app, through the `SEED_USERS` variable). Their usernames are in [seed/users.md](seed/users.md).
 
 ## Earlier deliverables

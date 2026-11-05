@@ -2,36 +2,32 @@
 
 | | |
 |---|---|
-| Participant | P1: _age range, relationship to dominoes (e.g. plays weekly with family), comfort with apps_ |
-| Date and setting | _date, in person or remote, device and browser_ |
-| Length | _tasks: N min, debrief: N min_ |
-| Consent | _consent to take part; consent to record screen and audio (yes/no)_ |
+| Participants | _Fernando Oliver, Alexandra Rivera, José Vargas, Enzo Zavaleta_ |
+| Date and setting | _November 1st, in person_ |
+| Length | _tasks: ~45 min, debrief: ~15 min_ |
+| Consent | _consent to take part; no consent to record_ |
 
 ## Report
 
-_200–300 words. Summarize and analyze the key moments: what the participant did, said
-or felt, and why you think it happened. Balance what worked with what did not. For a
-breakdown, say what they expected, what the interface did instead, and whether the
-gulf of execution (could not figure out how to act) or of evaluation (could not tell
-what happened) is where it broke down. Use the debrief to explain it._
+_All four testers completed every task, and most of the session went with little friction. Entering as a guest, joining a short public game, signing out, creating an account and playing the private game together needed no interventions. Two testers praised not needing an account to play ("Oh cool, this is way easier"), and the group praised the simplicity of the interface, especially the game screen, the tiles-left display, the move log and the score table. Most of the friction came from finding things. When asked to read the rules, testers took about 30 seconds to find the rules button ("Where do I even check these"), although once found, the rules were clear to everyone. When asked to add a friend, three of the four first tried to open the account menu through the signed-in account display at the top right, and one needed a hint to find the menu button, which testers called "easily missable". Both are breakdowns across the gulf of execution: testers knew what they wanted to do, but not where to do it. Playing the game showed a gulf of evaluation. One tester read her turn from the contrast between the lit and dimmed tiles in her hand. When all five of her remaining tiles were playable, nothing dimmed, so she believed the game was stuck waiting on another player. Another tester needed a hint to find the move log. Testers who already played dominoes also disliked how doubles are placed where the board turns, and felt that skips went by too fast. In the debrief, all four were positive about the app, and their suggestions were mostly small interface changes rather than reworks of features._
 
 ## Task notes
 
-| # | Task | Completed? | Time | Interventions | Observations |
+| # | Task | Completed | Time | Interventions | Observations |
 |---|---|---|---|---|---|
-| 1 | Enter as a guest | | | | |
-| 2 | Read the rules | | | | |
-| 3 | Join a short public game | | | | |
-| 4 | Play and follow the game | | | | |
-| 5 | Sign out | | | | |
-| 6 | Create an account | | | | |
-| 7 | Add a friend | | | | |
-| 8 | Play a private game together | | | | |
-| 9 | Delete your account | | | | |
+| 1 | Enter as a guest | All| ~1 min| None| All testers understood immediately what to do without further explanations. Two testers praised not having to have an account to play: "Guests accounts? Oh that's sick!" and "Oh cool, this is way easier".|
+| 2 | Read the rules | All| ~2 min| None| Expected time for players to find the rules was more than what I hoped for. Testers seemed confused for a little while on where to find the rules. One of them said "Where do I even check these". Everyone found where the rules were within ~30 sec of instruction delivery, way more than what it should be for discoverability's sake. Rules themselves seemed to be clear for everyone: testers expressed that they understood them well, one praised them.|
+| 3 | Join a short public game | All| ~1 min | None| All testers figured out immediately how to change to the correct short ruleset and how to hop into a queue. One of them asked "Why cant I add custom rules instead of choosing one of three presets?". Praise from another tester came for having the ruleset descriptions besides the rules.|
+| 4 | Play and follow the game | All| ~15 min| 2| Two of the testers got the hang of the game immediately, and were able to keep track of turn order, legal moves, score, move logs, and such without any friction. These two expressed praise for the clarity UI. The other two were also able to satisfy all task requirements, but each needed an intervention to do so: one of them could not find where the move logs were, and needed a little hint on where to look for them. The other needed a small intervention on a particular turn: she was using as a visual tell that it was her turn the fact that some of the pieces in her hand would light up and other would dim. A particular scenario arose where she thought the game "was stuck" because the player whose turn it was wasn't playing: turns out it was her turn and all five tiles she had left were legal to play and thus were all lighted up, and the lack of contrast made her believe it wasn't her turn. Extremely peculiar... but noteworthy, nonetheless. Besides these two interventions, all testers completed their games and satisfied task requirements while at it. Noteworthy feedback includes praise of the pieces-left display, the addition of move log, and the effectiveness of the score table: while some negative feedback included a discomfort from those who already played the game before on how the board would place doubles once it was about to do a vertical turn, as well as minute complaints on skips going by too fast.|
+| 5 | Sign out | All| ~1 min| None| All testers completed the task with almost no effort. No comments were made from testers either.|
+| 6 | Create an account | All| ~2 min| None| Again, no friction was observed for task completion. All testers completed their account creation quite fast and with no interventions required. Only noteworthy comment for this task was one of the testers expressing the allowed password restrictions were "too strict"|
+| 7 | Add a friend | All| ~4 min| 1| The most complicated and noteworthy part of this task was finding where the friends menu is. All testers but one took around a ~30 secs to find where the account menu is, which, again, is a discoverability issue. Once found, all testers were able to add each other as friends quite easily. Most of the failures to find this menu came from users attempting to open it through the account display in the top right of the screen (which I now understand its quite reasonable). One tester needed intervention to find the menu. Noteworthy comments include testers expressing that the inclusion of the menu button is "easily missable" compared to the guest home screen. Praise was expressed by all for including a friend system, though.|
+| 8 | Play a private game together | All| ~17 min| None| One of the testers hosted the game, the rest joined. One joined through a friend invite, the other two joined through the join code. No friction was visible in this procedure. After the game started, everyone was able to play without any issues.|
+| 9 | Delete your account | All| ~2 min| None| No meaningful comments here: all testers already knew about the account menus by this point, and completed the task easily because of it.|
 
 ## Debrief notes
 
-- **Worked well:** _…_
-- **Could be improved:** _…_
-- **Moments of hesitation, and what they expected:** _…_
-- **Notable quotes:** _…_
+- **Worked well:** _Guesting and Accounts, Home screen UI (game selection aspect), Game UI, Friends, and most other main features_
+- **Could be improved:** _UI clarity (discoverability for some menus, and clarity for some game aspects detailed above)_
+- **Moments of hesitation, and what they expected:** _Most common hesitation moment (3/4 tester agreed on this) was finding the account menus, expecting it to be accessible through the current signed in account display._
+
